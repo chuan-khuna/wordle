@@ -15,7 +15,7 @@ mod widgets;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
+use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::rules::game::{Game, MAX_GUESSES, random_seed};
 use wordle_gpui::rules::words::WORD_LENGTH;
 
@@ -30,24 +30,23 @@ actions!(wordle, [Quit, Paste, ToggleCommandPalette, ToggleSidebar, ToggleThemeP
 
 const CHEERS: [&str; 6] = ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"];
 
-/// A key binding, and how the platform writes it.
+/// A key binding. `widgets::shortcut` draws it, in the platform's own notation.
 pub struct Shortcut {
     keys: &'static str,
-    mac: &'static str,
-    other: &'static str,
 }
 
 impl Shortcut {
-    pub fn label(&self) -> &'static str {
-        if cfg!(target_os = "macos") { self.mac } else { self.other }
+    /// The key presses of this shortcut, one for each step of a chord.
+    pub fn keystrokes(&self) -> Vec<Keystroke> {
+        self.keys.split(' ').filter_map(|keys| Keystroke::parse(keys).ok()).collect()
     }
 }
 
-pub const PALETTE_SHORTCUT: Shortcut = Shortcut { keys: "secondary-p", mac: "âP", other: "Ctrl+P" };
+pub const PALETTE_SHORTCUT: Shortcut = Shortcut { keys: "secondary-p" };
 /// Zed's shortcut for its left dock.
-pub const SIDEBAR_SHORTCUT: Shortcut = Shortcut { keys: "secondary-b", mac: "âB", other: "Ctrl+B" };
+pub const SIDEBAR_SHORTCUT: Shortcut = Shortcut { keys: "secondary-b" };
 /// Zed's shortcut for its theme picker.
-pub const THEME_PICKER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-k secondary-t", mac: "âK âT", other: "Ctrl+K Ctrl+T" };
+pub const THEME_PICKER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-k secondary-t" };
 
 pub fn bind_keys(cx: &mut App) {
     cx.bind_keys([

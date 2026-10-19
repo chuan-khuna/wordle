@@ -24,5 +24,19 @@ fn search_matches_letters_in_order() {
 
 #[test]
 fn search_finds_themes_by_appearance() {
-    assert_eq!(names("light"), ["Rosé Pine Dawn", "Catppuccin Latte"]);
+    assert_eq!(names("light"), ["Rosé Pine Dawn", "Catppuccin Latte", "Flexoki Light"]);
+}
+
+#[test]
+fn search_finds_flexoki() {
+    assert_eq!(names("flex"), ["Flexoki Dark", "Flexoki Light"]);
+    assert_eq!(names("flexoki dark"), ["Flexoki Dark"]);
+}
+
+#[test]
+fn search_finds_the_newer_themes() {
+    assert_eq!(names("tokyo"), ["Tokyo Night"]);
+    assert_eq!(names("everforest"), ["Everforest"]);
+    assert_eq!(names("kanagawa"), ["Kanagawa"]);
+    assert_eq!(names("nord"), ["Nord"]);
 }

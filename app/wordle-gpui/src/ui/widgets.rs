@@ -2,6 +2,9 @@
 
 use gpui::{Div, ElementId, SharedString, Stateful, Svg, div, prelude::*, px, rgb, svg};
 use gpui_base::Button;
+use gpui_component::kbd::Kbd;
+
+use super::Shortcut;
 pub use gpui_kit_assets::IconName;
 
 use crate::theme::Theme;
@@ -48,26 +51,29 @@ pub fn separator(t: &Theme) -> Div {
     div().my_1().h(px(1.)).bg(rgb(t.overlay))
 }
 
-/// A row of a menu or list: a label, a dimmer hint under it, and room on the right for a check or a shortcut.
-pub fn menu_item(t: &Theme, id: impl Into<ElementId>, label: &'static str, hint: impl Into<SharedString>) -> Stateful<Div> {
+/// A row of a menu or list: the label on the left, and `right` (a detail, a check, a shortcut) on the right.
+pub fn menu_item(t: &Theme, id: impl Into<ElementId>, label: &'static str, right: impl IntoElement) -> Stateful<Div> {
     let overlay = t.overlay;
     div()
         .id(id)
         .flex()
         .items_center()
         .justify_between()
+        .gap_4()
+        .h(px(30.))
         .px_2()
-        .py_1()
         .rounded_md()
         .cursor_pointer()
         .hover(move |style| style.bg(rgb(overlay)))
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .child(div().text_sm().text_color(rgb(t.text)).child(label))
-                .child(div().text_xs().text_color(rgb(t.muted)).child(hint.into())),
-        )
+        .child(div().text_sm().text_color(rgb(t.text)).child(label))
+        .child(right)
+}
+
+/// A shortcut as the kit's `Kbd` keys, one for each key press of a chord, in the theme's colours.
+pub fn shortcut(t: &Theme, shortcut: &Shortcut) -> Div {
+    div().flex().items_center().gap_1().children(shortcut.keystrokes().into_iter().map(|stroke| {
+        Kbd::new(stroke).text_color(rgb(t.subtle)).bg(rgb(t.overlay)).border_1().border_color(rgb(t.highlight_med)).rounded_sm()
+    }))
 }
 
 /// A bordered button. The kit's `Button` is unstyled, so the theme's colours are applied here.

@@ -1,5 +1,5 @@
 use super::*;
-use crate::theme::{CATPPUCCIN_LATTE, CATPPUCCIN_MOCHA, ROSE_PINE, ROSE_PINE_DAWN};
+use crate::theme::{CATPPUCCIN_LATTE, CATPPUCCIN_MOCHA, ROSE_PINE, ROSE_PINE_DAWN, THEMES};
 
 #[test]
 fn opens_on_the_current_theme() {
@@ -18,7 +18,7 @@ fn up_and_down_move_through_the_matches_and_wrap() {
     let mut picker = ThemePicker::new(&ROSE_PINE);
     assert_eq!(picker.press("down", None), Outcome::Preview(&ROSE_PINE_DAWN));
     picker.press("up", None);
-    assert_eq!(picker.press("up", None), Outcome::Preview(&CATPPUCCIN_LATTE));
+    assert_eq!(picker.press("up", None), Outcome::Preview(THEMES.last().unwrap()));
 }
 
 #[test]

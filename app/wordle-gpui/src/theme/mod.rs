@@ -7,12 +7,24 @@ use wordle_gpui::rules::feedback::Mark;
 
 mod catppuccin_latte;
 mod catppuccin_mocha;
+mod everforest;
+mod flexoki_dark;
+mod flexoki_light;
+mod kanagawa;
+mod nord;
 pub mod picker;
 mod rose_pine;
 mod rose_pine_dawn;
+mod tokyo_night;
 
 pub use catppuccin_latte::CATPPUCCIN_LATTE;
 pub use catppuccin_mocha::CATPPUCCIN_MOCHA;
+pub use flexoki_dark::FLEXOKI_DARK;
+pub use everforest::EVERFOREST;
+pub use flexoki_light::FLEXOKI_LIGHT;
+pub use kanagawa::KANAGAWA;
+pub use nord::NORD;
+pub use tokyo_night::TOKYO_NIGHT;
 pub use rose_pine::ROSE_PINE;
 pub use rose_pine_dawn::ROSE_PINE_DAWN;
 
@@ -62,7 +74,7 @@ impl Theme {
     }
 }
 
-pub static THEMES: [&Theme; 4] = [&ROSE_PINE, &ROSE_PINE_DAWN, &CATPPUCCIN_MOCHA, &CATPPUCCIN_LATTE];
+pub static THEMES: [&Theme; 10] = [&ROSE_PINE, &ROSE_PINE_DAWN, &CATPPUCCIN_MOCHA, &CATPPUCCIN_LATTE, &FLEXOKI_DARK, &FLEXOKI_LIGHT, &TOKYO_NIGHT, &EVERFOREST, &KANAGAWA, &NORD];
 
 /// The themes whose name (or "dark"/"light") matches `query`, in order.
 /// See `search::matches`: "cmo" finds Catppuccin Mocha, and "rose" finds Rosé Pine.

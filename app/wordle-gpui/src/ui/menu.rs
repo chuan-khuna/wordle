@@ -3,43 +3,44 @@
 
 use gpui::{Anchor, AnyElement, Context, Div, ElementId, FontWeight, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
 
-use super::widgets::{caret, menu_item, panel, separator, small_button};
+use super::widgets::{self, caret, menu_item, panel, separator, small_button};
 use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
 use crate::commands::{Command, SeedField};
 use crate::theme::Theme;
 
 impl WordleApp {
-    /// The dim line under a command's label.
-    fn hint(&self, command: Command) -> SharedString {
+    /// The dim detail at the right of a command's row, if it has one.
+    fn detail(&self, command: Command) -> Option<SharedString> {
         match command {
-            Command::Reset => "A new random Answer".into(),
-            Command::Restart => match self.game.seed {
-                Some(seed) => format!("Same Answer, seed {seed}").into(),
-                None => "Same Answer".into(),
-            },
-            Command::PlaySeed => "Replay any Answer by its Seed".into(),
-            Command::CopySeed => match self.game.seed {
-                Some(seed) => format!("{seed}, to the clipboard").into(),
-                None => "No Seed: the Answer was chosen".into(),
-            },
-            Command::ToggleUnlimited => "Starts a new word".into(),
-            Command::ToggleLiveHints => "Colour typed letters by earlier Guesses".into(),
-            Command::ToggleSidebar => format!("Guesses and their meanings · {}", SIDEBAR_SHORTCUT.label()).into(),
-            Command::ChangeTheme => self.theme.name.into(),
+            Command::Restart => self.game.seed.map(|seed| format!("seed {seed}").into()),
+            Command::CopySeed => self.game.seed.map(|seed| seed.to_string().into()),
+            Command::ChangeTheme => Some(self.theme.name.into()),
+            _ => None,
         }
     }
 
-    /// A command as a row: its label, its hint, and a check (for a toggle) or a shortcut (Change theme…) on the right.
+    /// A command as a row: its label, and on the right its detail, a check (for a toggle) or its shortcut.
     pub(super) fn command_row(&self, command: Command, id: impl Into<ElementId>) -> Stateful<Div> {
         let t = self.theme;
-        let row = menu_item(t, id, command.label(), self.hint(command));
-        match command {
-            Command::ToggleUnlimited => row.child(check(t, self.game.is_unlimited())),
-            Command::ToggleLiveHints => row.child(check(t, self.live_hints)),
-            Command::ToggleSidebar => row.child(check(t, self.sidebar_open)),
-            Command::ChangeTheme => row.child(div().text_xs().text_color(rgb(t.muted)).child(THEME_PICKER_SHORTCUT.label())),
-            _ => row,
-        }
+        let toggled = match command {
+            Command::ToggleUnlimited => Some(self.game.is_unlimited()),
+            Command::ToggleLiveHints => Some(self.live_hints),
+            Command::ToggleSidebar => Some(self.sidebar_open),
+            _ => None,
+        };
+        let shortcut = match command {
+            Command::ToggleSidebar => Some(&SIDEBAR_SHORTCUT),
+            Command::ChangeTheme => Some(&THEME_PICKER_SHORTCUT),
+            _ => None,
+        };
+        let right = div()
+            .flex()
+            .items_center()
+            .gap_2()
+            .children(self.detail(command).map(|detail| div().text_xs().text_color(rgb(t.muted)).child(detail)))
+            .children(shortcut.map(|shortcut| widgets::shortcut(t, shortcut)))
+            .children(toggled.map(|on| check(t, on)));
+        menu_item(t, id, command.label(), right)
     }
 
     /// The hamburger, with the settings menu hanging from its bottom-right corner.
@@ -89,7 +90,7 @@ impl WordleApp {
 
     fn render_menu(&self, seed: Option<&SeedField>, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let mut menu = panel(t, "settings-menu").mt_1().w(px(220.)).p_1();
+        let mut menu = panel(t, "settings-menu").mt_1().w(px(280.)).p_1();
         for (index, command) in Command::ALL.into_iter().enumerate() {
             if index > 0 && Command::ALL[index - 1].group() != command.group() {
                 menu = menu.child(separator(t));
@@ -105,13 +106,14 @@ impl WordleApp {
         menu.child(separator(t)).child(
             div()
                 .flex()
+                .items_center()
                 .justify_between()
+                .h(px(30.))
                 .px_2()
-                .py_1()
-                .text_xs()
+                .text_sm()
                 .text_color(rgb(t.muted))
                 .child("Command palette")
-                .child(PALETTE_SHORTCUT.label()),
+                .child(widgets::shortcut(t, &PALETTE_SHORTCUT)),
         )
     }
 }

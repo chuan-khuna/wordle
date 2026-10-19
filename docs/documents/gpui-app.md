@@ -22,7 +22,7 @@ The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `wi
 
 ```
 app/wordle-gpui/
-  Cargo.toml          gpui-pre (gpui, as gpui-kit builds on it), gpui-base (the Button), gpui-kit-assets (the icons), ureq and scraper for the dictionary
+  Cargo.toml          gpui-pre (gpui, as gpui-kit builds on it), gpui-base (the Button), gpui-kit-assets (the icons), gpui-component (the Kbd shortcut keys), ureq and scraper for the dictionary
   data/               answers.txt, guesses.txt, SOURCES.md (copied from packages/wordle)
   src/
     lib.rs            the library: `pub mod rules`, usable from tests with no window
@@ -39,7 +39,9 @@ app/wordle-gpui/
     search.rs         the loose matching behind the palette and the theme picker
     theme/
       mod.rs          the Theme roles, THEMES and the theme search
-      rose_pine.rs, rose_pine_dawn.rs, catppuccin_mocha.rs, catppuccin_latte.rs
+      rose_pine.rs, rose_pine_dawn.rs, catppuccin_mocha.rs, catppuccin_latte.rs,
+                      flexoki_dark.rs, flexoki_light.rs, tokyo_night.rs,
+                      everforest.rs, kanagawa.rs, nord.rs
                       one theme each
       picker.rs       the theme picker's state and keys
     ui/
@@ -76,6 +78,8 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 
 The hamburger at the right of the title bar opens a menu. Its rows are the `Command`s in `commands.rs`, so the menu and the command palette always offer the same things:
 
+Each row is one line: the name on the left and, on the right, a dim detail (the seed, the theme name), a check for a toggle, or the shortcut drawn as gpui-kit `Kbd` keys (Ctrl+B on Windows and Linux, ⌘B on macOS; a chord such as Ctrl+K Ctrl+T is two keys). The palette uses the same rows.
+
 - **Play a new word:** a new random Answer, keeping the Guess Limit.
 - **Try this word again:** the same Game from the start (`Game::restart()`): the same Answer, Seed and Guess Limit, with no Guesses. Works for a chosen Answer (`--answer`) too.
 - **Play a seed…:** turns into a seed field. Type or paste (⌘V, Ctrl+V) up to six digits (any number from 0 to 999,999; pasting keeps only the digits), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. A **Paste seed** button beside it does the same as the paste shortcut. It picks the same Answer as `just wordle --seed N`.
@@ -83,7 +87,7 @@ The hamburger at the right of the title bar opens a menu. Its rows are the `Comm
 - **Unlimited guesses:** ticked when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
 - **Live hints:** ticked when on (see below).
 - **Show sidebar:** ticked when the sidebar is open (see below).
-- **Change theme…:** opens the theme picker (below). The hint shows the current theme.
+- **Change theme…:** opens the theme picker (below). The row shows the current theme.
 
 The menu's last line shows the command palette's shortcut.
 
@@ -124,7 +128,7 @@ Nothing is looked up until you click a word, so playing never touches the networ
 
 ## Theme
 
-Four themes, one file each in `theme/` (`rose_pine.rs`, …). The app starts in Rosé Pine.
+Ten themes, one file each in `theme/` (`rose_pine.rs`, …). The app starts in Rosé Pine.
 
 | Theme | Appearance | Correct | Present | Absent |
 | --- | --- | --- | --- | --- |
@@ -132,6 +136,12 @@ Four themes, one file each in `theme/` (`rose_pine.rs`, …). The app starts in 
 | Rosé Pine Dawn | Light | Pine | Gold | Muted |
 | [Catppuccin](https://catppuccin.com/palette) Mocha | Dark | Green | Yellow | Surface 0 |
 | Catppuccin Latte | Light | Green | Yellow | Overlay 1 |
+| [Flexoki](https://stephango.com/flexoki) Dark | Dark | Green 400 | Yellow 400 | 900 |
+| Flexoki Light | Light | Green 600 | Yellow 400 | 500 |
+| [Tokyo Night](https://github.com/folke/tokyonight.nvim) | Dark | Green | Yellow | Highlight |
+| [Everforest](https://github.com/sainnhe/everforest) | Dark (medium) | Green | Yellow | Bg 1 |
+| [Kanagawa](https://github.com/rebelot/kanagawa.nvim) Wave | Dark | Spring green | Carp yellow | Sumi ink 4 |
+| [Nord](https://www.nordtheme.com/docs/colors-and-palettes) | Dark | Nord 14 | Nord 13 | Nord 1 |
 
 Each theme is a `Theme` value that maps its palette onto the same roles (`background`, `surface`, `overlay`, `text`, `correct`, `present`, `absent`, `heading`, `error`, `success`, `accent`, …). The UI only uses the roles, so adding a theme means adding a file with one `Theme`, declaring it in `theme/mod.rs` and listing it in `THEMES`. In dark themes an Absent key fades into the background, so the letters still in play stand out; in light themes it matches the Absent tile. Messages under the board store a tone (error, success, info) rather than a colour, so they change colour with the theme.
 
