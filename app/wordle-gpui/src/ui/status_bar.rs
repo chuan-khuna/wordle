@@ -1,11 +1,11 @@
 //! The bar along the bottom of the window, like Zed's: the sidebar button on the left; the Guess
 //! Limit, the Seed (with a button that copies it) and the Guesses left on the right.
 
-use gpui::{Context, Div, Pixels, div, prelude::*, px, rgb};
+use gpui::{Context, Pixels, div, prelude::*, px, rgb};
 
-use super::{WordleApp, widgets};
+use super::widgets::{self, IconName};
+use super::WordleApp;
 use crate::commands::Command;
-use crate::theme::Theme;
 
 const HEIGHT: Pixels = px(28.);
 
@@ -28,7 +28,7 @@ impl WordleApp {
                 .items_center()
                 .gap_1()
                 .child(format!("seed {seed}"))
-                .child(widgets::icon_button(t, "copy-seed", widgets::copy_icon(t)).on_click(cx.listener(|this, _, window, cx| this.run(Command::CopySeed, window, cx)))),
+                .child(widgets::icon_button(t, "copy-seed", widgets::icon(IconName::Copy, t.subtle)).on_click(cx.listener(|this, _, window, cx| this.run(Command::CopySeed, window, cx)))),
             None => div().child("chosen answer"),
         };
 
@@ -51,7 +51,7 @@ impl WordleApp {
                     .items_center()
                     .gap_2()
                     .child(
-                        widgets::icon_button(t, "toggle-sidebar", sidebar_icon(t, self.sidebar_open))
+                        widgets::icon_button(t, "toggle-sidebar", widgets::icon(IconName::PanelLeft, if self.sidebar_open { t.text } else { t.subtle }))
                             .when(self.sidebar_open, |button| button.bg(rgb(t.overlay)))
                             .on_click(cx.listener(|this, _, window, cx| this.toggle_sidebar(window, cx))),
                     )
@@ -59,18 +59,5 @@ impl WordleApp {
             )
             .child(div().flex().items_center().gap_2().pr_2().child(mode).child(dot()).child(seed).child(dot()).child(self.guesses_status()))
     }
-}
-
-/// A window outline with its left column filled in while the sidebar is open.
-fn sidebar_icon(t: &Theme, open: bool) -> Div {
-    let colour = if open { t.text } else { t.subtle };
-    div()
-        .flex()
-        .w(px(14.))
-        .h(px(12.))
-        .rounded_sm()
-        .border_1()
-        .border_color(rgb(colour))
-        .child(div().w(px(4.)).h_full().border_r_1().border_color(rgb(colour)).when(open, |column| column.bg(rgb(colour))))
 }
 

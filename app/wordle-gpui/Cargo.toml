@@ -14,5 +14,7 @@ gpui = { package = "gpui-pre", version = "=0.3.9", features = ["font-kit", "wind
 gpui-pre-platform = { version = "=0.3.9", features = ["font-kit", "runtime_shaders"] }
 # The unstyled `Button` from gpui-kit (https://gpui-kit.com/base/primitives/button/).
 gpui-base = "0.8.0"
+# The kit's Lucide icons (Eye, EyeOff, Copy, ...) and the asset source that serves them.
+gpui-kit-assets = "0.7.3"
 scraper = "0.27.0"
 ureq = "3.4.2"

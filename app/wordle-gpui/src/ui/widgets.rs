@@ -1,7 +1,8 @@
 //! Small pieces shared by the menu, the command palette and the theme picker.
 
-use gpui::{Div, ElementId, SharedString, Stateful, div, prelude::*, px, rgb};
+use gpui::{Div, ElementId, SharedString, Stateful, Svg, div, prelude::*, px, rgb, svg};
 use gpui_base::Button;
+pub use gpui_kit_assets::IconName;
 
 use crate::theme::Theme;
 
@@ -104,7 +105,7 @@ pub const MONO_FONT: &str = if cfg!(target_os = "macos") {
 };
 
 /// A small square button around an icon.
-pub fn icon_button(t: &Theme, id: impl Into<ElementId>, icon: Div) -> Button {
+pub fn icon_button(t: &Theme, id: impl Into<ElementId>, icon: impl IntoElement) -> Button {
     let overlay = t.overlay;
     Button::new(id)
         .focusable(false)
@@ -119,18 +120,7 @@ pub fn icon_button(t: &Theme, id: impl Into<ElementId>, icon: Div) -> Button {
         .child(icon)
 }
 
-/// Two overlapping sheets.
-pub fn copy_icon(t: &Theme) -> Div {
-    let sheet = || div().absolute().size(px(8.)).rounded(px(1.5)).border_1().border_color(rgb(t.subtle));
-    div().relative().size(px(11.)).child(sheet().top_0().left_0()).child(sheet().bottom_0().right_0().bg(rgb(t.surface)))
-}
-
-/// An eye, open (a pupil in an outline) or closed (just the lower lid).
-pub fn eye_icon(t: &Theme, open: bool) -> Div {
-    let eye = div().flex().items_center().justify_center().w(px(15.)).h(px(9.)).border_color(rgb(t.subtle));
-    if open {
-        eye.rounded_full().border_1().child(div().size(px(4.)).rounded_full().bg(rgb(t.subtle)))
-    } else {
-        eye.rounded_b_full().border_b_1().border_l_1().border_r_1()
-    }
+/// One of the kit's icons, in `colour`.
+pub fn icon(name: IconName, colour: u32) -> Svg {
+    svg().path(name.path()).size(px(14.)).flex_none().text_color(rgb(colour))
 }

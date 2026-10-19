@@ -22,7 +22,7 @@ The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `wi
 
 ```
 app/wordle-gpui/
-  Cargo.toml          gpui-pre (gpui, as gpui-kit builds on it), gpui-base (the Button), ureq and scraper for the dictionary
+  Cargo.toml          gpui-pre (gpui, as gpui-kit builds on it), gpui-base (the Button), gpui-kit-assets (the icons), ureq and scraper for the dictionary
   data/               answers.txt, guesses.txt, SOURCES.md (copied from packages/wordle)
   src/
     lib.rs            the library: `pub mod rules`, usable from tests with no window
@@ -69,7 +69,7 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 - The keyboard colours each letter by the best Mark seen for it (Correct beats Present beats Absent).
 - The title bar holds only the hamburger (and the window buttons).
 - The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
-- After a Win or Loss: a cheer, or "Out of guesses" with the Answer hidden as dots until you click the eye icon (click again to hide it; the sidebar follows); the `just wordle-gpui ...` command that replays the Game, in a monospace font with a copy icon; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
+- After a Win or Loss: a cheer, or "Out of guesses" with the Answer hidden as dots until you click the Eye icon (EyeOff hides it again) (click again to hide it; the sidebar follows); the `just wordle-gpui ...` command that replays the Game, in a monospace font with a copy icon; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
 - Copying (the seed, the results, the replay command) shows a note in the status bar, next to the sidebar button, that hides itself after 2 seconds.
 
 ## Settings menu

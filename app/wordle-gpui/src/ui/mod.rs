@@ -23,6 +23,7 @@ use crate::commands::{self, Command, CommandPalette, SeedField, SeedOutcome};
 use crate::theme::picker::{self as theme_picker_state, ThemePicker};
 use crate::theme::{self, Theme};
 use board::{BACKSPACE, ENTER};
+use widgets::IconName;
 use sidebar::Meaning;
 
 actions!(wordle, [Quit, Paste, ToggleCommandPalette, ToggleSidebar, ToggleThemePicker]);
@@ -355,7 +356,7 @@ impl WordleApp {
         }
         if self.game.is_lost() {
             let word = if self.answer_shown { self.game.answer().to_uppercase() } else { "•".repeat(WORD_LENGTH) };
-            let (tip, icon) = if self.answer_shown { ("hide-answer", widgets::eye_icon(t, false)) } else { ("show-answer", widgets::eye_icon(t, true)) };
+            let (tip, icon) = if self.answer_shown { ("hide-answer", widgets::icon(IconName::EyeOff, t.subtle)) } else { ("show-answer", widgets::icon(IconName::Eye, t.subtle)) };
             footer = footer.child(
                 div()
                     .flex()
@@ -379,7 +380,7 @@ impl WordleApp {
                     .text_color(rgb(t.muted))
                     .child("Play it again")
                     .child(div().font_family(widgets::MONO_FONT).text_color(rgb(t.text)).child(self.replay_command()))
-                    .child(widgets::icon_button(t, "copy-replay", widgets::copy_icon(t)).on_click(cx.listener(|this, _, _, cx| {
+                    .child(widgets::icon_button(t, "copy-replay", widgets::icon(IconName::Copy, t.subtle)).on_click(cx.listener(|this, _, _, cx| {
                         this.copy(this.replay_command(), "Copied the replay command", cx);
                     }))),
             );

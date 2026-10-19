@@ -10,6 +10,7 @@ mod ui;
 use gpui::{App, Bounds, WindowBounds, WindowOptions, prelude::*, px, size};
 
 use args::Args;
+use gpui_kit_assets::Assets;
 use ui::{WordleApp, title_bar};
 
 fn main() {
@@ -21,7 +22,7 @@ fn main() {
         }
     };
 
-    gpui_platform::application().run(move |cx: &mut App| {
+    gpui_platform::application().with_assets(Assets).run(move |cx: &mut App| {
         ui::bind_keys(cx);
         cx.on_window_closed(|cx, _| cx.quit()).detach();
 
