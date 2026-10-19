@@ -4,6 +4,7 @@
 use gpui::{Context, SharedString, div, prelude::*, px, rgb};
 
 use super::WordleApp;
+use super::menu::paste_seed_button;
 use super::widgets::{panel, query_field};
 use crate::commands::CommandPalette;
 
@@ -13,7 +14,18 @@ impl WordleApp {
         let mut body = div().flex().flex_col().p_1();
         let field = match &palette.seed {
             Some(seed) => {
-                body = body.child(div().px_2().py_1().text_xs().text_color(rgb(t.muted)).child(seed.hint()));
+                body = body.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .px_2()
+                        .py_1()
+                        .text_xs()
+                        .text_color(rgb(t.muted))
+                        .child(seed.hint())
+                        .child(paste_seed_button(t, cx)),
+                );
                 query_field(t, &seed.digits, "Seed to play…")
             }
             None => {

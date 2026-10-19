@@ -13,8 +13,9 @@ pub mod title_bar;
 mod widgets;
 
 use std::collections::HashMap;
+use std::time::Duration;
 
-use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Window, actions, div, prelude::*, px, rgb};
+use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, SharedString, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::rules::game::{Game, MAX_GUESSES, random_seed};
 use wordle_gpui::rules::words::WORD_LENGTH;
 
@@ -58,12 +59,14 @@ pub fn bind_keys(cx: &mut App) {
     cx.on_action(|_: &Quit, cx| cx.quit());
 }
 
+/// How long a toast stays on screen.
+const TOAST_TIME: Duration = Duration::from_secs(2);
+
 /// What a message under the board is about, which picks its colour from the theme.
 #[derive(Clone, Copy)]
 enum Tone {
     Error,
     Success,
-    Info,
 }
 
 /// What floats above the board. At most one is open; while one is, typing goes to it, not the board.
@@ -78,8 +81,14 @@ pub struct WordleApp {
     game: Game,
     /// The letters of the Guess being typed, not yet submitted.
     typed: String,
-    /// Shown under the board, in a colour: a refused Guess, a cheer, or the Answer after a Loss.
+    /// Shown under the board, in a colour: a refused Guess, a cheer, or "Out of guesses" after a Loss.
     message: Option<(String, Tone)>,
+    /// A short note that confirms a copy and goes away by itself (see `show_toast`).
+    toast: Option<SharedString>,
+    /// Counts toasts, so an old toast's timer can't hide a newer one.
+    toast_serial: u32,
+    /// Whether the Answer of a lost Game has been revealed. It stays hidden until clicked.
+    answer_shown: bool,
     overlay: Option<Overlay>,
     sidebar_open: bool,
     /// Whether the typed Guess's tiles show what earlier Guesses say about each letter.
@@ -98,6 +107,9 @@ impl WordleApp {
             game,
             typed: String::new(),
             message: None,
+            toast: None,
+            toast_serial: 0,
+            answer_shown: false,
             overlay: None,
             sidebar_open: false,
             live_hints: false,
@@ -112,8 +124,32 @@ impl WordleApp {
         match tone {
             Tone::Error => self.theme.error,
             Tone::Success => self.theme.success,
-            Tone::Info => self.theme.subtle,
         }
+    }
+
+    /// Put `text` on the clipboard and say so in a toast.
+    fn copy(&mut self, text: String, confirmation: impl Into<SharedString>, cx: &mut Context<Self>) {
+        cx.write_to_clipboard(ClipboardItem::new_string(text));
+        self.show_toast(confirmation, cx);
+    }
+
+    /// Show a note for `TOAST_TIME`, then hide it.
+    fn show_toast(&mut self, text: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.toast_serial += 1;
+        let serial = self.toast_serial;
+        self.toast = Some(text.into());
+        cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(TOAST_TIME).await;
+            this.update(cx, |this, cx| {
+                if this.toast_serial == serial {
+                    this.toast = None;
+                    cx.notify();
+                }
+            })
+            .ok();
+        })
+        .detach();
+        cx.notify();
     }
 
     /// Close whatever is open, and open `overlay` instead.
@@ -160,13 +196,10 @@ impl WordleApp {
             Command::PlaySeed => self.overlay = Some(Overlay::Menu { seed: Some(SeedField::default()) }),
             Command::CopySeed => {
                 self.dismiss(cx);
-                self.message = Some(match self.game.seed {
-                    Some(seed) => {
-                        cx.write_to_clipboard(ClipboardItem::new_string(seed.to_string()));
-                        (format!("Copied seed {seed}"), Tone::Info)
-                    }
-                    None => ("This Game has a chosen Answer, not a Seed".into(), Tone::Info),
-                });
+                match self.game.seed {
+                    Some(seed) => self.copy(seed.to_string(), format!("Copied seed {seed}"), cx),
+                    None => self.show_toast("This game has a chosen answer, so it has no seed", cx),
+                }
             }
             Command::ToggleUnlimited => {
                 let other_limit = if self.game.is_unlimited() { Some(MAX_GUESSES) } else { None };
@@ -234,8 +267,10 @@ impl WordleApp {
     }
 
     /// Text from the clipboard, into the seed field or the palette's query, whichever shows.
-    fn paste(&mut self, cx: &mut Context<Self>) {
-        let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else { return };
+    pub(super) fn paste(&mut self, cx: &mut Context<Self>) {
+        let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else {
+            return self.show_toast("The clipboard has no text to paste", cx);
+        };
         match self.overlay.as_mut() {
             Some(Overlay::Palette(palette)) => palette.paste(&text),
             Some(Overlay::Menu { seed: Some(field) }) => field.paste(&text),
@@ -278,7 +313,7 @@ impl WordleApp {
                     let cheer = CHEERS.get(self.game.guesses().len() - 1).unwrap_or(&"Got there!");
                     Some((cheer.to_string(), Tone::Success))
                 } else if self.game.is_lost() {
-                    Some((format!("The answer was {}", self.game.answer().to_uppercase()), Tone::Error))
+                    Some(("Out of guesses".into(), Tone::Error))
                 } else {
                     None
                 };
@@ -296,45 +331,92 @@ impl WordleApp {
         self.game = game;
         self.typed.clear();
         self.message = None;
+        self.answer_shown = false;
         self.selected_word = None;
         self.dismiss(cx);
     }
 
     /// The command that plays this same Answer again.
-    fn replay_hint(&self) -> String {
+    fn replay_command(&self) -> String {
         let pick = match self.game.seed {
             Some(seed) => format!("--seed {seed}"),
             None => format!("--answer {}", self.game.answer()),
         };
         let unlimited = if self.game.is_unlimited() { " --unlimited" } else { "" };
-        format!("Replay: just wordle-gpui {pick}{unlimited}")
+        format!("just wordle-gpui {pick}{unlimited}")
     }
 
-    /// Shown once the Game is over: share it, play the same Answer again, or start a new Game.
+    /// Under the board once the Game is over: how it ended, and the command that replays it (click to copy).
+    fn render_footer(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        let mut footer = div().flex().flex_col().items_center().gap_1().h(px(76.));
+        if let Some((message, tone)) = &self.message {
+            footer = footer.child(div().text_color(rgb(self.tone_colour(*tone))).font_weight(FontWeight::BOLD).child(message.clone()));
+        }
+        if self.game.is_lost() {
+            footer = footer.child(if self.answer_shown {
+                div().text_color(rgb(t.text)).child(format!("The answer was {}", self.game.answer().to_uppercase()))
+            } else {
+                div().child(widgets::small_button(t, "show-answer", "Show the answer").on_click(cx.listener(|this, _, _, cx| {
+                    this.answer_shown = true;
+                    cx.notify();
+                })))
+            });
+        }
+        if self.game.is_over() {
+            footer = footer.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1p5()
+                    .text_xs()
+                    .text_color(rgb(t.muted))
+                    .child("Play it again:")
+                    .child(widgets::small_button(t, "copy-replay", self.replay_command()).on_click(cx.listener(|this, _, _, cx| {
+                        this.copy(this.replay_command(), "Copied the replay command", cx);
+                    }))),
+            );
+        }
+        footer
+    }
+
+    /// Shown once the Game is over: copy the result, try the same word again, or play a new word.
     fn render_end_buttons(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         div().h(px(32.)).flex().gap_2().when(self.game.is_over(), |area| {
-            area.child(widgets::button(t, "share", "Copy share grid").on_click(cx.listener(|this, _, _, cx| {
-                cx.write_to_clipboard(ClipboardItem::new_string(this.game.share_grid()));
-                this.message = Some(("Copied to the clipboard".into(), Tone::Info));
-                cx.notify();
-            })))
-            .child(widgets::button(t, "restart", "Restart game").on_click(cx.listener(|this, _, window, cx| this.run(Command::Restart, window, cx))))
-            .child(widgets::button(t, "new-game", "New game").on_click(cx.listener(|this, _, window, cx| this.run(Command::Reset, window, cx))))
+            area.child(
+                widgets::button(t, "share", "Copy results")
+                    .on_click(cx.listener(|this, _, _, cx| this.copy(this.game.share_grid(), "Copied your results. Paste them to share.", cx))),
+            )
+            .child(widgets::button(t, "restart", "Try this word again").on_click(cx.listener(|this, _, window, cx| this.run(Command::Restart, window, cx))))
+            .child(widgets::button(t, "new-game", "Play a new word").on_click(cx.listener(|this, _, window, cx| this.run(Command::Reset, window, cx))))
+        })
+    }
+
+    /// The toast, near the bottom of the window just above the status bar.
+    fn render_toast(&self) -> impl IntoElement {
+        let t = self.theme;
+        div().absolute().left_0().right_0().bottom(px(40.)).flex().justify_center().when_some(self.toast.clone(), |row, text| {
+            row.child(
+                div()
+                    .px_3()
+                    .py_1p5()
+                    .rounded_md()
+                    .bg(rgb(t.overlay))
+                    .border_1()
+                    .border_color(rgb(t.highlight_med))
+                    .shadow_lg()
+                    .text_sm()
+                    .text_color(rgb(t.text))
+                    .child(text),
+            )
         })
     }
 }
 
 impl Render for WordleApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let mut footer = div().flex().flex_col().items_center().gap_1().h(px(44.));
         let t = self.theme;
-        if let Some((message, tone)) = &self.message {
-            footer = footer.child(div().text_color(rgb(self.tone_colour(*tone))).font_weight(FontWeight::BOLD).child(message.clone()));
-        }
-        if self.game.is_over() {
-            footer = footer.child(div().text_xs().text_color(rgb(t.muted)).child(self.replay_hint()));
-        }
 
         div()
             .track_focus(&self.focus_handle)
@@ -368,12 +450,13 @@ impl Render for WordleApp {
                     .p_4()
                     .child(div().text_3xl().font_weight(FontWeight::BOLD).text_color(rgb(t.heading)).child("WORDLE"))
                     .child(self.render_board())
-                    .child(footer)
+                    .child(self.render_footer(cx))
                     .child(self.render_keyboard(cx))
                     .child(self.render_end_buttons(cx)),
                 ),
             )
             .child(self.render_status_bar(cx))
+            .child(self.render_toast())
             // While anything is open, a click anywhere else closes it (it draws above this).
             // Closing the theme picker this way puts the old theme back.
             .when(self.overlay.is_some(), |root| {

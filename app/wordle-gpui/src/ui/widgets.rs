@@ -1,6 +1,7 @@
 //! Small pieces shared by the menu, the command palette and the theme picker.
 
 use gpui::{Div, ElementId, SharedString, Stateful, div, prelude::*, px, rgb};
+use gpui_base::Button;
 
 use crate::theme::Theme;
 
@@ -68,10 +69,13 @@ pub fn menu_item(t: &Theme, id: impl Into<ElementId>, label: &'static str, hint:
         )
 }
 
-pub fn button(t: &Theme, id: &'static str, label: &'static str) -> Stateful<Div> {
+/// A bordered button. The kit's `Button` is unstyled, so the theme's colours are applied here.
+/// It doesn't take keyboard focus, so typing keeps going to the board after a click.
+pub fn button(t: &Theme, id: impl Into<ElementId>, label: impl Into<SharedString>) -> Button {
     let hover = t.highlight_high;
-    div()
-        .id(id)
+    Button::new(id)
+        .focusable(false)
+        .tab_stop(false)
         .px_3()
         .py_1p5()
         .rounded_md()
@@ -82,5 +86,10 @@ pub fn button(t: &Theme, id: &'static str, label: &'static str) -> Stateful<Div>
         .text_sm()
         .cursor_pointer()
         .hover(move |style| style.bg(rgb(hover)))
-        .child(label)
+        .child(label.into())
+}
+
+/// A smaller `button`, for actions that sit inside a line of text.
+pub fn small_button(t: &Theme, id: impl Into<ElementId>, label: impl Into<SharedString>) -> Button {
+    button(t, id, label).px_2().py_0p5().text_xs()
 }

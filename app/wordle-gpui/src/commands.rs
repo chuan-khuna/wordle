@@ -31,8 +31,8 @@ impl Command {
 
     pub fn label(self) -> &'static str {
         match self {
-            Command::Reset => "Reset game",
-            Command::Restart => "Restart game",
+            Command::Reset => "Play a new word",
+            Command::Restart => "Try this word again",
             Command::PlaySeed => "Play a seed…",
             Command::CopySeed => "Copy seed",
             Command::ToggleUnlimited => "Unlimited guesses",
@@ -200,7 +200,7 @@ mod tests {
     #[test]
     fn search_filters_by_label() {
         assert_eq!(Command::search("theme"), [Command::ChangeTheme]);
-        assert_eq!(Command::search("game"), [Command::Reset, Command::Restart]);
+        assert_eq!(Command::search("word"), [Command::Reset, Command::Restart]);
         assert_eq!(Command::search("").len(), Command::ALL.len());
     }
 
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn typing_selects_the_first_match_and_up_wraps() {
         let mut palette = CommandPalette::default();
-        type_text(&mut palette, "game");
+        type_text(&mut palette, "word");
         palette.press("up", None);
         assert_eq!(palette.press("enter", None), Outcome::Run(Command::Restart));
     }

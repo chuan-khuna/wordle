@@ -7,7 +7,7 @@ mod search;
 mod theme;
 mod ui;
 
-use gpui::{App, Application, Bounds, WindowBounds, WindowOptions, prelude::*, px, size};
+use gpui::{App, Bounds, WindowBounds, WindowOptions, prelude::*, px, size};
 
 use args::Args;
 use ui::{WordleApp, title_bar};
@@ -21,9 +21,9 @@ fn main() {
         }
     };
 
-    Application::new().run(move |cx: &mut App| {
+    gpui_platform::application().run(move |cx: &mut App| {
         ui::bind_keys(cx);
-        cx.on_window_closed(|cx| cx.quit()).detach();
+        cx.on_window_closed(|cx, _| cx.quit()).detach();
 
         let bounds = Bounds::centered(None, size(px(520.), px(880.)), cx);
         cx.open_window(
@@ -35,7 +35,7 @@ fn main() {
             |window, cx| {
                 cx.new(|cx| {
                     let app = WordleApp::new(game, cx);
-                    window.focus(&app.focus_handle);
+                    window.focus(&app.focus_handle, cx);
                     app
                 })
             },

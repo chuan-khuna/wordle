@@ -1,9 +1,9 @@
 //! The hamburger in the title bar and the settings menu that hangs from it. Its rows are
 //! `Command`s, drawn by `command_row`, which the command palette uses too.
 
-use gpui::{AnyElement, Context, Corner, Div, ElementId, FontWeight, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
+use gpui::{Anchor, AnyElement, Context, Div, ElementId, FontWeight, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
 
-use super::widgets::{caret, menu_item, panel, separator};
+use super::widgets::{caret, menu_item, panel, separator, small_button};
 use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
 use crate::commands::{Command, SeedField};
 use crate::theme::Theme;
@@ -12,7 +12,7 @@ impl WordleApp {
     /// The dim line under a command's label.
     fn hint(&self, command: Command) -> SharedString {
         match command {
-            Command::Reset => "Pick a new Answer".into(),
+            Command::Reset => "A new random Answer".into(),
             Command::Restart => match self.game.seed {
                 Some(seed) => format!("Same Answer, seed {seed}").into(),
                 None => "Same Answer".into(),
@@ -22,7 +22,7 @@ impl WordleApp {
                 Some(seed) => format!("{seed}, to the clipboard").into(),
                 None => "No Seed: the Answer was chosen".into(),
             },
-            Command::ToggleUnlimited => "Starts a new game".into(),
+            Command::ToggleUnlimited => "Starts a new word".into(),
             Command::ToggleLiveHints => "Colour typed letters by earlier Guesses".into(),
             Command::ToggleSidebar => format!("Guesses and their meanings · {}", SIDEBAR_SHORTCUT.label()).into(),
             Command::ChangeTheme => self.theme.name.into(),
@@ -70,7 +70,7 @@ impl WordleApp {
                     .when(menu_seed.is_some(), |button| button.bg(rgb(overlay)))
                     .hover(move |style| style.bg(rgb(overlay)))
                     .on_click(cx.listener(|this, _, window, cx| {
-                        window.focus(&this.focus_handle);
+                        window.focus(&this.focus_handle, cx);
                         this.toggle_menu(cx);
                     }))
                     .child(bars),
@@ -81,7 +81,7 @@ impl WordleApp {
                         .absolute()
                         .top_full()
                         .right_0()
-                        .child(deferred(anchored().anchor(Corner::TopRight).snap_to_window().child(self.render_menu(seed, cx)))),
+                        .child(deferred(anchored().anchor(Anchor::TopRight).snap_to_window().child(self.render_menu(seed, cx)))),
                 )
             })
             .into_any_element()
@@ -95,7 +95,7 @@ impl WordleApp {
                 menu = menu.child(separator(t));
             }
             menu = match (command, seed) {
-                (Command::PlaySeed, Some(field)) => menu.child(seed_field(t, field)),
+                (Command::PlaySeed, Some(field)) => menu.child(seed_field(t, field, cx)),
                 _ => menu.child(
                     self.command_row(command, SharedString::from(format!("menu-{index}")))
                         .on_click(cx.listener(move |this, _, window, cx| this.run(command, window, cx))),
@@ -121,14 +121,21 @@ fn check(t: &Theme, on: bool) -> impl IntoElement {
 }
 
 /// The seed field that replaces "Play a seed…" in the menu: the digits typed so far and a caret.
-fn seed_field(t: &Theme, field: &SeedField) -> impl IntoElement {
+fn seed_field(t: &Theme, field: &SeedField, cx: &mut Context<WordleApp>) -> impl IntoElement {
     div()
         .flex()
         .flex_col()
         .gap_1()
         .px_2()
         .py_1()
-        .child(div().text_sm().text_color(rgb(t.text)).child("Play a seed"))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(div().text_sm().text_color(rgb(t.text)).child("Play a seed"))
+                .child(paste_seed_button(t, cx)),
+        )
         .child(
             div()
                 .flex()
@@ -147,3 +154,8 @@ fn seed_field(t: &Theme, field: &SeedField) -> impl IntoElement {
         .child(div().text_xs().text_color(rgb(t.muted)).child(field.hint()))
 }
 
+
+/// Fills the seed field from the clipboard (its digits, as `SeedField::paste` keeps them).
+pub(super) fn paste_seed_button(t: &Theme, cx: &mut Context<WordleApp>) -> impl IntoElement {
+    small_button(t, "paste-seed", "Paste seed").on_click(cx.listener(|this, _, _, cx| this.paste(cx)))
+}

@@ -62,7 +62,7 @@ impl WordleApp {
             });
             words = words.child(self.word_row(&guess.word, tiles.collect(), None, cx));
         }
-        if self.game.is_lost() {
+        if self.game.is_lost() && self.answer_shown {
             let answer = self.game.answer();
             let tiles = answer.chars().map(|letter| mini_tile(letter, t.surface, t.highlight_med, t.text)).collect();
             words = words.child(self.word_row(answer, tiles, Some("Answer"), cx));

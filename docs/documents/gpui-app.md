@@ -14,7 +14,7 @@ From the repo root:
 | `just wordle-gpui --unlimited` | No Guess Limit |
 | `just test-gpui` | `cargo test` for the crate |
 
-It needs Rust 1.89 or newer (a dependency, `uuid`, requires it); `rustup update stable` gets one.
+It needs Rust 1.89 or newer (a dependency, `uuid`, requires it; the buttons come from gpui-kit's `gpui-base`); `rustup update stable` gets one.
 
 The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `windows-shell` to PowerShell, so they work on Windows too.
 
@@ -22,7 +22,7 @@ The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `wi
 
 ```
 app/wordle-gpui/
-  Cargo.toml          gpui 0.2.2 (`runtime_shaders`), ureq and scraper for the dictionary
+  Cargo.toml          gpui-pre (gpui, as gpui-kit builds on it), gpui-base (the Button), ureq and scraper for the dictionary
   data/               answers.txt, guesses.txt, SOURCES.md (copied from packages/wordle)
   src/
     lib.rs            the library: `pub mod rules`, usable from tests with no window
@@ -51,7 +51,7 @@ app/wordle-gpui/
       menu.rs         the hamburger and the settings menu, and the command rows both lists draw
       palette.rs      the command palette
       theme_picker.rs the theme picker
-      widgets.rs      panel, query field, menu row, button
+      widgets.rs      panel, query field, menu row, button (gpui-base `Button`, themed)
 ```
 
 Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`, `rules/`, the dictionary's parsing) has unit tests. The `ui/` modules each add `impl WordleApp` blocks that draw one part of the window.
@@ -69,15 +69,16 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 - The keyboard colours each letter by the best Mark seen for it (Correct beats Present beats Absent).
 - The title bar holds only the hamburger (and the window buttons).
 - The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
-- After a Win or Loss: a cheer or the Answer, the `just wordle-gpui ...` command that replays the Game, and three buttons: **Copy share grid**, **Restart game** (the same Answer again, as the menu's Restart game) and **New game** (a new random Answer, as the menu's Reset game).
+- After a Win or Loss: a cheer, or "Out of guesses" with a **Show the answer** button (the Answer stays hidden until clicked, here and in the sidebar); the `just wordle-gpui ...` command that replays the Game, which copies itself when clicked; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
+- Copying (the seed, the results, the replay command) shows a toast that hides itself after 2 seconds.
 
 ## Settings menu
 
 The hamburger at the right of the title bar opens a menu. Its rows are the `Command`s in `commands.rs`, so the menu and the command palette always offer the same things:
 
-- **Reset game:** a new random Answer, keeping the Guess Limit.
-- **Restart game:** the same Game from the start (`Game::restart()`): the same Answer, Seed and Guess Limit, with no Guesses. Works for a chosen Answer (`--answer`) too.
-- **Play a seed…:** turns into a seed field. Type or paste (⌘V, Ctrl+V) up to six digits (any number from 0 to 999,999; pasting keeps only the digits), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. It picks the same Answer as `just wordle --seed N`.
+- **Play a new word:** a new random Answer, keeping the Guess Limit.
+- **Try this word again:** the same Game from the start (`Game::restart()`): the same Answer, Seed and Guess Limit, with no Guesses. Works for a chosen Answer (`--answer`) too.
+- **Play a seed…:** turns into a seed field. Type or paste (⌘V, Ctrl+V) up to six digits (any number from 0 to 999,999; pasting keeps only the digits), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. A **Paste seed** button beside it does the same as the paste shortcut. It picks the same Answer as `just wordle --seed N`.
 - **Copy seed:** copies the Seed's number to the clipboard. A Game with a chosen Answer has no Seed, so it says so instead.
 - **Unlimited guesses:** ticked when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
 - **Live hints:** ticked when on (see below).
@@ -94,7 +95,7 @@ While the menu is open, typing doesn't reach the board. Escape or a click anywhe
 
 - Type to filter by label, with the same loose matching as the theme picker (`ul` finds Unlimited guesses).
 - Up and Down move, Enter or a click runs the highlighted command, Escape or a click outside closes it. The shortcut again closes it too.
-- **Play a seed…** turns the search field into a seed field: digits, Enter to play, Escape back to the list.
+- **Play a seed…** turns the search field into a seed field: digits, Enter to play, Escape back to the list, and a **Paste seed** button.
 - ⌘V (Ctrl+V) pastes into the search field, or the seed field while it shows.
 
 Only one of the menu, the palette and the theme picker is open at a time (`Overlay` in `ui/mod.rs`); opening one closes the others.

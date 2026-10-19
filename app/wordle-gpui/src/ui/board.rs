@@ -94,7 +94,7 @@ impl WordleApp {
             .cursor_pointer()
             .hover(|style| style.opacity(0.85))
             .on_click(cx.listener(move |this, _, window, cx| {
-                window.focus(&this.focus_handle);
+                window.focus(&this.focus_handle, cx);
                 this.press(&key, cx);
             }))
             .child(label)
