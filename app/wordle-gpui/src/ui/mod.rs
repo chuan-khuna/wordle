@@ -389,6 +389,8 @@ impl WordleApp {
                 div()
                     .flex()
                     .gap_2()
+                    .flex_wrap()
+                    .justify_center()
                     .child(
                         widgets::button(t, "share", "Copy results")
                             .on_click(cx.listener(|this, _, _, cx| this.copy(this.game.share_grid(), "Copied your results. Paste them to share.", cx))),
@@ -448,7 +450,8 @@ impl Render for WordleApp {
                 div().flex().flex_1().min_h_0().px_2().pb_1().when(self.sidebar_open, |row| row.child(self.render_sidebar(cx)).child(self.render_sidebar_handle(cx))).child(
                 div()
                     .flex_1()
-                    .min_h_0()
+                    .min_h(px(770.))
+                    .min_w(px(440.))
                     .rounded_xl()
                     .bg(rgb(t.surface))
                     .flex()
