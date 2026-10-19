@@ -9,24 +9,30 @@ How the playable game in `packages/wordle/src/wordle/cli.py` works. It uses [que
    - 🤫 **Choose the word (for a friend)**: typed in a password prompt so it stays hidden; must be on the Answer List
    - 🔁 **Replay with a seed**: same seed, same Answer
    - 👋 **Quit**
-2. **Play** (`play`): the screen is cleared and redrawn after every Guess. The Guess prompt validates as you type using `Game.check_guess`, so a refused word never reaches the Game.
-3. **End:** a message (🎉 "Genius!" … "Phew!" by Guess count, or 😵 with the Answer), then the emoji share grid, then **Play again?**
 
-`--answer WORD` or `--seed N` on the command line skip the menu for the first Game.
+   Then **How many guesses?**: 🟩 Classic (6) or ♾️ Unlimited (practice).
+2. **Play** (`play`): the screen is cleared and redrawn after every Guess. The Guess prompt validates as you type using `Game.check_guess`, so a refused word never reaches the Game.
+3. **End:** a message (🎉 "Genius!" … "Phew!" by Guess count, "Got there!" after more than six, or 😵 with the Answer), the emoji share grid, a **Replay** command, then **Play again?**
+
+`--answer WORD` or `--seed N` on the command line skip the menu for the first Game; add `--unlimited` for no Guess Limit.
+
+## Replaying a Game
+
+Every random Game shows its Seed in the panel's subtitle, and every Game ends (or gives up) with the command that replays it, e.g. `Replay: uv run src/main.py --seed 36293`. A Game with a chosen word has no Seed, so its replay command uses `--answer` (shown only after the Answer is revealed).
 
 ## Screen
 
-Drawn inside a rich `Panel` titled **W O R D L E**, with the Guesses left in the subtitle:
+Drawn inside a rich `Panel` titled **W O R D L E**. The subtitle (`status_line`) shows the Guesses left (or `guess N · no limit`) and the Seed:
 
-- **Board** (`draw_board`): six rows of five tiles. Played rows show the letters coloured by their Mark; the rest are empty grey tiles.
+- **Board** (`draw_board`): played rows show the letters coloured by their Mark. Below them are empty rows up to the Guess Limit, or a single empty row in an unlimited Game, so the board grows as you guess.
 - **Keyboard** (`draw_keyboard`): QWERTY rows. Each key takes the best Mark known for that letter (`best_marks`: Correct beats Present beats Absent); unused keys are light grey.
-- **Share grid** (`share_grid`): `Wordle 3/6` (or `X/6`) and 🟩🟨⬛ rows, printed under the panel.
+- **Share grid** (`share_grid`): `Wordle 3/6` (or `X/6`, or `9/∞` in an unlimited Game) and 🟩🟨⬛ rows, printed under the panel.
 
 Colours match the real Wordle: green `#6aaa64`, yellow `#c9b458`, grey `#787c7e`.
 
 ## Quitting
 
-Ctrl-C at the Guess prompt gives up and shows the Answer. Ctrl-C or "No" at **Play again?** quits.
+Ctrl-C at the Guess prompt gives up and shows the Answer and the replay command. In an unlimited Game this is the only way out without winning. Ctrl-C or "No" at **Play again?** quits.
 
 ## Testing it without a keyboard
 

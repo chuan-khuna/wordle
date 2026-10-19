@@ -13,7 +13,8 @@ It's built to make content as well as to play. Every game, guess and solver deci
 - Guess a hidden 5-letter word in six tries, on a coloured board with an on-screen keyboard that tracks every letter.
 - Pick how to play from a menu, have a friend type a hidden word, and get a 🟩🟨⬛ share grid at the end.
 - Each letter is coloured after a guess: green (right letter, right spot), yellow (in the word, wrong spot), grey (not in the word).
-- Pick a random Answer, a fixed one (`--answer`), or a seeded random one (`--seed`), so a game can be replayed exactly for a recording.
+- Every random game shows its seed, and every game ends with the command to replay it (`--seed`, or `--answer` for a chosen word), handy for re-recording a take.
+- Play classic (six guesses) or unlimited (`--unlimited`), to keep guessing until you find it.
 - Uses the original Wordle Answer List (2,315 words) and the NYT Guess List (14,855 words). See `packages/wordle/src/wordle/data/SOURCES.md`.
 
 ### Solve *(planned)*
@@ -37,7 +38,8 @@ git clone <repo-url> wordle
 cd wordle
 uv run src/main.py             # random Answer (same as `uv run wordle`)
 uv run wordle --answer crane   # fixed Answer
-uv run wordle --seed 7         # replayable random Answer
+uv run wordle --seed 7         # replay the Answer for seed 7
+uv run wordle --unlimited      # no guess limit
 uv run pytest                  # run every package's tests
 ```
 

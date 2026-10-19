@@ -49,7 +49,7 @@ Keeping the screen code out of `game.py` means the Solver and Benchmark can play
 | `uv run pytest` | Run the tests of every package |
 | `uv build --package wordle` | Build a wheel; it includes the word lists |
 
-All three game commands take `--answer WORD` or `--seed N` to skip the menu.
+All three game commands take `--answer WORD` or `--seed N` to skip the menu, and `--unlimited` for no Guess Limit.
 
 ## Dependencies
 

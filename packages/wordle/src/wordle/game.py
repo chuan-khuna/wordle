@@ -27,7 +27,7 @@ RESET = "\033[0m"
 @dataclass(frozen=True)
 class Guess:
     number: int
-    """Which Guess of the Game this is, from 1 to 6."""
+    """Which Guess of the Game this is, counting from 1."""
     word: str
     feedback: Feedback
 
@@ -66,30 +66,58 @@ class State:
     __str__ = render
 
 
+MAX_SEED = 999_999
+
+
 @dataclass
 class Game:
     answer: str
     word_lists: WordLists = field(default_factory=load_word_lists, repr=False)
+    max_guesses: int | None = MAX_GUESSES
+    """The Guess Limit. None means unlimited: the Game only ends with a Win."""
+    seed: int | None = None
+    """The Seed that picked this Answer, if it was picked at random."""
     _state: State = field(default_factory=State, init=False)
 
     def __post_init__(self) -> None:
         self.answer = self.answer.strip().lower()
         if self.answer not in self.word_lists.answers:
             raise ValueError(f"{self.answer!r} is not on the Answer List")
+        if self.max_guesses is not None and self.max_guesses < 1:
+            raise ValueError("max_guesses must be at least 1, or None for unlimited")
 
     @classmethod
-    def random(cls, rng: random.Random | None = None, word_lists: WordLists | None = None) -> "Game":
+    def random(
+        cls,
+        seed: int | None = None,
+        *,
+        max_guesses: int | None = MAX_GUESSES,
+        word_lists: WordLists | None = None,
+    ) -> "Game":
+        """A Game with an Answer picked by `seed`. The same seed always picks the same Answer.
+
+        Without a seed, one is chosen at random and kept in `game.seed`, so the Game can be replayed.
+        """
         word_lists = word_lists or load_word_lists()
-        answer = (rng or random.Random()).choice(word_lists.answers)
-        return cls(answer, word_lists)
+        if seed is None:
+            seed = random.randint(0, MAX_SEED)
+        answer = random.Random(seed).choice(word_lists.answers)
+        return cls(answer, word_lists, max_guesses=max_guesses, seed=seed)
 
     @property
     def state(self) -> State:
         return self._state
 
     @property
-    def guesses_left(self) -> int:
-        return MAX_GUESSES - len(self._state)
+    def is_unlimited(self) -> bool:
+        return self.max_guesses is None
+
+    @property
+    def guesses_left(self) -> int | None:
+        """How many Guesses are left, or None if the Game has no Guess Limit."""
+        if self.max_guesses is None:
+            return None
+        return self.max_guesses - len(self._state)
 
     @property
     def is_won(self) -> bool:

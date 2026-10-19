@@ -1,7 +1,6 @@
 """The terminal game: menus with questionary, the board and keyboard drawn with rich."""
 
 import argparse
-import random
 
 import questionary
 from rich.align import Align
@@ -10,7 +9,7 @@ from rich.panel import Panel
 from rich.text import Text
 
 from wordle.feedback import Mark
-from wordle.game import MAX_GUESSES, Game, InvalidGuess, State
+from wordle.game import MAX_GUESSES, MAX_SEED, Game, InvalidGuess, State
 from wordle.words import WORD_LENGTH, load_word_lists
 
 console = Console()
@@ -25,19 +24,26 @@ EMPTY_TILE_STYLE = "on grey23"
 UNUSED_KEY_STYLE = "bold black on #d3d6da"
 SHARE_SQUARES = {Mark.CORRECT: "🟩", Mark.PRESENT: "🟨", Mark.ABSENT: "⬛"}
 KEYBOARD_ROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
+CHEERS = ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"]
 
 RANDOM, CHOOSE, SEED, QUIT = "🎲 Random word", "🤫 Choose the word (for a friend)", "🔁 Replay with a seed", "👋 Quit"
+CLASSIC, UNLIMITED = f"🟩 Classic: {MAX_GUESSES} guesses", "♾️  Unlimited guesses (practice)"
 
 
-def draw_board(state: State) -> Text:
-    """Six rows of tiles: the Guesses so far, then empty rows."""
+def draw_board(game: Game) -> Text:
+    """The Guesses so far, then empty rows: up to the Guess Limit, or just one in an unlimited Game."""
     board = Text()
-    for guess in state:
+    for guess in game.state:
         for letter, mark in zip(guess.word, guess.feedback):
             board.append(f" {letter.upper()} ", style=TILE_STYLES[mark])
             board.append(" ")
         board.append("\n\n")
-    for _ in range(MAX_GUESSES - len(state)):
+
+    if game.is_unlimited:
+        empty_rows = 0 if game.is_won else 1
+    else:
+        empty_rows = game.guesses_left
+    for _ in range(empty_rows):
         for _ in range(WORD_LENGTH):
             board.append("   ", style=EMPTY_TILE_STYLE)
             board.append(" ")
@@ -68,21 +74,40 @@ def draw_keyboard(state: State) -> Text:
     return keyboard
 
 
+def status_line(game: Game) -> str:
+    """Shown under the board: Guesses left (or the Guess count when unlimited), and the Seed."""
+    if game.is_unlimited:
+        parts = [f"guess {len(game.state)} · no limit"]
+    else:
+        parts = [f"{game.guesses_left} guesses left"]
+    if game.seed is not None:
+        parts.append(f"seed {game.seed}")
+    return " · ".join(parts)
+
+
 def show(game: Game, message: str = "") -> None:
     console.clear()
     screen = Group(
-        Align.center(draw_board(game.state)),
+        Align.center(draw_board(game)),
         Align.center(draw_keyboard(game.state)),
         Align.center(Text(message, style="bold")),
     )
-    console.print(Panel(screen, title="[bold]W O R D L E[/]", subtitle=f"{game.guesses_left} guesses left", width=48))
+    console.print(Panel(screen, title="[bold]W O R D L E[/]", subtitle=status_line(game), width=48))
 
 
 def share_grid(game: Game) -> str:
     """The emoji grid people paste into chats, like the real Wordle's Share button."""
     score = len(game.state) if game.is_won else "X"
+    limit = "∞" if game.is_unlimited else game.max_guesses
     rows = ["".join(SHARE_SQUARES[mark] for mark in guess.feedback) for guess in game.state]
-    return f"Wordle {score}/{MAX_GUESSES}\n\n" + "\n".join(rows)
+    return f"Wordle {score}/{limit}\n\n" + "\n".join(rows)
+
+
+def replay_hint(game: Game) -> str:
+    """The command that plays this same Answer again."""
+    pick = f"--seed {game.seed}" if game.seed is not None else f"--answer {game.answer}"
+    unlimited = " --unlimited" if game.is_unlimited else ""
+    return f"Replay: uv run src/main.py {pick}{unlimited}"
 
 
 def play(game: Game) -> None:
@@ -100,47 +125,74 @@ def play(game: Game) -> None:
         word = questionary.text(f"Guess {len(game.state) + 1}:", validate=validate, qmark="✏️").ask()
         if word is None:  # Ctrl-C
             show(game, f"Gave up. The answer was {game.answer.upper()}.")
+            console.print(replay_hint(game), style="dim")
             return
         game.guess(word)
         show(game)
 
     if game.is_won:
-        cheers = ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"]
-        show(game, f"🎉 {cheers[len(game.state) - 1]}")
+        guesses = len(game.state)
+        cheer = CHEERS[guesses - 1] if guesses <= len(CHEERS) else "Got there!"
+        show(game, f"🎉 {cheer}")
     else:
         show(game, f"😵 The answer was {game.answer.upper()}")
     console.print(share_grid(game))
+    console.print(replay_hint(game), style="dim")
+
+
+def ask_for_guess_limit() -> int | None | bool:
+    """Classic six Guesses or unlimited. False means the player cancelled."""
+    choice = questionary.select("How many guesses?", choices=[CLASSIC, UNLIMITED]).ask()
+    if choice is None:
+        return False
+    return None if choice == UNLIMITED else MAX_GUESSES
 
 
 def ask_for_game() -> Game | None:
     """Ask how to pick the Answer for the next Game. None means quit."""
     choice = questionary.select("How do you want to play?", choices=[RANDOM, CHOOSE, SEED, QUIT]).ask()
-    if choice == RANDOM:
-        return Game.random()
+    if choice in (None, QUIT):
+        return None
+
+    answer = seed = None
     if choice == CHOOSE:
         answers = set(load_word_lists().answers)
-        word = questionary.password(
+        answer = questionary.password(
             "Type the answer (it stays hidden):",
             validate=lambda w: w.strip().lower() in answers or "That word isn't on the Answer List",
         ).ask()
-        return Game(word) if word else None
-    if choice == SEED:
-        seed = questionary.text("Seed number:", validate=lambda s: s.strip().isdigit() or "Type a whole number").ask()
-        return Game.random(random.Random(int(seed))) if seed else None
-    return None
+        if answer is None:
+            return None
+    elif choice == SEED:
+        text = questionary.text(
+            "Seed number:",
+            validate=lambda s: (s.strip().isdigit() and int(s) <= MAX_SEED) or f"Type a whole number from 0 to {MAX_SEED}",
+        ).ask()
+        if text is None:
+            return None
+        seed = int(text)
+
+    max_guesses = ask_for_guess_limit()
+    if max_guesses is False:
+        return None
+    if answer is not None:
+        return Game(answer, max_guesses=max_guesses)
+    return Game.random(seed, max_guesses=max_guesses)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="wordle", description="Play Wordle in the terminal.")
     parser.add_argument("--answer", help="play with this Answer instead of a random one")
-    parser.add_argument("--seed", type=int, help="seed for picking a random Answer, to replay a Game")
+    parser.add_argument("--seed", type=int, help="replay the Answer picked by this seed (shown during every game)")
+    parser.add_argument("--unlimited", action="store_true", help="no Guess Limit: keep guessing until you win")
     args = parser.parse_args()
 
+    max_guesses = None if args.unlimited else MAX_GUESSES
     # --answer or --seed skip the menu for the first Game.
     if args.answer:
-        game = Game(args.answer)
+        game = Game(args.answer, max_guesses=max_guesses)
     elif args.seed is not None:
-        game = Game.random(random.Random(args.seed))
+        game = Game.random(args.seed, max_guesses=max_guesses)
     else:
         console.clear()
         game = ask_for_game()

@@ -1,5 +1,3 @@
-import random
-
 import pytest
 
 from wordle.feedback import Mark
@@ -62,7 +60,40 @@ def test_answer_must_be_on_answer_list():
 
 
 def test_random_game_is_reproducible_with_a_seed():
-    assert Game.random(random.Random(42)).answer == Game.random(random.Random(42)).answer
+    assert Game.random(42).answer == Game.random(42).answer
+    assert Game.random(42).seed == 42
+
+
+def test_random_game_without_a_seed_records_the_one_it_used():
+    game = Game.random()
+    assert game.seed is not None
+    assert Game.random(game.seed).answer == game.answer
+
+
+def test_game_with_a_chosen_answer_has_no_seed():
+    assert Game("crane").seed is None
+
+
+def test_unlimited_game_is_never_lost():
+    game = Game("crane", max_guesses=None)
+    for _ in range(50):
+        game.guess("fight")
+    assert not game.is_over and not game.is_lost
+    assert game.guesses_left is None
+    assert game.guess("crane").number == 51
+    assert game.is_won
+
+
+def test_custom_guess_limit():
+    game = Game("crane", max_guesses=2)
+    game.guess("fight")
+    game.guess("fight")
+    assert game.is_lost
+
+
+def test_guess_limit_must_be_positive():
+    with pytest.raises(ValueError):
+        Game("crane", max_guesses=0)
 
 
 def test_state_is_a_snapshot():

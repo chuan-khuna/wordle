@@ -5,8 +5,12 @@ An English, five-letter Wordle game and a solver that plays it, suggests guesses
 ## Game
 
 **Game**:
-One attempt to find a single Answer, with up to six Guesses.
+One attempt to find a single Answer, within its Guess Limit.
 _Avoid_: puzzle, session, match
+
+**Guess Limit**:
+The most Guesses a Game allows: six, as in Wordle, or none, so the Game only ends with a Win.
+_Avoid_: max tries, lives, unlimited mode
 
 **Answer**:
 The hidden word the player is trying to find.
@@ -32,11 +36,15 @@ _Avoid_: board, grid, history, progress
 The end of a Game in which a Guess matched the Answer.
 
 **Loss**:
-The end of a Game after six Guesses, none of them the Answer.
+The end of a Game that reaches its Guess Limit without a Win. A Game with no Guess Limit can't be lost.
 _Avoid_: fail
 
 **Hard Mode**:
 A rule that every Guess must reuse all the Correct and Present letters revealed so far, keeping Correct letters in place.
+
+**Seed**:
+A number that picks the Answer of a random Game. The same Seed always picks the same Answer, so a Game can be replayed.
+_Avoid_: game ID, puzzle number
 
 **Answer List**:
 The words that can be an Answer.
