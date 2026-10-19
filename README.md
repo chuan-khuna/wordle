@@ -31,7 +31,19 @@ It's built to make content as well as to play. Every game, guess and solver deci
 
 ## Getting started
 
-Requires [uv](https://docs.astral.sh/uv/). uv installs the pinned Python version (see `.python-version`) for you.
+### Prerequisites
+
+| Tool                                 | Version tested | Needed for                                                       |
+| ------------------------------------ | -------------- | ---------------------------------------------------------------- |
+| [uv](https://docs.astral.sh/uv/)     | 0.11.27        | The Python game and tests; installs the pinned Python (3.14, see `.python-version`) for you |
+| [Rust](https://rustup.rs) (cargo)    | 1.99.1         | The desktop app (edition 2024, so Rust 1.85 or newer)            |
+| [just](https://just.systems)         | 1.46.0         | The `just` recipes (optional)                                    |
+| [bun](https://bun.sh)                | 1.4.0          | Node packages, if you add any (this repo has none yet)           |
+| [npm](https://nodejs.org) (Node.js)  | 11.12.1 (Node 24.15.0) | Only where bun can't do the job                          |
+
+The Python game needs only uv. The rest are optional.
+
+### Run it
 
 ```sh
 git clone <repo-url> wordle
