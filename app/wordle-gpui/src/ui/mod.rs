@@ -24,7 +24,7 @@ use crate::theme::{self, Theme};
 use board::{BACKSPACE, ENTER};
 use sidebar::Meaning;
 
-actions!(wordle, [Quit, ToggleCommandPalette, ToggleSidebar, ToggleThemePicker]);
+actions!(wordle, [Quit, Paste, ToggleCommandPalette, ToggleSidebar, ToggleThemePicker]);
 
 const CHEERS: [&str; 6] = ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"];
 
@@ -50,6 +50,7 @@ pub const THEME_PICKER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-k second
 pub fn bind_keys(cx: &mut App) {
     cx.bind_keys([
         KeyBinding::new("secondary-q", Quit, None),
+        KeyBinding::new("secondary-v", Paste, None),
         KeyBinding::new(PALETTE_SHORTCUT.keys, ToggleCommandPalette, None),
         KeyBinding::new(SIDEBAR_SHORTCUT.keys, ToggleSidebar, None),
         KeyBinding::new(THEME_PICKER_SHORTCUT.keys, ToggleThemePicker, None),
@@ -232,6 +233,17 @@ impl WordleApp {
         cx.notify();
     }
 
+    /// Text from the clipboard, into the seed field or the palette's query, whichever shows.
+    fn paste(&mut self, cx: &mut Context<Self>) {
+        let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else { return };
+        match self.overlay.as_mut() {
+            Some(Overlay::Palette(palette)) => palette.paste(&text),
+            Some(Overlay::Menu { seed: Some(field) }) => field.paste(&text),
+            _ => return,
+        }
+        cx.notify();
+    }
+
     /// Handle one key on the board, from the real keyboard or a click on the on-screen one.
     fn press(&mut self, key: &str, cx: &mut Context<Self>) {
         if self.game.is_over() {
@@ -298,14 +310,17 @@ impl WordleApp {
         format!("Replay: just wordle-gpui {pick}{unlimited}")
     }
 
-    /// Shown once the Game is over.
-    fn render_share_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        div().h(px(32.)).when(self.game.is_over(), |area| {
-            area.child(widgets::button(self.theme, "share", "Copy share grid").on_click(cx.listener(|this, _, _, cx| {
+    /// Shown once the Game is over: share it, play the same Answer again, or start a new Game.
+    fn render_end_buttons(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        div().h(px(32.)).flex().gap_2().when(self.game.is_over(), |area| {
+            area.child(widgets::button(t, "share", "Copy share grid").on_click(cx.listener(|this, _, _, cx| {
                 cx.write_to_clipboard(ClipboardItem::new_string(this.game.share_grid()));
                 this.message = Some(("Copied to the clipboard".into(), Tone::Info));
                 cx.notify();
             })))
+            .child(widgets::button(t, "restart", "Restart game").on_click(cx.listener(|this, _, window, cx| this.run(Command::Restart, window, cx))))
+            .child(widgets::button(t, "new-game", "New game").on_click(cx.listener(|this, _, window, cx| this.run(Command::Reset, window, cx))))
         })
     }
 }
@@ -323,6 +338,7 @@ impl Render for WordleApp {
 
         div()
             .track_focus(&self.focus_handle)
+            .on_action(cx.listener(|this, _: &Paste, _, cx| this.paste(cx)))
             .on_action(cx.listener(|this, _: &ToggleCommandPalette, _, cx| this.toggle_palette(cx)))
             .on_action(cx.listener(|this, _: &ToggleSidebar, window, cx| this.toggle_sidebar(window, cx)))
             .on_action(cx.listener(|this, _: &ToggleThemePicker, _, cx| this.toggle_theme_picker(cx)))
@@ -354,7 +370,7 @@ impl Render for WordleApp {
                     .child(self.render_board())
                     .child(footer)
                     .child(self.render_keyboard(cx))
-                    .child(self.render_share_button(cx)),
+                    .child(self.render_end_buttons(cx)),
                 ),
             )
             .child(self.render_status_bar(cx))

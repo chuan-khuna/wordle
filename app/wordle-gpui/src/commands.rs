@@ -91,6 +91,13 @@ impl SeedField {
         }
     }
 
+    /// Pasted text: its digits go in, as if typed, so "seed 4821" pastes as 4821.
+    pub fn paste(&mut self, text: &str) {
+        for digit in text.chars().filter(char::is_ascii_digit) {
+            self.press(&digit.to_string());
+        }
+    }
+
     pub fn hint(&self) -> String {
         if self.digits.is_empty() { format!("Type 0 to {MAX_SEED}") } else { "Enter to play · Esc to go back".into() }
     }
@@ -154,6 +161,17 @@ impl CommandPalette {
                     self.selected = 0;
                 }
                 Outcome::None
+            }
+        }
+    }
+
+    /// Pasted text goes to the seed field if it shows, or else to the query.
+    pub fn paste(&mut self, text: &str) {
+        match self.seed.as_mut() {
+            Some(field) => field.paste(text),
+            None => {
+                self.query.extend(text.chars().filter(|c| !c.is_control()));
+                self.selected = 0;
             }
         }
     }
@@ -227,6 +245,18 @@ mod tests {
             field.press(&key.to_string());
         }
         assert_eq!(field.press("enter"), SeedOutcome::Play(123_456));
+    }
+
+    #[test]
+    fn pasting_keeps_the_digits() {
+        let mut field = SeedField::default();
+        field.paste(" seed 4821\n");
+        assert_eq!(field.press("enter"), SeedOutcome::Play(4821));
+
+        let mut palette = CommandPalette::default();
+        palette.choose(Command::PlaySeed);
+        palette.paste("12345678");
+        assert_eq!(palette.press("enter", None), Outcome::PlaySeed(123_456));
     }
 
     #[test]

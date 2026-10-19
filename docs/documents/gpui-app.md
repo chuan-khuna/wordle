@@ -69,7 +69,7 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 - The keyboard colours each letter by the best Mark seen for it (Correct beats Present beats Absent).
 - The title bar holds only the hamburger (and the window buttons).
 - The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
-- After a Win or Loss: a cheer or the Answer, the `just wordle-gpui ...` command that replays the Game, and a **Copy share grid** button.
+- After a Win or Loss: a cheer or the Answer, the `just wordle-gpui ...` command that replays the Game, and three buttons: **Copy share grid**, **Restart game** (the same Answer again, as the menu's Restart game) and **New game** (a new random Answer, as the menu's Reset game).
 
 ## Settings menu
 
@@ -77,7 +77,7 @@ The hamburger at the right of the title bar opens a menu. Its rows are the `Comm
 
 - **Reset game:** a new random Answer, keeping the Guess Limit.
 - **Restart game:** the same Game from the start (`Game::restart()`): the same Answer, Seed and Guess Limit, with no Guesses. Works for a chosen Answer (`--answer`) too.
-- **Play a seed…:** turns into a seed field. Type up to six digits (any number from 0 to 999,999), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. It picks the same Answer as `just wordle --seed N`.
+- **Play a seed…:** turns into a seed field. Type or paste (⌘V, Ctrl+V) up to six digits (any number from 0 to 999,999; pasting keeps only the digits), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. It picks the same Answer as `just wordle --seed N`.
 - **Copy seed:** copies the Seed's number to the clipboard. A Game with a chosen Answer has no Seed, so it says so instead.
 - **Unlimited guesses:** ticked when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
 - **Live hints:** ticked when on (see below).
@@ -95,6 +95,7 @@ While the menu is open, typing doesn't reach the board. Escape or a click anywhe
 - Type to filter by label, with the same loose matching as the theme picker (`ul` finds Unlimited guesses).
 - Up and Down move, Enter or a click runs the highlighted command, Escape or a click outside closes it. The shortcut again closes it too.
 - **Play a seed…** turns the search field into a seed field: digits, Enter to play, Escape back to the list.
+- ⌘V (Ctrl+V) pastes into the search field, or the seed field while it shows.
 
 Only one of the menu, the palette and the theme picker is open at a time (`Overlay` in `ui/mod.rs`); opening one closes the others.
 
