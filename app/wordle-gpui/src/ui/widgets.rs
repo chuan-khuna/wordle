@@ -102,3 +102,35 @@ pub const MONO_FONT: &str = if cfg!(target_os = "macos") {
 } else {
     "monospace"
 };
+
+/// A small square button around an icon.
+pub fn icon_button(t: &Theme, id: impl Into<ElementId>, icon: Div) -> Button {
+    let overlay = t.overlay;
+    Button::new(id)
+        .focusable(false)
+        .tab_stop(false)
+        .flex()
+        .items_center()
+        .justify_center()
+        .size(px(22.))
+        .rounded_md()
+        .cursor_pointer()
+        .hover(move |style| style.bg(rgb(overlay)))
+        .child(icon)
+}
+
+/// Two overlapping sheets.
+pub fn copy_icon(t: &Theme) -> Div {
+    let sheet = || div().absolute().size(px(8.)).rounded(px(1.5)).border_1().border_color(rgb(t.subtle));
+    div().relative().size(px(11.)).child(sheet().top_0().left_0()).child(sheet().bottom_0().right_0().bg(rgb(t.surface)))
+}
+
+/// An eye, open (a pupil in an outline) or closed (just the lower lid).
+pub fn eye_icon(t: &Theme, open: bool) -> Div {
+    let eye = div().flex().items_center().justify_center().w(px(15.)).h(px(9.)).border_color(rgb(t.subtle));
+    if open {
+        eye.rounded_full().border_1().child(div().size(px(4.)).rounded_full().bg(rgb(t.subtle)))
+    } else {
+        eye.rounded_b_full().border_b_1().border_l_1().border_r_1()
+    }
+}

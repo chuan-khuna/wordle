@@ -42,11 +42,11 @@ impl Shortcut {
     }
 }
 
-pub const PALETTE_SHORTCUT: Shortcut = Shortcut { keys: "secondary-p", mac: "⌘P", other: "Ctrl+P" };
+pub const PALETTE_SHORTCUT: Shortcut = Shortcut { keys: "secondary-p", mac: "âP", other: "Ctrl+P" };
 /// Zed's shortcut for its left dock.
-pub const SIDEBAR_SHORTCUT: Shortcut = Shortcut { keys: "secondary-b", mac: "⌘B", other: "Ctrl+B" };
+pub const SIDEBAR_SHORTCUT: Shortcut = Shortcut { keys: "secondary-b", mac: "âB", other: "Ctrl+B" };
 /// Zed's shortcut for its theme picker.
-pub const THEME_PICKER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-k secondary-t", mac: "⌘K ⌘T", other: "Ctrl+K Ctrl+T" };
+pub const THEME_PICKER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-k secondary-t", mac: "âK âT", other: "Ctrl+K Ctrl+T" };
 
 pub fn bind_keys(cx: &mut App) {
     cx.bind_keys([
@@ -354,14 +354,20 @@ impl WordleApp {
             footer = footer.child(div().text_color(rgb(self.tone_colour(*tone))).font_weight(FontWeight::BOLD).child(message.clone()));
         }
         if self.game.is_lost() {
-            footer = footer.child(if self.answer_shown {
-                div().text_color(rgb(t.text)).child(format!("The answer was {}", self.game.answer().to_uppercase()))
-            } else {
-                div().child(widgets::small_button(t, "show-answer", "Show the answer").on_click(cx.listener(|this, _, _, cx| {
-                    this.answer_shown = true;
-                    cx.notify();
-                })))
-            });
+            let word = if self.answer_shown { self.game.answer().to_uppercase() } else { "•".repeat(WORD_LENGTH) };
+            let (tip, icon) = if self.answer_shown { ("hide-answer", widgets::eye_icon(t, false)) } else { ("show-answer", widgets::eye_icon(t, true)) };
+            footer = footer.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_1p5()
+                    .child(div().text_color(rgb(t.muted)).child("The answer is"))
+                    .child(div().font_weight(FontWeight::BOLD).text_color(rgb(t.text)).child(word))
+                    .child(widgets::icon_button(t, tip, icon).on_click(cx.listener(|this, _, _, cx| {
+                        this.answer_shown = !this.answer_shown;
+                        cx.notify();
+                    }))),
+            );
         }
         if self.game.is_over() {
             footer = footer.child(
@@ -373,7 +379,7 @@ impl WordleApp {
                     .text_color(rgb(t.muted))
                     .child("Play it again")
                     .child(div().font_family(widgets::MONO_FONT).text_color(rgb(t.text)).child(self.replay_command()))
-                    .child(widgets::small_button(t, "copy-replay", "Copy").on_click(cx.listener(|this, _, _, cx| {
+                    .child(widgets::icon_button(t, "copy-replay", widgets::copy_icon(t)).on_click(cx.listener(|this, _, _, cx| {
                         this.copy(this.replay_command(), "Copied the replay command", cx);
                     }))),
             );
