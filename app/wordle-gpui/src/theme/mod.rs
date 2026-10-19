@@ -1,11 +1,20 @@
 //! The colour themes, and the search behind the theme picker. `picker` is the picker's state.
 //!
-//! Each theme maps its palette onto the same roles. Rosé Pine: https://rosepinetheme.com/palette/ingredients
-//! Catppuccin: https://catppuccin.com/palette
+//! Each theme is in its own file and maps its palette onto the same roles. To add one, add a file
+//! and list it in `THEMES`.
 
 use wordle_gpui::rules::feedback::Mark;
 
+mod catppuccin_latte;
+mod catppuccin_mocha;
 pub mod picker;
+mod rose_pine;
+mod rose_pine_dawn;
+
+pub use catppuccin_latte::CATPPUCCIN_LATTE;
+pub use catppuccin_mocha::CATPPUCCIN_MOCHA;
+pub use rose_pine::ROSE_PINE;
+pub use rose_pine_dawn::ROSE_PINE_DAWN;
 
 /// A fill and the colour of the letter drawn on it.
 pub type Paint = (u32, u32);
@@ -52,94 +61,6 @@ impl Theme {
         if self.dark { "Dark" } else { "Light" }
     }
 }
-
-pub static ROSE_PINE: Theme = Theme {
-    name: "Rosé Pine",
-    dark: true,
-    background: 0x191724,
-    surface: 0x1f1d2e,
-    overlay: 0x26233a,
-    highlight_low: 0x21202e,
-    highlight_med: 0x403d52,
-    highlight_high: 0x524f67,
-    text: 0xe0def4,
-    subtle: 0x908caa,
-    muted: 0x6e6a86,
-    correct: (0x31748f, 0xe0def4), // pine
-    present: (0xf6c177, 0x191724), // gold
-    absent: (0x26233a, 0x6e6a86),
-    absent_key: (0x21202e, 0x6e6a86),
-    heading: 0xebbcba, // rose
-    error: 0xeb6f92,   // love
-    success: 0x9ccfd8, // foam
-    accent: 0xc4a7e7,  // iris
-};
-
-pub static ROSE_PINE_DAWN: Theme = Theme {
-    name: "Rosé Pine Dawn",
-    dark: false,
-    background: 0xfaf4ed,
-    surface: 0xfffaf3,
-    overlay: 0xf2e9e1,
-    highlight_low: 0xf4ede8,
-    highlight_med: 0xdfdad9,
-    highlight_high: 0xcecacd,
-    text: 0x575279,
-    subtle: 0x797593,
-    muted: 0x9893a5,
-    correct: (0x286983, 0xfaf4ed),
-    present: (0xea9d34, 0xfaf4ed),
-    absent: (0x9893a5, 0xfaf4ed),
-    absent_key: (0x9893a5, 0xfaf4ed),
-    heading: 0xd7827e,
-    error: 0xb4637a,
-    success: 0x56949f,
-    accent: 0x907aa9,
-};
-
-pub static CATPPUCCIN_MOCHA: Theme = Theme {
-    name: "Catppuccin Mocha",
-    dark: true,
-    background: 0x1e1e2e,     // base
-    surface: 0x181825,        // mantle
-    overlay: 0x313244,        // surface0
-    highlight_low: 0x181825,  // mantle
-    highlight_med: 0x45475a,  // surface1
-    highlight_high: 0x585b70, // surface2
-    text: 0xcdd6f4,
-    subtle: 0xa6adc8, // subtext0
-    muted: 0x6c7086,  // overlay0
-    correct: (0xa6e3a1, 0x1e1e2e), // green
-    present: (0xf9e2af, 0x1e1e2e), // yellow
-    absent: (0x313244, 0x7f849c),
-    absent_key: (0x181825, 0x6c7086),
-    heading: 0xcba6f7, // mauve
-    error: 0xf38ba8,   // red
-    success: 0x94e2d5, // teal
-    accent: 0xb4befe,  // lavender
-};
-
-pub static CATPPUCCIN_LATTE: Theme = Theme {
-    name: "Catppuccin Latte",
-    dark: false,
-    background: 0xeff1f5,
-    surface: 0xe6e9ef,
-    overlay: 0xccd0da,
-    highlight_low: 0xdce0e8,
-    highlight_med: 0xbcc0cc,
-    highlight_high: 0xacb0be,
-    text: 0x4c4f69,
-    subtle: 0x6c6f85,
-    muted: 0x9ca0b0,
-    correct: (0x40a02b, 0xeff1f5),
-    present: (0xdf8e1d, 0xeff1f5),
-    absent: (0x8c8fa1, 0xeff1f5),
-    absent_key: (0x8c8fa1, 0xeff1f5),
-    heading: 0x8839ef,
-    error: 0xd20f39,
-    success: 0x179299,
-    accent: 0x7287fd,
-};
 
 pub static THEMES: [&Theme; 4] = [&ROSE_PINE, &ROSE_PINE_DAWN, &CATPPUCCIN_MOCHA, &CATPPUCCIN_LATTE];
 

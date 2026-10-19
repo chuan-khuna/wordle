@@ -38,7 +38,9 @@ app/wordle-gpui/
     dictionary.rs     the Oxford Learner's Dictionary lookup (blocking; run in the background)
     search.rs         the loose matching behind the palette and the theme picker
     theme/
-      mod.rs          the themes (Rosé Pine, Catppuccin) and the theme search
+      mod.rs          the Theme roles, THEMES and the theme search
+      rose_pine.rs, rose_pine_dawn.rs, catppuccin_mocha.rs, catppuccin_latte.rs
+                      one theme each
       picker.rs       the theme picker's state and keys
     ui/
       mod.rs          WordleApp: the state, the overlays, key routing, Render
@@ -116,11 +118,11 @@ The button at the left of the status bar, **Show sidebar**, or ⌘B (Ctrl+B) ope
 - **Guesses:** each Guess as a row of small tiles, and the Answer after a Loss. Click one to see its meaning.
 - **Meaning:** the picked word in the [Oxford Learner's Dictionaries](https://www.oxfordlearnersdictionaries.com): each part of speech with its pronunciations, then numbered senses with their CEFR level, labels and first example. A word that isn't there shows the site's spelling suggestions.
 
-With the sidebar open, each submitted Guess (or the Answer, after a Loss) is looked up straight away. `dictionary.rs` is a Rust port of the Oxford source in the `dictionary-tui` project: it fetches the search page with a browser User-Agent, follows the redirect to the entry, scrapes it with `scraper`, and fetches the other parts of speech listed under "related entries". The lookup blocks, so it runs on gpui's background executor; results (and failures) are kept for the session, and clicking a word whose lookup failed tries again. `cargo test -- --ignored` runs one test against the real site.
+Nothing is looked up until you click a word, so playing never touches the network. `dictionary.rs` is a Rust port of the Oxford source in the `dictionary-tui` project: it fetches the search page with a browser User-Agent, follows the redirect to the entry, scrapes it with `scraper`, and fetches the other parts of speech listed under "related entries". The lookup blocks, so it runs on gpui's background executor; results (and failures) are kept for the session, and clicking a word whose lookup failed tries again. `cargo test -- --ignored` runs one test against the real site.
 
 ## Theme
 
-Four themes, defined in `theme/mod.rs`. The app starts in Rosé Pine.
+Four themes, one file each in `theme/` (`rose_pine.rs`, …). The app starts in Rosé Pine.
 
 | Theme | Appearance | Correct | Present | Absent |
 | --- | --- | --- | --- | --- |
@@ -129,7 +131,7 @@ Four themes, defined in `theme/mod.rs`. The app starts in Rosé Pine.
 | [Catppuccin](https://catppuccin.com/palette) Mocha | Dark | Green | Yellow | Surface 0 |
 | Catppuccin Latte | Light | Green | Yellow | Overlay 1 |
 
-Each theme is a `Theme` value that maps its palette onto the same roles (`background`, `surface`, `overlay`, `text`, `correct`, `present`, `absent`, `heading`, `error`, `success`, `accent`, …). The UI only uses the roles, so adding a theme means adding one `Theme` and listing it in `THEMES`. In dark themes an Absent key fades into the background, so the letters still in play stand out; in light themes it matches the Absent tile. Messages under the board store a tone (error, success, info) rather than a colour, so they change colour with the theme.
+Each theme is a `Theme` value that maps its palette onto the same roles (`background`, `surface`, `overlay`, `text`, `correct`, `present`, `absent`, `heading`, `error`, `success`, `accent`, …). The UI only uses the roles, so adding a theme means adding a file with one `Theme`, declaring it in `theme/mod.rs` and listing it in `THEMES`. In dark themes an Absent key fades into the background, so the letters still in play stand out; in light themes it matches the Absent tile. Messages under the board store a tone (error, success, info) rather than a colour, so they change colour with the theme.
 
 The chosen theme lasts until the app closes; it isn't saved.
 

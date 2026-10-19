@@ -1,5 +1,6 @@
 //! The sidebar on the left: the Game's Guesses (and the Answer after a Loss), and the meaning of
-//! the one picked, looked up in the Oxford Learner's Dictionary on a background thread.
+//! the one picked, looked up in the Oxford Learner's Dictionary on a background thread. Nothing is
+//! looked up until the player clicks a word.
 
 use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude::*, px, rgb, size};
 
@@ -24,12 +25,6 @@ impl WordleApp {
             let viewport = window.viewport_size();
             let width = if self.sidebar_open { viewport.width + WIDTH } else { viewport.width - WIDTH };
             window.resize(size(width, viewport.height));
-        }
-        if self.sidebar_open
-            && self.selected_word.is_none()
-            && let Some(last) = self.game.guesses().last()
-        {
-            self.select_word(last.word.clone(), cx);
         }
         cx.notify();
     }

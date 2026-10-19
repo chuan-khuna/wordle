@@ -238,7 +238,7 @@ impl WordleApp {
             return;
         }
         match key {
-            ENTER => self.submit(cx),
+            ENTER => self.submit(),
             BACKSPACE => {
                 self.typed.pop();
                 self.message = None;
@@ -257,12 +257,11 @@ impl WordleApp {
         cx.notify();
     }
 
-    /// Submit the typed Guess. With the sidebar open, it then shows the Guess's meaning (or the Answer's, after a Loss).
-    fn submit(&mut self, cx: &mut Context<Self>) {
+    fn submit(&mut self) {
         match self.game.guess(&self.typed) {
             Err(error) => self.message = Some((error.to_string(), Tone::Error)),
             Ok(_) => {
-                let guessed = std::mem::take(&mut self.typed);
+                self.typed.clear();
                 self.message = if self.game.is_won() {
                     let cheer = CHEERS.get(self.game.guesses().len() - 1).unwrap_or(&"Got there!");
                     Some((cheer.to_string(), Tone::Success))
@@ -271,10 +270,6 @@ impl WordleApp {
                 } else {
                     None
                 };
-                if self.sidebar_open {
-                    let word = if self.game.is_lost() { self.game.answer().to_string() } else { guessed };
-                    self.select_word(word, cx);
-                }
             }
         }
     }
