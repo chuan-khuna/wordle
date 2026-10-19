@@ -114,7 +114,7 @@ impl SeedField {
     }
 
     pub fn hint(&self) -> String {
-        if self.digits.is_empty() { format!("Type 0 to {MAX_SEED}") } else { "Enter to play · Esc to go back".into() }
+        if self.digits.is_empty() { format!("Type 0 to {}", group_digits(&MAX_SEED.to_string())) } else { "Enter to play · Esc to go back".into() }
     }
 }
 
