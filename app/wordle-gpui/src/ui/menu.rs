@@ -90,7 +90,7 @@ impl WordleApp {
 
     fn render_menu(&self, seed: Option<&SeedField>, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let mut menu = panel(t, "settings-menu").mt_1().w(px(280.)).p_1();
+        let mut menu = panel(t, "settings-menu").mt_1().w(px(340.)).p_1();
         for (index, command) in Command::ALL.into_iter().enumerate() {
             if index > 0 && Command::ALL[index - 1].group() != command.group() {
                 menu = menu.child(separator(t));

@@ -357,7 +357,7 @@ impl WordleApp {
     /// Under the board once the Game is over: how it ended, and the command that replays it (click to copy).
     fn render_footer(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let mut footer = div().flex().flex_col().items_center().gap_1().h(px(76.));
+        let mut footer = div().flex().flex_col().items_center().gap_1().h(px(52.));
         if let Some((message, tone)) = &self.message {
             footer = footer.child(div().text_color(rgb(self.tone_colour(*tone))).font_weight(FontWeight::BOLD).child(message.clone()));
         }
@@ -377,8 +377,26 @@ impl WordleApp {
                     }))),
             );
         }
-        if self.game.is_over() {
-            footer = footer.child(
+        footer
+    }
+
+    /// Shown once the Game is over: copy the result, try the same word again, or play a new word,
+    /// with the command that replays it (click to copy) beneath.
+    fn render_end_buttons(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        div().h(px(76.)).mt_4().flex().flex_col().items_center().gap_2().when(self.game.is_over(), |area| {
+            area.child(
+                div()
+                    .flex()
+                    .gap_2()
+                    .child(
+                        widgets::button(t, "share", "Copy results")
+                            .on_click(cx.listener(|this, _, _, cx| this.copy(this.game.share_grid(), "Copied your results. Paste them to share.", cx))),
+                    )
+                    .child(widgets::button(t, "restart", "Try this word again").on_click(cx.listener(|this, _, window, cx| this.run(Command::Restart, window, cx))))
+                    .child(widgets::button(t, "new-game", "Play a new word").on_click(cx.listener(|this, _, window, cx| this.run(Command::Reset, window, cx)))),
+            )
+            .child(
                 div()
                     .flex()
                     .items_center()
@@ -390,21 +408,7 @@ impl WordleApp {
                     .child(widgets::icon_button(t, "copy-replay", widgets::icon(IconName::Copy, t.subtle)).on_click(cx.listener(|this, _, _, cx| {
                         this.copy(this.replay_command(), "Copied the replay command", cx);
                     }))),
-            );
-        }
-        footer
-    }
-
-    /// Shown once the Game is over: copy the result, try the same word again, or play a new word.
-    fn render_end_buttons(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let t = self.theme;
-        div().h(px(32.)).flex().gap_2().when(self.game.is_over(), |area| {
-            area.child(
-                widgets::button(t, "share", "Copy results")
-                    .on_click(cx.listener(|this, _, _, cx| this.copy(this.game.share_grid(), "Copied your results. Paste them to share.", cx))),
             )
-            .child(widgets::button(t, "restart", "Try this word again").on_click(cx.listener(|this, _, window, cx| this.run(Command::Restart, window, cx))))
-            .child(widgets::button(t, "new-game", "Play a new word").on_click(cx.listener(|this, _, window, cx| this.run(Command::Reset, window, cx))))
         })
     }
 
