@@ -9,3 +9,5 @@ publish = false
 # `runtime_shaders` compiles gpui's Metal shaders when the app starts, so building
 # on macOS needs only the Command Line Tools, not the full Xcode.
 gpui = { version = "0.2.2", features = ["runtime_shaders"] }
+scraper = "0.27.0"
+ureq = "3.4.2"

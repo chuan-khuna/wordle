@@ -1,9 +1,11 @@
-//! The colour themes, and the search behind the theme picker.
+//! The colour themes, and the search behind the theme picker. `picker` is the picker's state.
 //!
 //! Each theme maps its palette onto the same roles. Rosé Pine: https://rosepinetheme.com/palette/ingredients
 //! Catppuccin: https://catppuccin.com/palette
 
-use wordle_gpui::feedback::Mark;
+use wordle_gpui::rules::feedback::Mark;
+
+pub mod picker;
 
 /// A fill and the colour of the letter drawn on it.
 pub type Paint = (u32, u32);
@@ -142,23 +144,9 @@ pub static CATPPUCCIN_LATTE: Theme = Theme {
 pub static THEMES: [&Theme; 4] = [&ROSE_PINE, &ROSE_PINE_DAWN, &CATPPUCCIN_MOCHA, &CATPPUCCIN_LATTE];
 
 /// The themes whose name (or "dark"/"light") matches `query`, in order.
-/// The letters of the query must appear in order, but not next to each other, so "cmo" finds Catppuccin Mocha.
-/// Case and accents are ignored, so "rose" finds Rosé Pine.
+/// See `search::matches`: "cmo" finds Catppuccin Mocha, and "rose" finds Rosé Pine.
 pub fn search(query: &str) -> Vec<&'static Theme> {
-    let query = fold(query);
-    THEMES
-        .iter()
-        .copied()
-        .filter(|theme| {
-            let haystack = fold(&format!("{} {}", theme.name, theme.appearance()));
-            let mut letters = haystack.chars();
-            query.chars().filter(|c| !c.is_whitespace()).all(|q| letters.any(|h| h == q))
-        })
-        .collect()
-}
-
-fn fold(text: &str) -> String {
-    text.to_lowercase().replace('é', "e")
+    THEMES.iter().copied().filter(|theme| crate::search::matches(query, &format!("{} {}", theme.name, theme.appearance()))).collect()
 }
 
 #[cfg(test)]

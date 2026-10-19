@@ -5,8 +5,8 @@ use std::sync::OnceLock;
 
 pub const WORD_LENGTH: usize = 5;
 
-const ANSWERS: &str = include_str!("../data/answers.txt");
-const GUESSES: &str = include_str!("../data/guesses.txt");
+const ANSWERS: &str = include_str!("../../data/answers.txt");
+const GUESSES: &str = include_str!("../../data/guesses.txt");
 
 pub struct WordLists {
     /// The Answer List, sorted (so a Seed picks the same Answer as the Python game).

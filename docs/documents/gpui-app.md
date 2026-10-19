@@ -14,25 +14,45 @@ From the repo root:
 | `just wordle-gpui --unlimited` | No Guess Limit |
 | `just test-gpui` | `cargo test` for the crate |
 
+It needs Rust 1.89 or newer (a dependency, `uuid`, requires it); `rustup update stable` gets one.
+
 The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `windows-shell` to PowerShell, so they work on Windows too.
 
 ## Layout
 
 ```
 app/wordle-gpui/
-  Cargo.toml        gpui 0.2.2 with the `runtime_shaders` feature
-  data/             answers.txt, guesses.txt, SOURCES.md (copied from packages/wordle)
+  Cargo.toml          gpui 0.2.2 (`runtime_shaders`), ureq and scraper for the dictionary
+  data/               answers.txt, guesses.txt, SOURCES.md (copied from packages/wordle)
   src/
-    lib.rs          the rules, with no window: usable from tests
-    feedback.rs     Mark, Feedback and the two-pass scoring rule
-    words.rs        the word lists, built into the binary with include_str!
-    seed.rs         Python-compatible Mersenne Twister, so Seeds match the terminal game
-    game.rs         Game, Guess, Error, share_grid
-    main.rs         the window: board, on-screen keyboard, buttons, command-line options
-    theme.rs        the themes (Rosé Pine, Catppuccin) and the theme search
-    theme_picker.rs the theme picker's state and keys, testable without a window
-    title_bar.rs    the Zed-style title bar
+    lib.rs            the library: `pub mod rules`, usable from tests with no window
+    rules/
+      feedback.rs     Mark, Feedback and the two-pass scoring rule
+      words.rs        the word lists, built into the binary with include_str!
+      seed.rs         Python-compatible Mersenne Twister, so Seeds match the terminal game
+      game.rs         Game, Guess, Error, share_grid, random_seed
+      hints.rs        best_marks (the keyboard's colours) and live_hint
+    main.rs           parse the options, bind the keys, open the window
+    args.rs           --answer, --seed, --unlimited
+    commands.rs       Command (shared by the menu and the palette), the palette's and seed field's state
+    dictionary.rs     the Oxford Learner's Dictionary lookup (blocking; run in the background)
+    search.rs         the loose matching behind the palette and the theme picker
+    theme/
+      mod.rs          the themes (Rosé Pine, Catppuccin) and the theme search
+      picker.rs       the theme picker's state and keys
+    ui/
+      mod.rs          WordleApp: the state, the overlays, key routing, Render
+      title_bar.rs    the Zed-style title bar
+      status_bar.rs   the bar along the bottom
+      sidebar.rs      Guesses and their meanings
+      board.rs        the tiles and the on-screen keyboard
+      menu.rs         the hamburger and the settings menu, and the command rows both lists draw
+      palette.rs      the command palette
+      theme_picker.rs the theme picker
+      widgets.rs      panel, query field, menu row, button
 ```
+
+Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`, `rules/`, the dictionary's parsing) has unit tests. The `ui/` modules each add `impl WordleApp` blocks that draw one part of the window.
 
 `feedback.rs` and `game.rs` follow [feedback-scoring.md](feedback-scoring.md) and [game-and-state.md](game-and-state.md). Their tests check against values printed by the Python game.
 
@@ -45,24 +65,62 @@ app/wordle-gpui/
 - Type letters, Backspace and Enter on the real keyboard, or click the on-screen keys. Cmd-Q (Ctrl-Q elsewhere) quits, and so does closing the window.
 - A refused Guess shows its reason under the board and doesn't use up a Guess.
 - The keyboard colours each letter by the best Mark seen for it (Correct beats Present beats Absent).
-- The title bar reads `wordle / classic / seed 7`: the Guess Limit, then the Seed (or `chosen answer`). Under the heading, the status line shows Guesses left (or the Guess count when unlimited).
+- The title bar holds only the hamburger (and the window buttons).
+- The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
 - After a Win or Loss: a cheer or the Answer, the `just wordle-gpui ...` command that replays the Game, and a **Copy share grid** button.
 
 ## Settings menu
 
-The hamburger at the right of the title bar opens a menu:
+The hamburger at the right of the title bar opens a menu. Its rows are the `Command`s in `commands.rs`, so the menu and the command palette always offer the same things:
 
 - **Reset game:** a new random Answer, keeping the Guess Limit.
 - **Restart game:** the same Game from the start (`Game::restart()`): the same Answer, Seed and Guess Limit, with no Guesses. Works for a chosen Answer (`--answer`) too.
 - **Play a seed…:** turns into a seed field. Type up to six digits (any number from 0 to 999,999), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. It picks the same Answer as `just wordle --seed N`.
-- **Change theme…:** opens the theme picker (below). The hint shows the current theme.
+- **Copy seed:** copies the Seed's number to the clipboard. A Game with a chosen Answer has no Seed, so it says so instead.
 - **Unlimited guesses:** ticked when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
+- **Live hints:** ticked when on (see below).
+- **Show sidebar:** ticked when the sidebar is open (see below).
+- **Change theme…:** opens the theme picker (below). The hint shows the current theme.
+
+The menu's last line shows the command palette's shortcut.
 
 While the menu is open, typing doesn't reach the board. Escape or a click anywhere else closes the menu. The menu is drawn with gpui's `deferred(anchored(...))` so it sits above the rest of the window, with a transparent backdrop underneath it that catches the click outside. Both the hamburger and the menu `occlude()`, so on Windows a click on them isn't taken as dragging the title bar.
 
+## Command palette
+
+⌘P (Ctrl+P on Windows and Linux) opens the command palette in the middle of the window. It lists the menu's commands:
+
+- Type to filter by label, with the same loose matching as the theme picker (`ul` finds Unlimited guesses).
+- Up and Down move, Enter or a click runs the highlighted command, Escape or a click outside closes it. The shortcut again closes it too.
+- **Play a seed…** turns the search field into a seed field: digits, Enter to play, Escape back to the list.
+
+Only one of the menu, the palette and the theme picker is open at a time (`Overlay` in `ui/mod.rs`); opening one closes the others.
+
+## Live hints
+
+With **Live hints** on, the tiles of the Guess being typed show what earlier Guesses already say about each letter, before it is submitted (`rules/hints.rs`):
+
+| Earlier Guesses say | Typed tile |
+| --- | --- |
+| Correct in this spot | border in the Correct colour |
+| In the Answer, but not known to be in this spot | border in the Present colour |
+| Absent | faint border, faded letter |
+| Nothing (not guessed yet) | the usual border |
+
+Hints use the border, not a fill, so a typed row never looks like a submitted one. They are off by default.
+
+## Sidebar
+
+The button at the left of the status bar, **Show sidebar**, or ⌘B (Ctrl+B) opens a sidebar on the left. The window widens by the sidebar's width (unless it is maximised), so the board keeps its size.
+
+- **Guesses:** each Guess as a row of small tiles, and the Answer after a Loss. Click one to see its meaning.
+- **Meaning:** the picked word in the [Oxford Learner's Dictionaries](https://www.oxfordlearnersdictionaries.com): each part of speech with its pronunciations, then numbered senses with their CEFR level, labels and first example. A word that isn't there shows the site's spelling suggestions.
+
+With the sidebar open, each submitted Guess (or the Answer, after a Loss) is looked up straight away. `dictionary.rs` is a Rust port of the Oxford source in the `dictionary-tui` project: it fetches the search page with a browser User-Agent, follows the redirect to the entry, scrapes it with `scraper`, and fetches the other parts of speech listed under "related entries". The lookup blocks, so it runs on gpui's background executor; results (and failures) are kept for the session, and clicking a word whose lookup failed tries again. `cargo test -- --ignored` runs one test against the real site.
+
 ## Theme
 
-Four themes, defined in `theme.rs`. The app starts in Rosé Pine.
+Four themes, defined in `theme/mod.rs`. The app starts in Rosé Pine.
 
 | Theme | Appearance | Correct | Present | Absent |
 | --- | --- | --- | --- | --- |
@@ -85,7 +143,7 @@ Open it with **Change theme…** in the settings menu, or with Zed's shortcut, �
 
 ## Title bar
 
-Like Zed, the app draws its own title bar (`title_bar.rs`):
+Like Zed, the app draws its own title bar (`ui/title_bar.rs`):
 
 - **macOS:** the system title bar is transparent (`appears_transparent`) and the traffic lights are moved onto the app's bar. macOS still drags the window by the bar; a double-click does what the system setting says (zoom or minimise).
 - **Windows:** the system title bar is hidden and the bar draws minimise, maximise and close with the Segoe Fluent Icons font, as Zed does. `window_control_area` tells Windows which parts drag the window and which are the caption buttons.

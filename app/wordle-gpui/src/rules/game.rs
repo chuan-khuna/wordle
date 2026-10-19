@@ -1,14 +1,21 @@
 //! The rules of a Game: the Guess Limit, which words are allowed, Win and Loss.
 //! Mirrors `packages/wordle/src/wordle/game.py`.
 
+use std::collections::hash_map::RandomState;
 use std::fmt;
+use std::hash::{BuildHasher, Hasher};
 
-use crate::feedback::{Feedback, Mark, feedback};
-use crate::seed::choose_index;
-use crate::words::{WORD_LENGTH, word_lists};
+use super::feedback::{Feedback, Mark, feedback};
+use super::seed::choose_index;
+use super::words::{WORD_LENGTH, word_lists};
 
 pub const MAX_GUESSES: usize = 6;
 pub const MAX_SEED: u32 = 999_999;
+
+/// A Seed from 0 to MAX_SEED, different every time.
+pub fn random_seed() -> u32 {
+    (RandomState::new().build_hasher().finish() % (MAX_SEED as u64 + 1)) as u32
+}
 
 /// Why a Guess was refused, or why a Game couldn't start. A refused Guess doesn't use up a Guess.
 #[derive(Debug, Clone, PartialEq, Eq)]

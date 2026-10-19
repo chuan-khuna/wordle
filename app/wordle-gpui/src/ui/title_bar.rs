@@ -4,7 +4,7 @@
 //! system which areas drag, minimise, maximise and close. Linux keeps its system title bar.
 
 use gpui::{
-    AnyElement, ClickEvent, FontWeight, Pixels, Point, SharedString, TitlebarOptions, Window,
+    AnyElement, ClickEvent, Pixels, Point, TitlebarOptions, Window,
     WindowControlArea, div, point, prelude::*, px, rgb,
 };
 
@@ -23,21 +23,12 @@ pub fn options() -> TitlebarOptions {
     }
 }
 
-/// The bar: the app's name, then `crumbs` (dimmer, like Zed's project and branch),
-/// and `trailing` on the right. `trailing` should `occlude()` so clicks on it don't drag the window.
-pub fn render(theme: &Theme, crumbs: Vec<SharedString>, trailing: AnyElement, window: &Window) -> impl IntoElement {
+/// The bar holds only `trailing` on the right (the hamburger); the rest of it drags the window.
+/// `trailing` should `occlude()` so clicks on it don't drag the window.
+pub fn render(theme: &Theme, trailing: AnyElement, window: &Window) -> impl IntoElement {
     let background = if window.is_window_active() { theme.surface } else { theme.background };
     let left_padding = if cfg!(target_os = "macos") { TRAFFIC_LIGHTS_WIDTH } else { px(12.) };
 
-    let mut title = div()
-        .flex()
-        .items_center()
-        .gap_2()
-        .text_sm()
-        .child(div().text_color(rgb(theme.text)).font_weight(FontWeight::SEMIBOLD).child("wordle"));
-    for crumb in crumbs {
-        title = title.child(div().text_color(rgb(theme.muted)).child("/")).child(div().text_color(rgb(theme.subtle)).child(crumb));
-    }
 
     div()
         .id("title-bar")
@@ -57,7 +48,7 @@ pub fn render(theme: &Theme, crumbs: Vec<SharedString>, trailing: AnyElement, wi
                 if cfg!(target_os = "macos") { window.titlebar_double_click() } else { window.zoom_window() }
             }
         })
-        .child(title)
+        .child(div())
         .child(
             div()
                 .flex()
