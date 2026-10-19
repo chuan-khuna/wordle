@@ -1,7 +1,22 @@
 [project]
-name = "wordle"
+name = "wordle-workspace"
 version = "0.1.0"
-description = "Add your description here"
+description = "An interactive Wordle game and a solver that explains its guesses."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = ["wordle"]
+
+[tool.uv.sources]
+wordle = { workspace = true }
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["packages"]
+addopts = ["--import-mode=importlib"]

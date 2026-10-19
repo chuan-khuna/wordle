@@ -1,2 +1,9 @@
 references/*
 !references/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+dist/
