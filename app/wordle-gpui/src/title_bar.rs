@@ -8,7 +8,7 @@ use gpui::{
     WindowControlArea, div, point, prelude::*, px, rgb,
 };
 
-use crate::theme;
+use crate::theme::Theme;
 
 const HEIGHT: Pixels = px(34.);
 /// Room on the left for the macOS traffic lights.
@@ -23,9 +23,10 @@ pub fn options() -> TitlebarOptions {
     }
 }
 
-/// The bar: the app's name, then `crumbs` (dimmer, like Zed's project and branch).
-pub fn render(crumbs: Vec<SharedString>, window: &Window) -> impl IntoElement {
-    let background = if window.is_window_active() { theme::SURFACE } else { theme::BASE };
+/// The bar: the app's name, then `crumbs` (dimmer, like Zed's project and branch),
+/// and `trailing` on the right. `trailing` should `occlude()` so clicks on it don't drag the window.
+pub fn render(theme: &Theme, crumbs: Vec<SharedString>, trailing: AnyElement, window: &Window) -> impl IntoElement {
+    let background = if window.is_window_active() { theme.surface } else { theme.background };
     let left_padding = if cfg!(target_os = "macos") { TRAFFIC_LIGHTS_WIDTH } else { px(12.) };
 
     let mut title = div()
@@ -33,9 +34,9 @@ pub fn render(crumbs: Vec<SharedString>, window: &Window) -> impl IntoElement {
         .items_center()
         .gap_2()
         .text_sm()
-        .child(div().text_color(rgb(theme::TEXT)).font_weight(FontWeight::SEMIBOLD).child("wordle"));
+        .child(div().text_color(rgb(theme.text)).font_weight(FontWeight::SEMIBOLD).child("wordle"));
     for crumb in crumbs {
-        title = title.child(div().text_color(rgb(theme::MUTED)).child("/")).child(div().text_color(rgb(theme::SUBTLE)).child(crumb));
+        title = title.child(div().text_color(rgb(theme.muted)).child("/")).child(div().text_color(rgb(theme.subtle)).child(crumb));
     }
 
     div()
@@ -49,7 +50,7 @@ pub fn render(crumbs: Vec<SharedString>, window: &Window) -> impl IntoElement {
         .pl(left_padding)
         .bg(rgb(background))
         .border_b_1()
-        .border_color(rgb(theme::OVERLAY))
+        .border_color(rgb(theme.overlay))
         .window_control_area(WindowControlArea::Drag)
         .on_click(|event: &ClickEvent, window, _| {
             if event.click_count() == 2 {
@@ -57,22 +58,31 @@ pub fn render(crumbs: Vec<SharedString>, window: &Window) -> impl IntoElement {
             }
         })
         .child(title)
-        .when(cfg!(target_os = "windows"), |bar| bar.child(caption_buttons(window)))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .h_full()
+                .gap_1()
+                .when(!cfg!(target_os = "windows"), |right| right.pr_2())
+                .child(trailing)
+                .when(cfg!(target_os = "windows"), |right| right.child(caption_buttons(theme, window))),
+        )
 }
 
 /// Minimise, maximise (or restore) and close, drawn with the Segoe icon fonts like Zed does.
-fn caption_buttons(window: &Window) -> AnyElement {
+fn caption_buttons(theme: &Theme, window: &Window) -> AnyElement {
     let maximise = if window.is_maximized() { "\u{e923}" } else { "\u{e922}" };
     div()
         .flex()
         .h_full()
-        .child(caption_button("minimise", "\u{e921}", WindowControlArea::Min, theme::HIGHLIGHT_MED))
-        .child(caption_button("maximise", maximise, WindowControlArea::Max, theme::HIGHLIGHT_MED))
-        .child(caption_button("close", "\u{e8bb}", WindowControlArea::Close, theme::LOVE))
+        .child(caption_button(theme, "minimise", "\u{e921}", WindowControlArea::Min, theme.highlight_med))
+        .child(caption_button(theme, "maximise", maximise, WindowControlArea::Max, theme.highlight_med))
+        .child(caption_button(theme, "close", "\u{e8bb}", WindowControlArea::Close, theme.error))
         .into_any_element()
 }
 
-fn caption_button(id: &'static str, icon: &'static str, area: WindowControlArea, hover: u32) -> impl IntoElement {
+fn caption_button(theme: &Theme, id: &'static str, icon: &'static str, area: WindowControlArea, hover: u32) -> impl IntoElement {
     div()
         .id(id)
         .flex()
@@ -82,8 +92,11 @@ fn caption_button(id: &'static str, icon: &'static str, area: WindowControlArea,
         .h_full()
         .font_family("Segoe Fluent Icons")
         .text_size(px(10.))
-        .text_color(rgb(theme::SUBTLE))
+        .text_color(rgb(theme.subtle))
         .window_control_area(area)
-        .hover(move |style| style.bg(rgb(hover)).text_color(rgb(theme::TEXT)))
+        .hover({
+            let text = theme.text;
+            move |style| style.bg(rgb(hover)).text_color(rgb(text))
+        })
         .child(icon)
 }

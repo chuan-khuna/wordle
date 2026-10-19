@@ -69,6 +69,11 @@ impl Game {
         Self { answer: answer.to_string(), max_guesses, seed: Some(seed), guesses: Vec::new() }
     }
 
+    /// The same Game from the start: the same Answer, Seed and Guess Limit, with no Guesses.
+    pub fn restart(&self) -> Self {
+        Self { guesses: Vec::new(), ..self.clone() }
+    }
+
     pub fn answer(&self) -> &str {
         &self.answer
     }
@@ -189,6 +194,15 @@ mod tests {
         }
         assert!(!game.is_over());
         assert_eq!(game.guesses_left(), None);
+    }
+
+    #[test]
+    fn restarting_keeps_the_answer_and_seed_but_clears_the_guesses() {
+        let mut game = Game::random(7, None);
+        game.guess("octet").unwrap();
+        let restarted = game.restart();
+        assert_eq!((restarted.answer(), restarted.seed, restarted.max_guesses), ("octet", Some(7), None));
+        assert!(restarted.guesses().is_empty() && !restarted.is_over());
     }
 
     #[test]
