@@ -70,7 +70,7 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 - The title bar holds only the hamburger (and the window buttons).
 - The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
 - After a Win or Loss: a cheer, or "Out of guesses" with the Answer hidden as dots until you click the eye icon (click again to hide it; the sidebar follows); the `just wordle-gpui ...` command that replays the Game, in a monospace font with a copy icon; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
-- Copying (the seed, the results, the replay command) shows a toast that hides itself after 2 seconds.
+- Copying (the seed, the results, the replay command) shows a note in the status bar, next to the sidebar button, that hides itself after 2 seconds.
 
 ## Settings menu
 

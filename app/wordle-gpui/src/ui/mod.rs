@@ -59,8 +59,8 @@ pub fn bind_keys(cx: &mut App) {
     cx.on_action(|_: &Quit, cx| cx.quit());
 }
 
-/// How long a toast stays on screen.
-const TOAST_TIME: Duration = Duration::from_secs(2);
+/// How long a note stays in the status bar.
+const STATUS_TIME: Duration = Duration::from_secs(2);
 
 /// What a message under the board is about, which picks its colour from the theme.
 #[derive(Clone, Copy)]
@@ -83,10 +83,10 @@ pub struct WordleApp {
     typed: String,
     /// Shown under the board, in a colour: a refused Guess, a cheer, or "Out of guesses" after a Loss.
     message: Option<(String, Tone)>,
-    /// A short note that confirms a copy and goes away by itself (see `show_toast`).
-    toast: Option<SharedString>,
-    /// Counts toasts, so an old toast's timer can't hide a newer one.
-    toast_serial: u32,
+    /// A short note in the status bar that confirms a copy and goes away by itself (see `show_status`).
+    status: Option<SharedString>,
+    /// Counts notes, so an old note's timer can't hide a newer one.
+    status_serial: u32,
     /// Whether the Answer of a lost Game has been revealed. It stays hidden until clicked.
     answer_shown: bool,
     overlay: Option<Overlay>,
@@ -107,8 +107,8 @@ impl WordleApp {
             game,
             typed: String::new(),
             message: None,
-            toast: None,
-            toast_serial: 0,
+            status: None,
+            status_serial: 0,
             answer_shown: false,
             overlay: None,
             sidebar_open: false,
@@ -127,22 +127,22 @@ impl WordleApp {
         }
     }
 
-    /// Put `text` on the clipboard and say so in a toast.
+    /// Put `text` on the clipboard and say so in the status bar.
     fn copy(&mut self, text: String, confirmation: impl Into<SharedString>, cx: &mut Context<Self>) {
         cx.write_to_clipboard(ClipboardItem::new_string(text));
-        self.show_toast(confirmation, cx);
+        self.show_status(confirmation, cx);
     }
 
-    /// Show a note for `TOAST_TIME`, then hide it.
-    fn show_toast(&mut self, text: impl Into<SharedString>, cx: &mut Context<Self>) {
-        self.toast_serial += 1;
-        let serial = self.toast_serial;
-        self.toast = Some(text.into());
+    /// Show a note in the status bar for `STATUS_TIME`, then hide it.
+    fn show_status(&mut self, text: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.status_serial += 1;
+        let serial = self.status_serial;
+        self.status = Some(text.into());
         cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(TOAST_TIME).await;
+            cx.background_executor().timer(STATUS_TIME).await;
             this.update(cx, |this, cx| {
-                if this.toast_serial == serial {
-                    this.toast = None;
+                if this.status_serial == serial {
+                    this.status = None;
                     cx.notify();
                 }
             })
@@ -198,7 +198,7 @@ impl WordleApp {
                 self.dismiss(cx);
                 match self.game.seed {
                     Some(seed) => self.copy(seed.to_string(), format!("Copied seed {seed}"), cx),
-                    None => self.show_toast("This game has a chosen answer, so it has no seed", cx),
+                    None => self.show_status("This game has a chosen answer, so it has no seed", cx),
                 }
             }
             Command::ToggleUnlimited => {
@@ -269,7 +269,7 @@ impl WordleApp {
     /// Text from the clipboard, into the seed field or the palette's query, whichever shows.
     pub(super) fn paste(&mut self, cx: &mut Context<Self>) {
         let Some(text) = cx.read_from_clipboard().and_then(|item| item.text()) else {
-            return self.show_toast("The clipboard has no text to paste", cx);
+            return self.show_status("The clipboard has no text to paste", cx);
         };
         match self.overlay.as_mut() {
             Some(Overlay::Palette(palette)) => palette.paste(&text),
@@ -400,25 +400,6 @@ impl WordleApp {
         })
     }
 
-    /// The toast, near the bottom of the window just above the status bar.
-    fn render_toast(&self) -> impl IntoElement {
-        let t = self.theme;
-        div().absolute().left_0().right_0().bottom(px(40.)).flex().justify_center().when_some(self.toast.clone(), |row, text| {
-            row.child(
-                div()
-                    .px_3()
-                    .py_1p5()
-                    .rounded_md()
-                    .bg(rgb(t.overlay))
-                    .border_1()
-                    .border_color(rgb(t.highlight_med))
-                    .shadow_lg()
-                    .text_sm()
-                    .text_color(rgb(t.text))
-                    .child(text),
-            )
-        })
-    }
 }
 
 impl Render for WordleApp {
@@ -463,7 +444,6 @@ impl Render for WordleApp {
                 ),
             )
             .child(self.render_status_bar(cx))
-            .child(self.render_toast())
             // While anything is open, a click anywhere else closes it (it draws above this).
             // Closing the theme picker this way puts the old theme back.
             .when(self.overlay.is_some(), |root| {

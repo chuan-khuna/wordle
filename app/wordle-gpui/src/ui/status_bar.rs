@@ -46,9 +46,16 @@ impl WordleApp {
             .text_xs()
             .text_color(rgb(t.subtle))
             .child(
-                widgets::icon_button(t, "toggle-sidebar", sidebar_icon(t, self.sidebar_open))
-                    .when(self.sidebar_open, |button| button.bg(rgb(t.overlay)))
-                    .on_click(cx.listener(|this, _, window, cx| this.toggle_sidebar(window, cx))),
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(
+                        widgets::icon_button(t, "toggle-sidebar", sidebar_icon(t, self.sidebar_open))
+                            .when(self.sidebar_open, |button| button.bg(rgb(t.overlay)))
+                            .on_click(cx.listener(|this, _, window, cx| this.toggle_sidebar(window, cx))),
+                    )
+                    .when_some(self.status.clone(), |left, note| left.child(div().text_color(rgb(t.text)).child(note))),
             )
             .child(div().flex().items_center().gap_2().pr_2().child(mode).child(dot()).child(seed).child(dot()).child(self.guesses_status()))
     }
