@@ -54,7 +54,7 @@ app/wordle-gpui/
       widgets.rs      panel, query field, menu row, button (gpui-base `Button`, themed)
 ```
 
-Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`, `rules/`, the dictionary's parsing) has unit tests. The `ui/` modules each add `impl WordleApp` blocks that draw one part of the window.
+Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`, `rules/`, the dictionary's parsing) has unit tests. They sit in the same folder as the code they test, as `<name>_tests.rs` (`commands.rs` has `commands_tests.rs`), pulled in by `#[cfg(test)] #[path = "commands_tests.rs"] mod tests;`. The `ui/` modules each add `impl WordleApp` blocks that draw one part of the window.
 
 `feedback.rs` and `game.rs` follow [feedback-scoring.md](feedback-scoring.md) and [game-and-state.md](game-and-state.md). Their tests check against values printed by the Python game.
 
