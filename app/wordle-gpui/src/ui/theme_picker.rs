@@ -1,7 +1,7 @@
 //! The theme picker, floating near the top of the window like Zed's: a search field, then the
 //! matching themes. Its state and keys are in `theme/picker.rs`.
 
-use gpui::{Context, SharedString, div, prelude::*, px, rgb};
+use gpui::{Context, FontWeight, SharedString, div, prelude::*, px, rgb};
 
 use super::WordleApp;
 use super::widgets::{panel, query_field};
@@ -14,6 +14,10 @@ impl WordleApp {
 
         let mut list = div().flex().flex_col().p_1();
         for (index, theme) in matches.iter().copied().enumerate() {
+            // A heading above the first theme of each group (`THEMES` keeps the dark ones together, then the light ones).
+            if index == 0 || matches[index - 1].dark != theme.dark {
+                list = list.child(div().px_2().pt_1p5().pb_0p5().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child(theme.appearance().to_uppercase()));
+            }
             list = list.child(
                 div()
                     .id(SharedString::from(format!("theme-{index}")))
@@ -31,8 +35,7 @@ impl WordleApp {
                         this.overlay = None;
                         cx.notify();
                     }))
-                    .child(div().text_color(rgb(t.text)).child(theme.name))
-                    .child(div().text_color(rgb(t.muted)).child(theme.appearance())),
+                    .child(div().text_color(rgb(t.text)).child(theme.name)),
             );
         }
         if matches.is_empty() {

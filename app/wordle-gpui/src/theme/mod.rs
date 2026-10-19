@@ -74,7 +74,19 @@ impl Theme {
     }
 }
 
-pub static THEMES: [&Theme; 10] = [&ROSE_PINE, &ROSE_PINE_DAWN, &CATPPUCCIN_MOCHA, &CATPPUCCIN_LATTE, &FLEXOKI_DARK, &FLEXOKI_LIGHT, &TOKYO_NIGHT, &EVERFOREST, &KANAGAWA, &NORD];
+/// Every theme, dark ones first and then light ones: the picker lists them in this order, under a heading for each.
+pub static THEMES: [&Theme; 10] = [
+    &ROSE_PINE,
+    &CATPPUCCIN_MOCHA,
+    &FLEXOKI_DARK,
+    &TOKYO_NIGHT,
+    &EVERFOREST,
+    &KANAGAWA,
+    &NORD,
+    &ROSE_PINE_DAWN,
+    &CATPPUCCIN_LATTE,
+    &FLEXOKI_LIGHT,
+];
 
 /// The themes whose name (or "dark"/"light") matches `query`, in order.
 /// See `search::matches`: "cmo" finds Catppuccin Mocha, and "rose" finds Rosé Pine.

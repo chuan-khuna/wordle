@@ -1,7 +1,7 @@
 //! The hamburger in the title bar and the settings menu that hangs from it. Its rows are
 //! `Command`s, drawn by `command_row`, which the command palette uses too.
 
-use gpui::{Anchor, AnyElement, Context, Div, ElementId, FontWeight, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
+use gpui::{Anchor, AnyElement, Context, Div, ElementId, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
 
 use super::widgets::{self, caret, menu_item, panel, separator, small_button};
 use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
@@ -118,8 +118,9 @@ impl WordleApp {
     }
 }
 
+/// The mark for a toggle that is on: a dot. Off, the space stays empty so the rows line up.
 fn check(t: &Theme, on: bool) -> impl IntoElement {
-    div().w(px(16.)).text_color(rgb(t.success)).font_weight(FontWeight::BOLD).when(on, |check| check.child("✓"))
+    div().w(px(16.)).flex().justify_center().when(on, |slot| slot.child(div().size(px(6.)).rounded_full().bg(rgb(t.success))))
 }
 
 /// The seed field that replaces "Play a seed…" in the menu: the digits typed so far and a caret.

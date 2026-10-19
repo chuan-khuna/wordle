@@ -40,3 +40,10 @@ fn search_finds_the_newer_themes() {
     assert_eq!(names("kanagawa"), ["Kanagawa"]);
     assert_eq!(names("nord"), ["Nord"]);
 }
+
+#[test]
+fn themes_are_grouped_dark_first_then_light() {
+    let first_light = THEMES.iter().position(|theme| !theme.dark).unwrap();
+    assert!(THEMES[..first_light].iter().all(|theme| theme.dark));
+    assert!(THEMES[first_light..].iter().all(|theme| !theme.dark));
+}

@@ -78,15 +78,15 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 
 The hamburger at the right of the title bar opens a menu. Its rows are the `Command`s in `commands.rs`, so the menu and the command palette always offer the same things:
 
-Each row is one line: the name on the left and, on the right, a dim detail (the seed, the theme name), a check for a toggle, or the shortcut drawn as gpui-kit `Kbd` keys (Ctrl+B on Windows and Linux, ⌘B on macOS; a chord such as Ctrl+K Ctrl+T is two keys). The palette uses the same rows.
+Each row is one line: the name on the left and, on the right, a dim detail (the seed, the theme name), a dot for a toggle that is on, or the shortcut drawn as gpui-kit `Kbd` keys (Ctrl+B on Windows and Linux, ⌘B on macOS; a chord such as Ctrl+K Ctrl+T is two keys). The palette uses the same rows.
 
 - **Play a new word:** a new random Answer, keeping the Guess Limit.
 - **Try this word again:** the same Game from the start (`Game::restart()`): the same Answer, Seed and Guess Limit, with no Guesses. Works for a chosen Answer (`--answer`) too.
 - **Play a seed…:** turns into a seed field. Type or paste (⌘V, Ctrl+V) up to six digits (any number from 0 to 999,999; pasting keeps only the digits), Enter plays that Seed with the current Guess Limit, Escape goes back to the menu. A **Paste seed** button beside it does the same as the paste shortcut. It picks the same Answer as `just wordle --seed N`.
 - **Copy seed:** copies the Seed's number to the clipboard. A Game with a chosen Answer has no Seed, so it says so instead.
-- **Unlimited guesses:** ticked when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
-- **Live hints:** ticked when on (see below).
-- **Show sidebar:** ticked when the sidebar is open (see below).
+- **Unlimited guesses:** dotted when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
+- **Live hints:** dotted when on (see below).
+- **Show sidebar:** dotted when the sidebar is open (see below).
 - **Change theme…:** opens the theme picker (below). The row shows the current theme.
 
 The menu's last line shows the command palette's shortcut.
@@ -151,6 +151,7 @@ The chosen theme lasts until the app closes; it isn't saved.
 
 Open it with **Change theme…** in the settings menu, or with Zed's shortcut, ⌘K ⌘T (Ctrl+K Ctrl+T on Windows and Linux).
 
+- The list has a **Dark** heading and a **Light** heading, with the dark themes first (the order of `THEMES` in `theme/mod.rs`; keep it grouped when adding a theme).
 - Type to filter by name. The letters must appear in order but not side by side (`cmo` finds Catppuccin Mocha). Case and accents don't matter (`rose` finds Rosé Pine), and `dark` or `light` filters by appearance.
 - Up and Down move through the matches, and each move previews that theme on the whole window. Typing previews the first match.
 - Enter or a click keeps the theme. Escape, a click outside, or the shortcut again puts back the theme from before the picker opened.
