@@ -222,6 +222,14 @@ impl WordleApp {
                 self.toggle_sidebar(window, cx);
             }
             Command::ChangeTheme => self.open(Overlay::ThemePicker(ThemePicker::new(self.theme)), cx),
+            Command::ResetLayout => {
+                self.dismiss(cx);
+                self.sidebar_open = false;
+                self.sidebar_width = sidebar::DEFAULT_WIDTH;
+                if !window.is_maximized() && !window.is_fullscreen() {
+                    window.resize(gpui::size(px(520.), px(980.)));
+                }
+            }
         }
         cx.notify();
     }

@@ -10,7 +10,7 @@ mod ui;
 use gpui::{App, Bounds, WindowBounds, WindowOptions, prelude::*, px, size};
 
 use args::Args;
-use gpui_kit_assets::Assets;
+use gpui_kit_assets::AllAssets as Assets;
 use ui::{WordleApp, title_bar};
 
 fn main() {

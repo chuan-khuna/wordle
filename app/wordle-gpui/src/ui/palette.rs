@@ -6,7 +6,7 @@ use gpui::{Context, SharedString, div, prelude::*, px, rgb};
 use super::WordleApp;
 use super::menu::paste_seed_button;
 use super::widgets::{panel, query_field};
-use crate::commands::CommandPalette;
+use crate::commands::{CommandPalette, group_digits};
 
 impl WordleApp {
     pub(super) fn render_palette(&self, palette: &CommandPalette, cx: &mut Context<Self>) -> impl IntoElement {
@@ -26,7 +26,7 @@ impl WordleApp {
                         .child(seed.hint())
                         .child(paste_seed_button(t, cx)),
                 );
-                query_field(t, &seed.digits, "Seed to play…")
+                query_field(t, &group_digits(&seed.digits), "Seed to play…")
             }
             None => {
                 let matches = palette.matches();

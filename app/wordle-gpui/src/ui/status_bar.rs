@@ -5,7 +5,7 @@ use gpui::{Context, Pixels, div, prelude::*, px, rgb};
 
 use super::widgets::{self, IconName};
 use super::WordleApp;
-use crate::commands::Command;
+use crate::commands::{Command, group_digits};
 
 const HEIGHT: Pixels = px(28.);
 
@@ -27,7 +27,7 @@ impl WordleApp {
                 .flex()
                 .items_center()
                 .gap_1()
-                .child(format!("seed {seed}"))
+                .child(format!("seed {}", group_digits(&seed.to_string())))
                 .child(widgets::icon_button(t, "copy-seed", widgets::icon(IconName::Copy, t.subtle)).on_click(cx.listener(|this, _, window, cx| this.run(Command::CopySeed, window, cx)))),
             None => div().child("chosen answer"),
         };

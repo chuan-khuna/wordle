@@ -96,11 +96,6 @@ pub fn button(t: &Theme, id: impl Into<ElementId>, label: impl Into<SharedString
         .child(label.into())
 }
 
-/// A smaller `button`, for actions that sit inside a line of text.
-pub fn small_button(t: &Theme, id: impl Into<ElementId>, label: impl Into<SharedString>) -> Button {
-    button(t, id, label).px_2().py_0p5().text_xs()
-}
-
 /// A monospace font for commands and code, by platform (gpui falls back if it's missing).
 pub const MONO_FONT: &str = if cfg!(target_os = "macos") {
     "Menlo"

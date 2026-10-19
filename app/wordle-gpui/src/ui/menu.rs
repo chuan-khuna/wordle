@@ -3,17 +3,17 @@
 
 use gpui::{Anchor, AnyElement, Context, Div, ElementId, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
 
-use super::widgets::{self, caret, menu_item, panel, separator, small_button};
+use super::widgets::{self, caret, menu_item, panel, separator};
 use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
-use crate::commands::{Command, SeedField};
+use crate::commands::{Command, SeedField, group_digits};
 use crate::theme::Theme;
 
 impl WordleApp {
     /// The dim detail at the right of a command's row, if it has one.
     fn detail(&self, command: Command) -> Option<SharedString> {
         match command {
-            Command::Restart => self.game.seed.map(|seed| format!("seed {seed}").into()),
-            Command::CopySeed => self.game.seed.map(|seed| seed.to_string().into()),
+            Command::Restart => self.game.seed.map(|seed| format!("seed {}", group_digits(&seed.to_string())).into()),
+            Command::CopySeed => self.game.seed.map(|seed| group_digits(&seed.to_string()).into()),
             Command::ChangeTheme => Some(self.theme.name.into()),
             _ => None,
         }
@@ -151,7 +151,7 @@ fn seed_field(t: &Theme, field: &SeedField, cx: &mut Context<WordleApp>) -> impl
                 .border_color(rgb(t.accent))
                 .text_sm()
                 .text_color(rgb(t.text))
-                .child(field.digits.clone())
+                .child(group_digits(&field.digits))
                 .child(caret(t)),
         )
         .child(div().text_xs().text_color(rgb(t.muted)).child(field.hint()))
@@ -160,5 +160,5 @@ fn seed_field(t: &Theme, field: &SeedField, cx: &mut Context<WordleApp>) -> impl
 
 /// Fills the seed field from the clipboard (its digits, as `SeedField::paste` keeps them).
 pub(super) fn paste_seed_button(t: &Theme, cx: &mut Context<WordleApp>) -> impl IntoElement {
-    small_button(t, "paste-seed", "Paste seed").on_click(cx.listener(|this, _, _, cx| this.paste(cx)))
+    widgets::icon_button(t, "paste-seed", widgets::icon(widgets::IconName::ClipboardPaste, t.subtle)).on_click(cx.listener(|this, _, _, cx| this.paste(cx)))
 }

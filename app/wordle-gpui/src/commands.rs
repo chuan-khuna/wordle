@@ -14,11 +14,12 @@ pub enum Command {
     ToggleLiveHints,
     ToggleSidebar,
     ChangeTheme,
+    ResetLayout,
 }
 
 impl Command {
     /// In menu order.
-    pub const ALL: [Command; 8] = [
+    pub const ALL: [Command; 9] = [
         Command::Reset,
         Command::Restart,
         Command::PlaySeed,
@@ -27,6 +28,7 @@ impl Command {
         Command::ToggleLiveHints,
         Command::ToggleSidebar,
         Command::ChangeTheme,
+        Command::ResetLayout,
     ];
 
     pub fn label(self) -> &'static str {
@@ -39,6 +41,7 @@ impl Command {
             Command::ToggleLiveHints => "Live hints",
             Command::ToggleSidebar => "Show sidebar",
             Command::ChangeTheme => "Change theme…",
+            Command::ResetLayout => "Reset layout",
         }
     }
 
@@ -47,7 +50,7 @@ impl Command {
         match self {
             Command::Reset | Command::Restart | Command::PlaySeed | Command::CopySeed => 0,
             Command::ToggleUnlimited | Command::ToggleLiveHints => 1,
-            Command::ToggleSidebar | Command::ChangeTheme => 2,
+            Command::ToggleSidebar | Command::ChangeTheme | Command::ResetLayout => 2,
         }
     }
 
@@ -55,6 +58,18 @@ impl Command {
     pub fn search(query: &str) -> Vec<Command> {
         Command::ALL.into_iter().filter(|command| crate::search::matches(query, command.label())).collect()
     }
+}
+
+/// A seed with its digits in groups of three from the right ("365176" is "365 176"), to be easier to read.
+pub fn group_digits(digits: &str) -> String {
+    let mut grouped = String::new();
+    for (index, digit) in digits.chars().enumerate() {
+        if index > 0 && (digits.len() - index) % 3 == 0 {
+            grouped.push(' ');
+        }
+        grouped.push(digit);
+    }
+    grouped
 }
 
 /// The digits typed into a seed field, in the menu or the palette.

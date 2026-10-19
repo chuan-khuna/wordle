@@ -72,3 +72,16 @@ fn pasting_keeps_the_digits() {
 fn an_empty_seed_field_plays_nothing() {
     assert_eq!(SeedField::default().press("enter"), SeedOutcome::None);
 }
+
+#[test]
+fn seeds_are_shown_in_groups_of_three_from_the_right() {
+    assert_eq!(group_digits(""), "");
+    assert_eq!(group_digits("7"), "7");
+    assert_eq!(group_digits("52826"), "52 826");
+    assert_eq!(group_digits("365176"), "365 176");
+}
+
+#[test]
+fn reset_layout_is_in_the_palette() {
+    assert_eq!(Command::search("layout"), [Command::ResetLayout]);
+}
