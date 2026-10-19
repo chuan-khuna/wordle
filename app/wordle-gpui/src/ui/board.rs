@@ -49,7 +49,7 @@ impl WordleApp {
             .items_center()
             .gap_1p5()
             .flex_1()
-            .min_h_0()
+            .min_h(px(378.))
             .overflow_y_scroll()
             .children(submitted.chain(typing))
     }
@@ -73,16 +73,18 @@ impl WordleApp {
             if row_index == 2 {
                 keys.push(self.key(BACKSPACE.into(), "⌫".into(), unused, px(64.), cx));
             }
-            rows.push(div().flex().justify_center().gap_1p5().children(keys));
+            rows.push(div().flex().justify_center().gap_1p5().flex_1().min_h_0().children(keys));
         }
-        div().flex().flex_col().gap_2().children(rows)
+        // Three rows of up to 56px keys, which shrink together when the window is too short for the full size.
+        div().flex().flex_col().gap_2().h(px(184.)).min_h(px(120.)).children(rows)
     }
 
     fn key(&self, key: String, label: String, (fill, text): (u32, u32), width: Pixels, cx: &mut Context<Self>) -> Stateful<Div> {
         div()
             .id(SharedString::from(format!("key-{key}")))
             .w(width)
-            .h(px(56.))
+            .h_full()
+            .max_h(px(56.))
             .flex()
             .items_center()
             .justify_center()

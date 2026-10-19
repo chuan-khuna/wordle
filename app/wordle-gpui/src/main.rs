@@ -27,10 +27,11 @@ fn main() {
         ui::bind_keys(cx);
         cx.on_window_closed(|cx, _| cx.quit()).detach();
 
-        let bounds = Bounds::centered(None, size(px(520.), px(880.)), cx);
+        let bounds = Bounds::centered(None, size(px(520.), px(980.)), cx);
         cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
+                window_min_size: Some(size(px(480.), px(960.))),
                 titlebar: Some(title_bar::options()),
                 ..Default::default()
             },

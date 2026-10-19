@@ -357,7 +357,7 @@ impl WordleApp {
     /// Under the board once the Game is over: how it ended, and the command that replays it (click to copy).
     fn render_footer(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let mut footer = div().flex().flex_col().items_center().gap_1().h(px(52.));
+        let mut footer = div().flex().flex_col().items_center().gap_1().h(px(52.)).flex_none();
         if let Some((message, tone)) = &self.message {
             footer = footer.child(div().text_color(rgb(self.tone_colour(*tone))).font_weight(FontWeight::BOLD).child(message.clone()));
         }
@@ -384,7 +384,7 @@ impl WordleApp {
     /// with the command that replays it (click to copy) beneath.
     fn render_end_buttons(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        div().h(px(76.)).mt_4().flex().flex_col().items_center().gap_2().when(self.game.is_over(), |area| {
+        div().h(px(76.)).flex_none().mt_4().flex().flex_col().items_center().gap_2().when(self.game.is_over(), |area| {
             area.child(
                 div()
                     .flex()
