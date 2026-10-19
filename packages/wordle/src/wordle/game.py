@@ -103,13 +103,18 @@ class Game:
     def is_over(self) -> bool:
         return self.is_won or self.is_lost
 
-    def guess(self, word: str) -> Guess:
-        if self.is_over:
-            raise GameOver("the Game is already over")
+    def check_guess(self, word: str) -> str:
+        """Return `word` tidied up (trimmed, lowercase), or raise InvalidGuess if the game would refuse it."""
         word = word.strip().lower()
         if len(word) != WORD_LENGTH:
             raise InvalidGuess(f"a Guess must have {WORD_LENGTH} letters")
         if word not in self.word_lists.guesses:
             raise InvalidGuess(f"{word!r} is not on the Guess List")
+        return word
+
+    def guess(self, word: str) -> Guess:
+        if self.is_over:
+            raise GameOver("the Game is already over")
+        word = self.check_guess(word)
         self._state = self._state.add(word, feedback(word, self.answer))
         return self._state.last

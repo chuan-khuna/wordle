@@ -12,6 +12,10 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Implementation docs
+
+Documents about how this project is implemented live in `docs/documents/` as `.md` or `.html` files. `docs/documents/INDEX.md` is the entry point: a bullet list with one link per document, each followed by a one-line summary. Read the index before working on an area. When you add, rename or remove a document, update the index in the same change, and keep documents in step with the code they describe.
+
 ## Tools
 
 ### Python

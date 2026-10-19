@@ -10,7 +10,8 @@ It's built to make content as well as to play. Every game, guess and solver deci
 
 ### Play
 
-- Guess a hidden 5-letter word in six tries.
+- Guess a hidden 5-letter word in six tries, on a coloured board with an on-screen keyboard that tracks every letter.
+- Pick how to play from a menu, have a friend type a hidden word, and get a 🟩🟨⬛ share grid at the end.
 - Each letter is coloured after a guess: green (right letter, right spot), yellow (in the word, wrong spot), grey (not in the word).
 - Pick a random Answer, a fixed one (`--answer`), or a seeded random one (`--seed`), so a game can be replayed exactly for a recording.
 - Uses the original Wordle Answer List (2,315 words) and the NYT Guess List (14,855 words). See `packages/wordle/src/wordle/data/SOURCES.md`.
@@ -54,6 +55,7 @@ uv run pytest                  # run every package's tests
 | `src/main.py` | Entry point to the game (`uv run src/main.py`) |
 | `packages/wordle/` | The game: word lists, Feedback, Game and State, and the `wordle` command |
 | `GLOSSARY.md` | The words this project uses for the game and the Solver |
+| `docs/documents/` | How the project is implemented; start at `docs/documents/INDEX.md` |
 | `docs/agents/` | Notes for coding agents (issue tracker, triage labels, domain docs) |
 | `references/` | Third-party projects cloned for reference (git-ignored; see `references/README.md`) |
 
