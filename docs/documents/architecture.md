@@ -12,7 +12,10 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
+justfile                    `just wordle`, `just wordle-gpui`, `just test`, `just test-gpui`
 src/main.py                 entry point: `uv run src/main.py`
+app/
+  wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml
@@ -43,6 +46,8 @@ Keeping the screen code out of `game.py` means the Solver and Benchmark can play
 
 | Command | What it does |
 | --- | --- |
+| `just wordle` | Start the terminal game (runs `uv run src/main.py`) |
+| `just wordle-gpui` | Start the desktop app. See [gpui-app.md](gpui-app.md) |
 | `uv run src/main.py` | Start the game (menu) |
 | `uv run wordle` | Same, via the package's console script |
 | `uv run python -m wordle` | Same, via `__main__.py` |

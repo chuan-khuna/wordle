@@ -1,0 +1,11 @@
+# Cargo build output
+/target/
+
+# rustfmt backups
+**/*.rs.bk
+
+# MSVC debug symbols (Windows)
+*.pdb
+
+# macOS
+.DS_Store

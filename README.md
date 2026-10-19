@@ -43,6 +43,14 @@ uv run wordle --unlimited      # no guess limit
 uv run pytest                  # run every package's tests
 ```
 
+With [just](https://just.systems) and a Rust toolchain you can also play in a desktop window:
+
+```sh
+just wordle                    # the terminal game
+just wordle-gpui               # the desktop app (Rust + gpui)
+just wordle-gpui --seed 7      # same Answer as `just wordle --seed 7`
+```
+
 ## Using it for an article or video
 
 - **Reproducible games:** fix the answer word (and the random seed) so a game plays out the same way on every take.
@@ -56,6 +64,8 @@ uv run pytest                  # run every package's tests
 | `pyproject.toml` | uv workspace root: shared dev tools and test settings |
 | `src/main.py` | Entry point to the game (`uv run src/main.py`) |
 | `packages/wordle/` | The game: word lists, Feedback, Game and State, and the `wordle` command |
+| `app/wordle-gpui/` | The same game as a desktop app, in Rust with gpui |
+| `justfile` | `just wordle`, `just wordle-gpui` and the test recipes |
 | `GLOSSARY.md` | The words this project uses for the game and the Solver |
 | `docs/documents/` | How the project is implemented; start at `docs/documents/INDEX.md` |
 | `docs/agents/` | Notes for coding agents (issue tracker, triage labels, domain docs) |

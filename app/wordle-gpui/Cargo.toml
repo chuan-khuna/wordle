@@ -1,0 +1,11 @@
+[package]
+name = "wordle-gpui"
+version = "0.1.0"
+edition = "2024"
+description = "Wordle as a desktop app, drawn with gpui (Zed's UI framework)."
+publish = false
+
+[dependencies]
+# `runtime_shaders` compiles gpui's Metal shaders when the app starts, so building
+# on macOS needs only the Command Line Tools, not the full Xcode.
+gpui = { version = "0.2.2", features = ["runtime_shaders"] }
