@@ -69,7 +69,7 @@ Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`,
 - The keyboard colours each letter by the best Mark seen for it (Correct beats Present beats Absent).
 - The title bar holds only the hamburger (and the window buttons).
 - The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
-- After a Win or Loss: a cheer, or "Out of guesses" with the Answer hidden as dots until you click the Eye icon (EyeOff hides it again) (click again to hide it; the sidebar follows); the `just wordle-gpui ...` command that replays the Game, in a monospace font with a copy icon; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
+- After a Win or Loss: a cheer, or "Out of guesses" with the Answer hidden as dots until you click the Eye icon (EyeOff hides it again; the sidebar follows); the `just wordle-gpui ...` command that replays the Game, in a monospace font with a copy icon; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
 - Copying (the seed, the results, the replay command) shows a note in the status bar, next to the sidebar button, that hides itself after 2 seconds.
 
 ## Settings menu
@@ -115,10 +115,10 @@ Hints use the border, not a fill, so a typed row never looks like a submitted on
 
 ## Sidebar
 
-The button at the left of the status bar, **Show sidebar**, or ⌘B (Ctrl+B) opens a sidebar on the left. The window widens by the sidebar's width (unless it is maximised), so the board keeps its size.
+The button at the left of the status bar, **Show sidebar**, or ⌘B (Ctrl+B) opens a sidebar on the left. The window widens by the sidebar's width (unless it is maximised), so the board keeps its size. The sidebar and the board are "islands" in the style of JetBrains' Island UI: rounded panels on the window colour, with the title bar and status bar flat on it. Drag the strip between the sidebar and the board to resize the sidebar (220 to 520 px wide; the window keeps its size, so the board narrows or widens).
 
-- **Guesses:** each Guess as a row of small tiles, and the Answer after a Loss. Click one to see its meaning.
-- **Meaning:** the picked word in the [Oxford Learner's Dictionaries](https://www.oxfordlearnersdictionaries.com): each part of speech with its pronunciations, then numbered senses with their CEFR level, labels and first example. A word that isn't there shows the site's spelling suggestions.
+- **Guesses:** each Guess as a row of small tiles, and the Answer after a Loss. Click one to see its meaning. A dot at the right end of a row marks a word that has been looked up already.
+- **Meaning:** the picked word in the [Oxford Learner's Dictionaries](https://www.oxfordlearnersdictionaries.com): each part of speech with its pronunciations, then numbered senses with their CEFR level, labels and first example. It scrolls, with a scroll bar from gpui-kit. A word that isn't there shows the site's spelling suggestions.
 
 Nothing is looked up until you click a word, so playing never touches the network. `dictionary.rs` is a Rust port of the Oxford source in the `dictionary-tui` project: it fetches the search page with a browser User-Agent, follows the redirect to the entry, scrapes it with `scraper`, and fetches the other parts of speech listed under "related entries". The lookup blocks, so it runs on gpui's background executor; results (and failures) are kept for the session, and clicking a word whose lookup failed tries again. `cargo test -- --ignored` runs one test against the real site.
 

@@ -40,9 +40,7 @@ impl WordleApp {
             .w_full()
             .h(HEIGHT)
             .px_1()
-            .bg(rgb(t.surface))
-            .border_t_1()
-            .border_color(rgb(t.overlay))
+            .bg(rgb(t.background))
             .text_xs()
             .text_color(rgb(t.subtle))
             .child(

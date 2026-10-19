@@ -2,14 +2,20 @@
 //! the one picked, looked up in the Oxford Learner's Dictionary on a background thread. Nothing is
 //! looked up until the player clicks a word.
 
-use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude::*, px, rgb, size};
+use gpui::{Context, Div, FontWeight, MouseButton, Pixels, SharedString, Window, div, prelude::*, px, rgb, rgba, size};
+use gpui_base::{Scrollbar, ScrollbarMode};
 
 use super::WordleApp;
 use super::widgets::separator;
 use crate::dictionary::{self, Entry, Lookup};
 use crate::theme::Theme;
 
-pub const WIDTH: Pixels = px(300.);
+/// The sidebar's width when the app opens, and the least and most it can be dragged to. Each includes the gap beside it.
+pub const DEFAULT_WIDTH: Pixels = px(300.);
+const MIN_WIDTH: Pixels = px(220.);
+const MAX_WIDTH: Pixels = px(520.);
+/// The space between islands, which is also the handle that resizes the sidebar.
+pub(super) const GAP: Pixels = px(8.);
 
 /// A word's meaning, while it's being looked up and after.
 pub enum Meaning {
@@ -23,10 +29,37 @@ impl WordleApp {
         self.sidebar_open = !self.sidebar_open;
         if !window.is_maximized() && !window.is_fullscreen() {
             let viewport = window.viewport_size();
-            let width = if self.sidebar_open { viewport.width + WIDTH } else { viewport.width - WIDTH };
+            let width = if self.sidebar_open { viewport.width + self.sidebar_width } else { viewport.width - self.sidebar_width };
             window.resize(size(width, viewport.height));
         }
         cx.notify();
+    }
+
+    /// The strip between the sidebar and the board: drag it to change the sidebar's width.
+    pub(super) fn render_sidebar_handle(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        let active = self.resizing_sidebar;
+        div()
+            .id("sidebar-handle")
+            .flex_none()
+            .w(GAP)
+            .h_full()
+            .cursor_col_resize()
+            .when(active, |handle| handle.child(div().mx_auto().w(px(2.)).h_full().bg(rgb(t.accent))))
+            .hover(move |style| style.bg(rgb(t.overlay)))
+            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| {
+                this.resizing_sidebar = true;
+                cx.notify();
+            }))
+    }
+
+    /// Follow the mouse while the handle is held, keeping the island's right edge under it.
+    pub(super) fn drag_sidebar(&mut self, x: Pixels, cx: &mut Context<Self>) {
+        if self.resizing_sidebar {
+            // The row has 8px of padding on the left, and the handle is GAP wide.
+            self.sidebar_width = (x - px(8.) + GAP / 2.).clamp(MIN_WIDTH, MAX_WIDTH);
+            cx.notify();
+        }
     }
 
     /// Show `word`'s meaning, looking it up unless it's known already. A failed lookup is tried again.
@@ -54,6 +87,7 @@ impl WordleApp {
 
     pub(super) fn render_sidebar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
+        let subtle = (t.subtle << 8) | 0x99;
         let mut words = div().flex().flex_col().gap_1().p_2();
         for guess in self.game.guesses() {
             let tiles = guess.word.chars().zip(&guess.feedback).map(|(letter, mark)| {
@@ -71,26 +105,37 @@ impl WordleApp {
             words = words.child(div().px_1().text_xs().text_color(rgb(t.muted)).child("Your Guesses show here. Pick one to see what it means."));
         }
 
+        // An island: the sidebar's width includes the gap beside it, so opening it widens the window by exactly WIDTH.
         div()
             .flex()
             .flex_col()
             .flex_none()
-            .w(WIDTH)
+            .w(self.sidebar_width - GAP)
             .h_full()
+            .rounded_xl()
+            .overflow_hidden()
             .bg(rgb(t.surface))
-            .border_r_1()
-            .border_color(rgb(t.overlay))
             .child(heading(t, "GUESSES"))
             .child(words)
             .child(separator(t))
             .child(heading(t, "MEANING"))
-            .child(div().id("meaning").flex_1().min_h_0().overflow_y_scroll().px_3().pb_3().child(self.render_meaning()))
+            .child(
+                div()
+                    .relative()
+                    .flex_1()
+                    .min_h_0()
+                    .child(div().id("meaning").size_full().overflow_y_scroll().track_scroll(&self.meaning_scroll).px_3().pb_3().child(self.render_meaning()))
+                    .child(div().absolute().inset_0().child(
+                        Scrollbar::vertical(&self.meaning_scroll).mode(ScrollbarMode::Always).styles(|styles| styles.thumb(|thumb| thumb.bg(rgba(subtle)).radius(px(3.)))),
+                    )),
+            )
     }
 
     /// A Guess (or the Answer) as a row of small tiles; clicking it shows its meaning.
     fn word_row(&self, word: &str, tiles: Vec<Div>, note: Option<&'static str>, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let selected = self.selected_word.as_deref() == Some(word);
+        let looked_up = matches!(self.meanings.get(word), Some(Meaning::Done(Ok(_))));
         let word = word.to_string();
         div()
             .id(SharedString::from(format!("word-{word}-{}", note.unwrap_or(""))))
@@ -105,6 +150,8 @@ impl WordleApp {
             .on_click(cx.listener(move |this, _, _, cx| this.select_word(word.clone(), cx)))
             .child(div().flex().gap_1().children(tiles))
             .children(note.map(|note| div().text_xs().text_color(rgb(t.muted)).child(note)))
+            // A dot marks a word whose meaning has been looked up already.
+            .when(looked_up, |row| row.child(div().ml_auto().mr_1().size(px(6.)).rounded_full().bg(rgb(t.accent))))
     }
 
     fn render_meaning(&self) -> Div {

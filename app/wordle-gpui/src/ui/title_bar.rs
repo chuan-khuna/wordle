@@ -26,7 +26,6 @@ pub fn options() -> TitlebarOptions {
 /// The bar holds only `trailing` on the right (the hamburger); the rest of it drags the window.
 /// `trailing` should `occlude()` so clicks on it don't drag the window.
 pub fn render(theme: &Theme, trailing: AnyElement, window: &Window) -> impl IntoElement {
-    let background = if window.is_window_active() { theme.surface } else { theme.background };
     let left_padding = if cfg!(target_os = "macos") { TRAFFIC_LIGHTS_WIDTH } else { px(12.) };
 
 
@@ -39,9 +38,7 @@ pub fn render(theme: &Theme, trailing: AnyElement, window: &Window) -> impl Into
         .w_full()
         .h(HEIGHT)
         .pl(left_padding)
-        .bg(rgb(background))
-        .border_b_1()
-        .border_color(rgb(theme.overlay))
+        .bg(rgb(theme.background))
         .window_control_area(WindowControlArea::Drag)
         .on_click(|event: &ClickEvent, window, _| {
             if event.click_count() == 2 {

@@ -23,6 +23,7 @@ fn main() {
     };
 
     gpui_platform::application().with_assets(Assets).run(move |cx: &mut App| {
+        gpui_base::init(cx);
         ui::bind_keys(cx);
         cx.on_window_closed(|cx, _| cx.quit()).detach();
 

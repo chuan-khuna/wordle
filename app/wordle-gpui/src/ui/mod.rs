@@ -15,7 +15,7 @@ mod widgets;
 use std::collections::HashMap;
 use std::time::Duration;
 
-use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, SharedString, Window, actions, div, prelude::*, px, rgb};
+use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::rules::game::{Game, MAX_GUESSES, random_seed};
 use wordle_gpui::rules::words::WORD_LENGTH;
 
@@ -92,12 +92,17 @@ pub struct WordleApp {
     answer_shown: bool,
     overlay: Option<Overlay>,
     sidebar_open: bool,
+    /// How wide the sidebar is (with its gap), dragged by `render_sidebar_handle`.
+    sidebar_width: gpui::Pixels,
+    resizing_sidebar: bool,
     /// Whether the typed Guess's tiles show what earlier Guesses say about each letter.
     live_hints: bool,
     /// The word whose meaning the sidebar shows.
     selected_word: Option<String>,
     /// Every word looked up so far, kept until the app closes.
     meanings: HashMap<String, Meaning>,
+    /// Scroll position of the meaning section in the sidebar, which its scroll bar follows.
+    meaning_scroll: ScrollHandle,
     theme: &'static Theme,
     pub focus_handle: FocusHandle,
 }
@@ -113,9 +118,12 @@ impl WordleApp {
             answer_shown: false,
             overlay: None,
             sidebar_open: false,
+            sidebar_width: sidebar::DEFAULT_WIDTH,
+            resizing_sidebar: false,
             live_hints: false,
             selected_word: None,
             meanings: HashMap::new(),
+            meaning_scroll: ScrollHandle::new(),
             theme: &theme::ROSE_PINE,
             focus_handle: cx.focus_handle(),
         }
@@ -421,17 +429,25 @@ impl Render for WordleApp {
                 }
                 this.key_down(&keystroke.key, keystroke.key_char.as_deref(), window, cx);
             }))
+            .on_mouse_move(cx.listener(|this, event: &gpui::MouseMoveEvent, _, cx| this.drag_sidebar(event.position.x, cx)))
+            .on_mouse_up(gpui::MouseButton::Left, cx.listener(|this, _, _, cx| {
+                this.resizing_sidebar = false;
+                cx.notify();
+            }))
             .relative()
             .size_full()
             .flex()
             .flex_col()
             .bg(rgb(t.background))
             .child(title_bar::render(t, self.render_menu_button(cx), window))
+            // The sidebar and the board are islands: rounded panels floating on the window, with a gap between them.
             .child(
-                div().flex().flex_1().min_h_0().when(self.sidebar_open, |row| row.child(self.render_sidebar(cx))).child(
+                div().flex().flex_1().min_h_0().px_2().pb_1().when(self.sidebar_open, |row| row.child(self.render_sidebar(cx)).child(self.render_sidebar_handle(cx))).child(
                 div()
                     .flex_1()
                     .min_h_0()
+                    .rounded_xl()
+                    .bg(rgb(t.surface))
                     .flex()
                     .flex_col()
                     .items_center()
