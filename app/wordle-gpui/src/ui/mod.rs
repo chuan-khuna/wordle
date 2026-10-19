@@ -371,8 +371,9 @@ impl WordleApp {
                     .gap_1p5()
                     .text_xs()
                     .text_color(rgb(t.muted))
-                    .child("Play it again:")
-                    .child(widgets::small_button(t, "copy-replay", self.replay_command()).on_click(cx.listener(|this, _, _, cx| {
+                    .child("Play it again")
+                    .child(div().font_family(widgets::MONO_FONT).text_color(rgb(t.text)).child(self.replay_command()))
+                    .child(widgets::small_button(t, "copy-replay", "Copy").on_click(cx.listener(|this, _, _, cx| {
                         this.copy(this.replay_command(), "Copied the replay command", cx);
                     }))),
             );
