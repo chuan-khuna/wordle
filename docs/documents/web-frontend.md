@@ -10,6 +10,7 @@ app/frontend/
   bunfig.toml               minimumReleaseAge = 604800 (7 days)
   .npmrc                    min-release-age=7
   components.json           shadcn/ui config (style radix-nova, aliases, lucide icons)
+  scripts/screenshot.ts     Playwright screenshots of the pages (`bun run screenshot`)
   next.config.ts            the /api rewrite to BACKEND_URL, and @next/mdx with its plugins
   content/
     series.mdx              the site's one Series and its Parts (frontmatter + MDX)
@@ -58,6 +59,7 @@ Versions (current when the app was made, all at least 7 days old): Next 16.4, Re
 | `bun run build` | Production build |
 | `bun run lint` | ESLint |
 | `bun run typecheck` | `tsc --noEmit` |
+| `bun run screenshot` | Highlight PNGs of every page into `screenshots/<page>/` (git-ignored) with Playwright's Chromium, against a running site (`just web`): the top of the page, then each Widget and `<Boards>` (anything in a `WidgetFrame`) cropped with a small margin, as `NN-<title>.<theme>.<width>.png`. Takes paths (`articles/rules openers`; the leading slash is optional), `--theme <id|all>`, `--mobile`, `--width`/`--height`, `--full-page` (one whole-page shot per page instead), `--url`, `--out`. Run `bunx playwright install chromium` once first |
 | `bun test` | Unit tests (`src/lib/*.test.ts`); the cross-check against `/api/feedback` runs when the backend is up |
 
 Run `just precompute` and `just precompute-benchmark` once first: the backend will not start without the matrices, and answers 503 for the Benchmark and Openers without their files.
