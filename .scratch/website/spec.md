@@ -6,10 +6,9 @@ A personal website that hosts Articles (the scripts behind the user's videos). E
 
 ## Shape
 
-- `app/backend/`: Python and FastAPI (served by uvicorn), a **standalone** uv project. It is not a workspace member and never imports `packages/wordle`. Like `app/wordle-gpui`, it has:
-  - its own copies of `answers.txt` / `guesses.txt` / `SOURCES.md` (from `packages/wordle/src/wordle/data/`),
-  - its own Feedback, Candidates and Strategy code,
-  - its own precompute command, which writes the Feedback matrices and the Benchmark results into `app/backend/matrices/` (gitignored). The `.npy` files are byte-identical to the other two apps' files.
+- `app/backend/`: Python and FastAPI (served by uvicorn), its own uv project outside the root workspace. It **reuses the engine from `packages/wordle`** (a uv path dependency): the word lists, Feedback, Candidates, the Feedback matrices and the Solver's Strategy all come from the package. The backend adds only the web layer and what the website needs on top:
+  - `wordle_backend/main.py` is the FastAPI entry point (`uvicorn wordle_backend.main:app`); the endpoints live in `wordle_backend/routers/*.py`, one module per area,
+  - its precompute command writes the Feedback matrices (with the package's builder) and the Benchmark and Opener results into `app/backend/matrices/` (gitignored).
 - `app/frontend/`: Next.js (App Router), TypeScript, Tailwind and bun. `bunfig.toml` sets `minimumReleaseAge = 604800` and `.npmrc` sets `min-release-age=7`.
 - Runs locally for now: `just backend`, `just frontend`, `just web` (both), `just backend-precompute`, `just test-backend`. Next proxies `/api/*` to FastAPI through `rewrites`, and the backend URL comes from an env var (`BACKEND_URL`), so a later deployment only needs config.
 
