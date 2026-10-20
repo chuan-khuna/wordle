@@ -27,6 +27,12 @@ pub const GAP: Pixels = px(8.);
 const SUGGESTIONS: usize = 8;
 /// The tallest the chart grows before its bars scroll; it draws every group.
 const CHART_HEIGHT: Pixels = px(320.);
+/// The tallest the Candidate list grows before it scrolls.
+const CANDIDATES_HEIGHT: Pixels = px(120.);
+/// Up to this many Candidates are laid out as a grid of words instead of one run of text.
+const GRID_WORDS: usize = 20;
+/// Words per row in that grid: 20 Candidates fill 4 rows of 5.
+const GRID_COLUMNS: usize = 5;
 
 /// A Feedback matrix: being read, read, or missing.
 pub enum MatrixLoad {
@@ -261,7 +267,7 @@ impl WordleApp {
             }));
 
         let candidates = self.solver.candidates.len();
-        let mut status = div()
+        let status = div()
             .flex()
             .items_center()
             .justify_between()
@@ -270,11 +276,6 @@ impl WordleApp {
             .pb_1()
             .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child(if opener { "BEST OPENER" } else { "BEST GUESS" }))
             .child(div().text_xs().text_color(rgb(t.subtle)).child(format!("{} candidate{}", group_thousands(candidates), if candidates == 1 { "" } else { "s" })));
-        if !opener && (1..=6).contains(&candidates) {
-            let answers = &word_lists().answers;
-            let words: Vec<String> = self.solver.candidates.iter().map(|&index| answers[index].to_uppercase()).collect();
-            status = div().flex().flex_col().child(status).child(div().px_3().text_xs().text_color(rgb(t.subtle)).child(words.join(" · ")));
-        }
 
         div()
             .id("solver")
@@ -291,6 +292,8 @@ impl WordleApp {
             .child(settings)
             .child(status)
             .child(self.render_suggestions(cx))
+            .child(separator(t).mx_3().my_2())
+            .child(self.render_candidates())
             .child(separator(t).mx_3().my_2())
             .child(self.render_search(cx))
             .children(self.solver.selected.as_ref().map(|word| match strategy::distribution(word, &self.solver.candidates) {
@@ -343,6 +346,31 @@ impl WordleApp {
             .when(suggestion.is_candidate, |row| row.child(div().size(px(6.)).rounded_full().bg(rgb(t.correct.0))))
             .child(div().ml_auto().text_color(rgb(t.text)).child(format!("{:.2} bits", suggestion.bits)))
             .child(div().w(px(64.)).text_right().text_xs().text_color(rgb(t.muted)).child(format!("≈{} left", format_left(suggestion.expected_left))))
+    }
+
+    /// Every current Candidate, in Answer List order, in a box that scrolls once it is full. One
+    /// text run rather than a chip per word, so the 2,315 words before the first Guess stay cheap.
+    fn render_candidates(&self) -> impl IntoElement {
+        let t = self.theme;
+        let answers = &word_lists().answers;
+        let words: Vec<String> = self.solver.candidates.iter().map(|&index| answers[index].to_uppercase()).collect();
+        let count = words.len();
+        let body = if words.is_empty() {
+            div().text_color(rgb(t.muted)).child("No word fits every Feedback so far.")
+        } else if words.len() <= GRID_WORDS {
+            // Few enough to read at a glance: a grid, GRID_COLUMNS words to a row.
+            let cells = words.into_iter().map(|word| div().w(relative(1. / GRID_COLUMNS as f32)).py(px(2.)).child(word));
+            div().flex().flex_wrap().font_family(widgets::MONO_FONT).font_weight(FontWeight::BOLD).text_sm().text_color(rgb(t.text)).children(cells)
+        } else {
+            div().font_family(widgets::MONO_FONT).text_color(rgb(t.subtle)).child(words.join(" · "))
+        };
+        div()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .px_3()
+            .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child(format!("CANDIDATES ({})", group_thousands(count))))
+            .child(div().id("solver-candidates").max_h(CANDIDATES_HEIGHT).overflow_y_scroll().text_xs().child(body))
     }
 
     /// The field to chart any word on the Guess List. Clicking it sends the keys there instead of the board.
