@@ -10,13 +10,11 @@ How the Python package and the gpui app store the precomputed matrices, what one
 
 | File (under `precompute-cache/`) | Python package | gpui app (Rust) |
 | --- | --- | --- |
-| `feedback/answers_vs_answers.npy`, `feedback/guesses_vs_answers.npy` | writes (`wordle.solver.matrix.build`, `np.save`) and reads; the backend reads them too | — |
-| `feedback-rust/answers_vs_answers.npy`, `feedback-rust/guesses_vs_answers.npy` | — | writes (`solver/matrix.rs` `build`, `npy_bytes`) and reads |
-| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | only its tests read it, to compare |
-| `guess-counts-rust/<strategy id>.npy` | — | writes in place (`solver/guess_count_matrix.rs` `build`) and reads |
-| `manifest.json`, `summary.json`, `<id>.ranking.csv` in each of those folders | writes them in `guess-counts/` | writes them in `guess-counts-rust/` (with `serde_json`); the Solver panel reads its `summary.json` |
+| `feedback/answers_vs_answers.npy`, `feedback/guesses_vs_answers.npy` | writes (`wordle.solver.matrix.build`, `np.save`) and reads; the backend reads them too | writes (`solver/matrix.rs` `build`, `npy_bytes`) and reads |
+| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | writes in place (`solver/guess_count_matrix.rs` `build`) and reads |
+| `guess-counts/manifest.json`, `summary.json`, `<id>.ranking.csv` | writes them | writes them (with `serde_json`); the Solver panel reads `summary.json` |
 
-Each tool keeps its own folders (`feedback/` and `guess-counts/` for Python, `feedback-rust/` and `guess-counts-rust/` for the gpui app), so neither ever writes a file the other is reading. For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. For the Guess Count Matrix the gpui app follows the contract below: its rows equal the Python command's rows, and from the same matrices it writes `summary.json` and the ranking CSVs byte for byte as Python does (`rows_equal_the_python_commands_rows` and `the_summary_equals_the_python_commands_summary` in `solver/guess_count_matrix_tests.rs`). `manifest.json` differs only in `tool`. Each tool has its own folder, so they never write the same file, but the files are interchangeable: copy one folder's files into the other to resume there.
+Both tools share the folders, so either reads and resumes what the other wrote (running both on one folder at once is not guarded against). For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. For the Guess Count Matrix the gpui app follows the contract below: its rows equal the Python command's rows, and from the same matrices it writes `summary.json` and the ranking CSVs byte for byte as Python does (`rows_equal_the_python_commands_rows` and `the_summary_equals_the_python_commands_summary` in `solver/guess_count_matrix_tests.rs`). `manifest.json` differs only in `tool`, which the resume check ignores. Those comparison tests read Python's files from `WORDLE_PYTHON_GUESS_COUNTS`, or else from `precompute-cache/guess-counts/` when its manifest's `tool` ends in `(python)`, and skip otherwise; to run them after the gpui app last wrote the folder, build Python's into another folder (`just precompute-guess-counts --out DIR`) and point the variable at it.
 
 ## One file, byte by byte
 

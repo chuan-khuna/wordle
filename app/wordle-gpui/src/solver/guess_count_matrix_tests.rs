@@ -292,7 +292,7 @@ fn the_summary_files_are_written_as_python_writes_them() {
 /// The Python command's folder to compare with: `WORDLE_PYTHON_GUESS_COUNTS` if set, or else
 /// `precompute-cache/guess-counts/`, if its manifest says Python wrote it.
 fn python_reference() -> Option<PathBuf> {
-    let dir = std::env::var_os("WORDLE_PYTHON_GUESS_COUNTS").map_or_else(python_dir, PathBuf::from);
+    let dir = std::env::var_os("WORDLE_PYTHON_GUESS_COUNTS").map_or_else(default_dir, PathBuf::from);
     let manifest = read_manifest(&dir)?;
     manifest["tool"].as_str()?.ends_with("(python)").then_some(dir)
 }

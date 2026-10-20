@@ -221,7 +221,7 @@ fn matches_python(guesses: &[&str], answer: &str, id: &str, want: &[Expected]) {
 }
 
 // The expected values below were printed by the Python package's `Solver.rank` (with the two-or-fewer
-// Candidates rule of `Solver.suggest`) on the matrices in `precompute-cache/feedback-rust/`.
+// Candidates rule of `Solver.suggest`) on the matrices in `precompute-cache/feedback/`.
 
 #[test]
 fn the_empty_state_matches_the_python_solver() {

@@ -23,8 +23,8 @@ use super::precompute::threads_label;
 /// How many log lines are kept; older ones are dropped (and counted).
 pub const MAX_LOG_LINES: usize = 1_000;
 
-pub const MATRICES_FOLDER: &str = "precompute-cache/feedback-rust/";
-pub const GUESS_COUNTS_FOLDER: &str = "precompute-cache/guess-counts-rust/";
+pub const MATRICES_FOLDER: &str = "precompute-cache/feedback/";
+pub const GUESS_COUNTS_FOLDER: &str = "precompute-cache/guess-counts/";
 
 /// Which precompute is running.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -96,7 +96,7 @@ pub enum Span {
     Opener,
     /// A number: a count (`14,855`), an average (`3.528`) or a size (`34.4`).
     Number,
-    /// A file name or a folder (`guesses_vs_answers.npy`, `precompute-cache/feedback-rust/`).
+    /// A file name or a folder (`guesses_vs_answers.npy`, `precompute-cache/feedback/`).
     Path,
 }
 

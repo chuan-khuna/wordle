@@ -76,10 +76,10 @@ fn enter_stops_a_run_and_escape_keeps_it_going() {
 #[test]
 fn the_end_note_says_where_the_files_went_and_how_long_it_took() {
     let built = |stopped| Ok(Built { paths: vec![PathBuf::from("summary.json")], stopped, filled: 14855 });
-    assert_eq!(end_note(&built(false), Duration::from_secs(185), 8), "Saved guess counts to precompute-cache/guess-counts-rust/ in 3 min 05s (14,855 rows, 8 threads)");
-    assert_eq!(end_note(&built(true), Duration::from_millis(4200), 1), "Stopped guess counts after 4.2s: 14,855 rows kept in precompute-cache/guess-counts-rust/. Run it again to resume");
+    assert_eq!(end_note(&built(false), Duration::from_secs(185), 8), "Saved guess counts to precompute-cache/guess-counts/ in 3 min 05s (14,855 rows, 8 threads)");
+    assert_eq!(end_note(&built(true), Duration::from_millis(4200), 1), "Stopped guess counts after 4.2s: 14,855 rows kept in precompute-cache/guess-counts/. Run it again to resume");
     let mismatch = Err(BuildError::Mismatch { strategy: "bits-all", reason: "there is no manifest.json".into() });
-    assert_eq!(end_note(&mismatch, Duration::ZERO, 8), "Can't resume bits-all: there is no manifest.json. Delete precompute-cache/guess-counts-rust/ to start it over");
+    assert_eq!(end_note(&mismatch, Duration::ZERO, 8), "Can't resume bits-all: there is no manifest.json. Delete precompute-cache/guess-counts/ to start it over");
 }
 
 #[test]

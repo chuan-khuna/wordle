@@ -199,7 +199,7 @@ def test_resume_refuses_when_the_manifest_differs(solver, tmp_path):
 
 
 def test_a_folder_copied_from_the_gpui_app_is_resumed(solver, tmp_path):
-    # A copy of `precompute-cache/guess-counts-rust/` differs only in the manifest's `tool`, which is not checked.
+    # Files the gpui app wrote differ only in the manifest's `tool`, which is not checked.
     build(tmp_path, (HOW,), ["raise"], solver)
     edit_manifest(tmp_path, lambda manifest: manifest.update(tool="wordle-gpui Precompute guess counts (rust)"))
     assert mismatch(tmp_path, HOW, solver) is None

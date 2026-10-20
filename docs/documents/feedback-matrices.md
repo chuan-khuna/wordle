@@ -115,7 +115,7 @@ The matrices are dense and have no column names, so a table format (CSV, Parquet
 
 ## The gpui app builds them too
 
-The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`, into its own `precompute-cache/feedback-rust/` (it finds the repo root from its own `CARGO_MANIFEST_DIR`, so the working directory does not matter), so it never writes the files the package and the backend read. Both writers give byte-identical files, so either folder's files can be copied into the other. The app reads the files with a small `.npy` header parser of its own in `solver/strategy.rs`, not the `npyz` crate, and refuses a file that is not `uint8` row by row. [`.npy` files in Python and Rust](npy-in-python-and-rust.md) compares the two byte by byte.
+The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`, into the same `precompute-cache/feedback/` (it finds the repo root from its own `CARGO_MANIFEST_DIR`, so the working directory does not matter). Both writers give byte-identical files, so it does not matter which one built them. The app reads the files with a small `.npy` header parser of its own in `solver/strategy.rs`, not the `npyz` crate, and refuses a file that is not `uint8` row by row. [`.npy` files in Python and Rust](npy-in-python-and-rust.md) compares the two byte by byte.
 
 ## The web backend builds them too
 
