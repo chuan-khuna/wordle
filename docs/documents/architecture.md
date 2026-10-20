@@ -12,12 +12,13 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just precompute`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just backend-precompute`
+justfile                    `just wordle`, `just precompute`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just backend-precompute`, `just frontend`, `just web`
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
   backend/                  the website's FastAPI app: its own uv project outside the workspace, depending on `packages/wordle` through a path dependency (see web-backend.md)
+  frontend/                 the website's Next.js app (App Router, TypeScript, Tailwind, bun), proxying /api to the backend (see web-frontend.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml
@@ -58,6 +59,8 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `uv run pytest` | Run the tests of every package |
 | `just backend-precompute` | Precompute the website backend's Feedback matrices, Benchmark and Opener leaderboard. See [web-backend.md](web-backend.md) |
 | `just backend` | Serve the website backend with uvicorn. See [web-backend.md](web-backend.md) |
+| `just frontend` | Serve the website frontend (Next.js dev server). See [web-frontend.md](web-frontend.md) |
+| `just web` | Serve the backend and the frontend together. See [web-frontend.md](web-frontend.md) |
 | `just test-backend` | Run the website backend's tests. See [web-backend.md](web-backend.md) |
 | `uv build --package wordle` | Build a wheel; it includes the word lists |
 

@@ -40,3 +40,19 @@ backend-precompute *args:
 [working-directory: 'app/backend']
 backend *args:
     uv run uvicorn wordle_backend.main:app {{args}}
+
+# Run the website frontend (Next.js) dev server on http://localhost:3000. Proxies /api to BACKEND_URL (default http://127.0.0.1:8000). Takes next dev options, e.g. --port 3001
+[working-directory: 'app/frontend']
+frontend *args:
+    bun run dev {{args}}
+
+# Run the website: backend on :8000 and frontend on :3000 together. Ctrl-C stops both
+[working-directory: 'app']
+[unix]
+web:
+    #!/usr/bin/env bash
+    set -u
+    trap 'trap - INT TERM EXIT; kill 0' INT TERM EXIT
+    (cd backend && exec uv run uvicorn wordle_backend.main:app) &
+    (cd frontend && exec bun run dev) &
+    wait

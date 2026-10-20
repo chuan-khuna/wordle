@@ -1,0 +1,253 @@
+/* Generated from app/wordle-gpui/src/theme/*.rs: the same ten palettes and role names.
+   A theme is the [data-theme] attribute on <html>; Paint roles (correct, present, absent,
+   absent-key) are a fill plus --on-<role>, the colour of the letter drawn on it. */
+
+[data-theme="rose-pine"] {
+  color-scheme: dark;
+  --background: #191724;
+  --surface: #1f1d2e;
+  --overlay: #26233a;
+  --highlight-low: #21202e;
+  --highlight-med: #403d52;
+  --highlight-high: #524f67;
+  --text: #e0def4;
+  --subtle: #908caa;
+  --muted: #6e6a86;
+  --heading: #ebbcba;
+  --error: #eb6f92;
+  --success: #9ccfd8;
+  --accent: #c4a7e7;
+  --correct: #31748f;
+  --on-correct: #e0def4;
+  --present: #f6c177;
+  --on-present: #191724;
+  --absent: #26233a;
+  --on-absent: #6e6a86;
+  --absent-key: #21202e;
+  --on-absent-key: #6e6a86;
+}
+
+[data-theme="catppuccin-mocha"] {
+  color-scheme: dark;
+  --background: #1e1e2e;
+  --surface: #181825;
+  --overlay: #313244;
+  --highlight-low: #181825;
+  --highlight-med: #45475a;
+  --highlight-high: #585b70;
+  --text: #cdd6f4;
+  --subtle: #a6adc8;
+  --muted: #6c7086;
+  --heading: #cba6f7;
+  --error: #f38ba8;
+  --success: #94e2d5;
+  --accent: #b4befe;
+  --correct: #a6e3a1;
+  --on-correct: #1e1e2e;
+  --present: #f9e2af;
+  --on-present: #1e1e2e;
+  --absent: #313244;
+  --on-absent: #7f849c;
+  --absent-key: #181825;
+  --on-absent-key: #6c7086;
+}
+
+[data-theme="flexoki-dark"] {
+  color-scheme: dark;
+  --background: #100f0f;
+  --surface: #1c1b1a;
+  --overlay: #282726;
+  --highlight-low: #282726;
+  --highlight-med: #403e3c;
+  --highlight-high: #575653;
+  --text: #cecdc3;
+  --subtle: #878580;
+  --muted: #6f6e69;
+  --heading: #da702c;
+  --error: #d14d41;
+  --success: #879a39;
+  --accent: #3aa99f;
+  --correct: #879a39;
+  --on-correct: #100f0f;
+  --present: #d0a215;
+  --on-present: #100f0f;
+  --absent: #282726;
+  --on-absent: #6f6e69;
+  --absent-key: #1c1b1a;
+  --on-absent-key: #6f6e69;
+}
+
+[data-theme="tokyo-night"] {
+  color-scheme: dark;
+  --background: #16161e;
+  --surface: #1a1b26;
+  --overlay: #292e42;
+  --highlight-low: #1f2335;
+  --highlight-med: #3b4261;
+  --highlight-high: #545c7e;
+  --text: #c0caf5;
+  --subtle: #a9b1d6;
+  --muted: #565f89;
+  --heading: #ff9e64;
+  --error: #f7768e;
+  --success: #1abc9c;
+  --accent: #bb9af7;
+  --correct: #9ece6a;
+  --on-correct: #16161e;
+  --present: #e0af68;
+  --on-present: #16161e;
+  --absent: #292e42;
+  --on-absent: #565f89;
+  --absent-key: #1f2335;
+  --on-absent-key: #565f89;
+}
+
+[data-theme="everforest"] {
+  color-scheme: dark;
+  --background: #232a2e;
+  --surface: #2d353b;
+  --overlay: #343f44;
+  --highlight-low: #343f44;
+  --highlight-med: #475258;
+  --highlight-high: #56635f;
+  --text: #d3c6aa;
+  --subtle: #9da9a0;
+  --muted: #7a8478;
+  --heading: #e69875;
+  --error: #e67e80;
+  --success: #83c092;
+  --accent: #7fbbb3;
+  --correct: #a7c080;
+  --on-correct: #232a2e;
+  --present: #dbbc7f;
+  --on-present: #232a2e;
+  --absent: #343f44;
+  --on-absent: #7a8478;
+  --absent-key: #2d353b;
+  --on-absent-key: #7a8478;
+}
+
+[data-theme="kanagawa"] {
+  color-scheme: dark;
+  --background: #16161d;
+  --surface: #1f1f28;
+  --overlay: #2a2a37;
+  --highlight-low: #1a1a22;
+  --highlight-med: #363646;
+  --highlight-high: #54546d;
+  --text: #dcd7ba;
+  --subtle: #c8c093;
+  --muted: #727169;
+  --heading: #ffa066;
+  --error: #e46876;
+  --success: #7aa89f;
+  --accent: #957fb8;
+  --correct: #98bb6c;
+  --on-correct: #16161d;
+  --present: #e6c384;
+  --on-present: #16161d;
+  --absent: #2a2a37;
+  --on-absent: #727169;
+  --absent-key: #1a1a22;
+  --on-absent-key: #727169;
+}
+
+[data-theme="nord"] {
+  color-scheme: dark;
+  --background: #242933;
+  --surface: #2e3440;
+  --overlay: #3b4252;
+  --highlight-low: #3b4252;
+  --highlight-med: #434c5e;
+  --highlight-high: #4c566a;
+  --text: #d8dee9;
+  --subtle: #9aa5b8;
+  --muted: #616e88;
+  --heading: #d08770;
+  --error: #bf616a;
+  --success: #8fbcbb;
+  --accent: #88c0d0;
+  --correct: #a3be8c;
+  --on-correct: #2e3440;
+  --present: #ebcb8b;
+  --on-present: #2e3440;
+  --absent: #3b4252;
+  --on-absent: #616e88;
+  --absent-key: #2e3440;
+  --on-absent-key: #616e88;
+}
+
+[data-theme="rose-pine-dawn"] {
+  color-scheme: light;
+  --background: #faf4ed;
+  --surface: #fffaf3;
+  --overlay: #f2e9e1;
+  --highlight-low: #f4ede8;
+  --highlight-med: #dfdad9;
+  --highlight-high: #cecacd;
+  --text: #575279;
+  --subtle: #797593;
+  --muted: #9893a5;
+  --heading: #d7827e;
+  --error: #b4637a;
+  --success: #56949f;
+  --accent: #907aa9;
+  --correct: #286983;
+  --on-correct: #faf4ed;
+  --present: #ea9d34;
+  --on-present: #faf4ed;
+  --absent: #9893a5;
+  --on-absent: #faf4ed;
+  --absent-key: #9893a5;
+  --on-absent-key: #faf4ed;
+}
+
+[data-theme="catppuccin-latte"] {
+  color-scheme: light;
+  --background: #eff1f5;
+  --surface: #e6e9ef;
+  --overlay: #ccd0da;
+  --highlight-low: #dce0e8;
+  --highlight-med: #bcc0cc;
+  --highlight-high: #acb0be;
+  --text: #4c4f69;
+  --subtle: #6c6f85;
+  --muted: #9ca0b0;
+  --heading: #8839ef;
+  --error: #d20f39;
+  --success: #179299;
+  --accent: #7287fd;
+  --correct: #40a02b;
+  --on-correct: #eff1f5;
+  --present: #df8e1d;
+  --on-present: #eff1f5;
+  --absent: #8c8fa1;
+  --on-absent: #eff1f5;
+  --absent-key: #8c8fa1;
+  --on-absent-key: #eff1f5;
+}
+
+[data-theme="flexoki-light"] {
+  color-scheme: light;
+  --background: #f2f0e5;
+  --surface: #fffcf0;
+  --overlay: #e6e4d9;
+  --highlight-low: #e6e4d9;
+  --highlight-med: #cecdc3;
+  --highlight-high: #b7b5ac;
+  --text: #100f0f;
+  --subtle: #6f6e69;
+  --muted: #878580;
+  --heading: #bc5215;
+  --error: #af3029;
+  --success: #66800b;
+  --accent: #24837b;
+  --correct: #66800b;
+  --on-correct: #fffcf0;
+  --present: #d0a215;
+  --on-present: #100f0f;
+  --absent: #878580;
+  --on-absent: #fffcf0;
+  --absent-key: #878580;
+  --on-absent-key: #fffcf0;
+}

@@ -1,0 +1,32 @@
+@import "tailwindcss";
+@import "./themes.css";
+
+/* The gpui role names as Tailwind colours: bg-surface, text-correct, border-highlight-med, ... */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-overlay: var(--overlay);
+  --color-highlight-low: var(--highlight-low);
+  --color-highlight-med: var(--highlight-med);
+  --color-highlight-high: var(--highlight-high);
+  --color-text: var(--text);
+  --color-subtle: var(--subtle);
+  --color-muted: var(--muted);
+  --color-heading: var(--heading);
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-accent: var(--accent);
+  --color-correct: var(--correct);
+  --color-on-correct: var(--on-correct);
+  --color-present: var(--present);
+  --color-on-present: var(--on-present);
+  --color-absent: var(--absent);
+  --color-on-absent: var(--on-absent);
+  --color-absent-key: var(--absent-key);
+  --color-on-absent-key: var(--on-absent-key);
+}
+
+body {
+  background: var(--background);
+  color: var(--text);
+}
