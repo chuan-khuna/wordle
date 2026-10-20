@@ -6,6 +6,8 @@ const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
+  // The dev indicator defaults to bottom-left, on top of the sidebar's theme button.
+  devIndicators: { position: "bottom-right" },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` }];
   },
