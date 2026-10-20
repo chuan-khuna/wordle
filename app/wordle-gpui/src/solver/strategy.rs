@@ -150,6 +150,10 @@ fn read_npy_header(bytes: &[u8]) -> Result<((usize, usize), usize), String> {
     if !header.contains("'|u1'") {
         return Err("the cells are not u8".into());
     }
+    // Column by column would swap what a row and a column mean.
+    if !header.contains("'fortran_order': False") {
+        return Err("the cells are not stored row by row".into());
+    }
     let shape = header.split("'shape': (").nth(1).and_then(|rest| rest.split(')').next()).ok_or("no shape in the .npy header")?;
     let mut sizes = shape.split(',').filter_map(|size| size.trim().parse::<usize>().ok());
     match (sizes.next(), sizes.next()) {

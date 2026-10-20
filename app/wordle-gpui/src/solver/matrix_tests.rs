@@ -59,6 +59,20 @@ fn an_npy_header_is_padded_to_64_bytes_and_ends_in_a_newline() {
 }
 
 #[test]
+fn the_npy_header_is_byte_for_byte_the_one_numpy_writes() {
+    // What `np.save` and `open_memmap` write for a 14,855 × 2,315 `uint8` array (numpy 2.5), also
+    // pinned in packages/wordle/tests/test_matrix.py, so both tools write the same file.
+    let dict = "{'descr': '|u1', 'fortran_order': False, 'shape': (14855, 2315), }";
+    let mut numpy = b"\x93NUMPY\x01\x00\x76\x00".to_vec();
+    numpy.extend_from_slice(dict.as_bytes());
+    numpy.extend_from_slice(&[b' '; 51]);
+    numpy.push(b'\n');
+    assert_eq!(numpy.len(), 128);
+    let bytes = npy_bytes(14855, 2315, &vec![0; 14855 * 2315]);
+    assert_eq!(&bytes[..128], &numpy[..]);
+}
+
+#[test]
 fn build_writes_both_matrices() {
     let directory = std::env::temp_dir().join(format!("wordle-gpui-matrices-{}", std::process::id()));
     let (answers_path, guesses_path) = build(&directory, 4).unwrap();

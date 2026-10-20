@@ -131,6 +131,16 @@ fn a_missing_or_stale_matrix_is_an_error() {
 }
 
 #[test]
+fn a_column_by_column_npy_is_refused() {
+    // What `np.save(path, matrix.T)` or a Fortran-ordered array writes: same bytes, other meaning.
+    let row_by_row = crate::solver::matrix::npy_bytes(2, 3, &[0; 6]);
+    assert!(read_npy_header(&row_by_row).is_ok());
+    let header = std::str::from_utf8(&row_by_row[10..128]).unwrap().replace("'fortran_order': False, ", "'fortran_order': True,  ");
+    let column_by_column = [&row_by_row[..10], header.as_bytes(), &[0; 6]].concat();
+    assert_eq!(read_npy_header(&column_by_column).unwrap_err(), "the cells are not stored row by row");
+}
+
+#[test]
 fn marks_of_undoes_code() {
     for marks in [[Mark::Correct, Mark::Absent, Mark::Present, Mark::Absent, Mark::Correct], [Mark::Absent; 5], [Mark::Correct; 5]] {
         assert_eq!(marks_of(code(&marks)), marks);
