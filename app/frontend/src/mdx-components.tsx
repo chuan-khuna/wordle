@@ -9,6 +9,7 @@ import { Word } from "@/components/Word";
 import { BenchmarkChart } from "@/components/widgets/BenchmarkChart";
 import { CandidateFilter } from "@/components/widgets/CandidateFilter";
 import { FeedbackScorer } from "@/components/widgets/FeedbackScorer";
+import { OpenerDistribution } from "@/components/widgets/OpenerDistribution";
 import { OpenerTable } from "@/components/widgets/OpenerTable";
 import { SplitExplorer } from "@/components/widgets/SplitExplorer";
 import { StepThroughGame } from "@/components/widgets/StepThroughGame";
@@ -19,7 +20,7 @@ function Figure(props: ComponentProps<"figure">) {
   return "data-rehype-pretty-code-figure" in props ? <CodeFigure {...props} /> : <figure {...props} />;
 }
 
-const components: MDXComponents = { figure: Figure, Term, Mark, Word, Letter, MarginNote, FeedbackScorer, CandidateFilter, SplitExplorer, StepThroughGame, OpenerTable, BenchmarkChart };
+const components: MDXComponents = { figure: Figure, Term, Mark, Word, Letter, MarginNote, FeedbackScorer, CandidateFilter, SplitExplorer, StepThroughGame, OpenerTable, BenchmarkChart, OpenerDistribution };
 
 export function useMDXComponents(): MDXComponents {
   return components;

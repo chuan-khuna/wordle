@@ -39,3 +39,25 @@ export function groupOpeners<T extends { rank: number; average_guess_count: numb
     openers: (byBar.get(first + i) ?? []).sort((a, b) => a.rank - b.rank),
   }));
 }
+
+/** The Openers to chart: every one, or only those on the Answer List. */
+export function filterOpeners<T extends { is_answer: boolean }>(openers: readonly T[], answersOnly: boolean): T[] {
+  return answersOnly ? openers.filter((o) => o.is_answer) : [...openers];
+}
+
+/**
+ * Rows for labels along a line, so none overlaps: each x (sorted ascending or not) gets the lowest row whose
+ * last label is at least `gap` away. Returns one row per input x, in input order.
+ */
+export function labelRows(xs: readonly number[], gap: number): number[] {
+  const order = xs.map((x, i) => i).sort((a, b) => xs[a] - xs[b]);
+  const lastX: number[] = [];
+  const rows = new Array<number>(xs.length).fill(0);
+  for (const i of order) {
+    let row = lastX.findIndex((last) => xs[i] - last >= gap);
+    if (row < 0) row = lastX.length;
+    lastX[row] = xs[i];
+    rows[i] = row;
+  }
+  return rows;
+}

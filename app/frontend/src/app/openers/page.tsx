@@ -2,7 +2,7 @@ import { OpenerDistribution } from "@/components/widgets/OpenerDistribution";
 
 export const metadata = { title: "Opener Distribution" };
 
-/** The Opener Distribution page: the Widget at full width. */
+/** The Opener Distribution page: the Widget at full width, with every control. */
 export default function OpenersPage() {
   return (
     <div className="relative min-w-0 space-y-8">
@@ -11,6 +11,11 @@ export default function OpenersPage() {
         <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-balance text-text">Opener Distribution</h1>
         <p className="text-lg text-meta">
           Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.
+        </p>
+        <p className="text-base text-meta">
+          Each block is one Opener. Hover or tap a block to see its stats, pick a Strategy, show only Answer List words, highlight a few words, or find one
+          Opener by name.
+          {/* Ticket 03 adds the link to Article 11 here ("How it works"). */}
         </p>
       </header>
       <OpenerDistribution />

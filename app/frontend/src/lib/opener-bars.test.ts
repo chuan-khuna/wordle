@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { ANSWER_COUNT, barOf, groupOpeners } from "@/lib/opener-bars";
+import { ANSWER_COUNT, barOf, filterOpeners, groupOpeners, labelRows } from "@/lib/opener-bars";
 
 const average = (total: number) => total / ANSWER_COUNT;
 const opener = (rank: number, total: number) => ({ rank, average_guess_count: average(total) });
@@ -47,4 +47,27 @@ test("groupOpeners keeps the empty bars between the first and last occupied ones
 
 test("groupOpeners of nothing is no bars", () => {
   expect(groupOpeners([])).toEqual([]);
+});
+
+const withAnswer = (rank: number, total: number, is_answer: boolean) => ({ ...opener(rank, total), is_answer });
+
+test("filterOpeners keeps every Opener, or only those on the Answer List", () => {
+  const all = [withAnswer(1, 8160, true), withAnswer(2, 8161, false), withAnswer(3, 8161, true)];
+  expect(filterOpeners(all, false)).toEqual(all);
+  expect(filterOpeners(all, true).map((o) => o.rank)).toEqual([1, 3]);
+  expect(filterOpeners([], true)).toEqual([]);
+});
+
+test("grouping the filtered Openers drops the others from their bars and keeps rank order", () => {
+  const all = [withAnswer(1, 8161, false), withAnswer(2, 8161, true), withAnswer(3, 8161, true), withAnswer(4, 8200, false)];
+  const bars = groupOpeners(filterOpeners(all, true));
+  expect(bars.map((b) => b.hundredths)).toEqual([353]);
+  expect(bars[0].openers.map((o) => o.rank)).toEqual([2, 3]);
+  expect(groupOpeners(filterOpeners([withAnswer(1, 8161, false)], true))).toEqual([]);
+});
+
+test("labelRows puts labels that would touch on different rows", () => {
+  expect(labelRows([100, 110, 300, 105], 40)).toEqual([0, 2, 0, 1]);
+  expect(labelRows([0, 40, 80], 40)).toEqual([0, 0, 0]);
+  expect(labelRows([], 40)).toEqual([]);
 });
