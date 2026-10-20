@@ -67,7 +67,7 @@ English, written in glossary terms only. Colours appear only in the Widgets and 
 
    The Article states the shared idea explicitly (an expectation over the Feedback Split, differing only in the score of each group: its size, or how many halvings it saves), and notes why they can disagree (a big group counts quadratically in one and logarithmically in the other). Article 06 then builds the Feedback Split and shows both numbers in the Split explorer.
 5. Candidate Set → Candidate filter
-6. Feedback Split and Expected Information (one Article: the groups first, then scoring them in bits, $-\sum p \log_2 p$, "entropy" named once) → Split explorer, without then with bits
+6. Feedback Split and Expected Information (one Article: the groups first, then scoring them in bits, $-\sum p \log_2 p$, "entropy" named once) → one Split explorer (chart with Expected Candidates and bits, beside the remaining words)
 7. Openers → Opener table
 8. Greedy Strategy (non-Candidate Guesses, the _ATCH trap) → Step-through Game
 9. Benchmark → Benchmark chart
