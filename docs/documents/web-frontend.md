@@ -173,7 +173,11 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 
 ## `<Word>`
 
-`<Word>speed</Word>` works in any MDX file with no import. It draws the word as five small letter tiles inline in the prose (JetBrains Mono caps, tile radius, sized in `em` so it does not grow the line), with a hairline `rule-strong` frame. `<Word feedback="00101">speed</Word>` paints each tile with its Mark (digits 0 Absent, 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works that Feedback out with `lib/feedback.ts`. Painted tiles use the same `bg-*` and `text-ink-*` pair as `<Mark>`, for contrast. Screen readers get one `role="img"` label: the word, then each letter's Mark when there is Feedback ("SPEED: S Absent, P Absent, E Present, …"). The word (and `answer`) must be on the Guess List, read at build time from `packages/wordle/src/wordle/data/guesses.txt` by `lib/words.ts`; an unknown word, malformed `feedback`, or both `feedback` and `answer` throws and fails the build.
+`<Word>speed</Word>` works in any MDX file with no import. It draws the word as five small letter tiles inline in the prose (JetBrains Mono caps, tile radius, sized in `em` so it does not grow the line), with a quiet hairline `rule` frame (the divider colour). The tile styles live in `components/letter-tile.ts`, shared with `<Letter>`. `<Word feedback="00101">speed</Word>` paints each tile with its Mark (digits 0 Absent, 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works that Feedback out with `lib/feedback.ts`. Painted tiles use the same `bg-*` and `text-ink-*` pair as `<Mark>`, for contrast. Screen readers get one `role="img"` label: the word, then each letter's Mark when there is Feedback ("SPEED: S Absent, P Absent, E Present, …"). The word (and `answer`) must be on the Guess List, read at build time from `packages/wordle/src/wordle/data/guesses.txt` by `lib/words.ts`; an unknown word, malformed `feedback`, or both `feedback` and `answer` throws and fails the build.
+
+## `<Letter>`
+
+`<Letter>e</Letter>` works in any MDX file with no import: one letter drawn as the same small tile as a letter of `<Word>` (plain, with the `rule` frame). `<Letter mark="present">e</Letter>` paints it with that Mark; `mark` takes the names `<Mark kind>` takes (`correct`, `present`, `absent`). Screen readers get "E" or "E, Present". Anything but one letter a to z, or an unknown `mark`, throws and fails the build.
 
 ## Code blocks
 

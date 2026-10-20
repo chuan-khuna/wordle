@@ -1,13 +1,6 @@
 import { MARK_NAMES, parseMarks, scoreFeedback, WORD_LENGTH, type Mark } from "@/lib/feedback";
 import { guessList } from "@/lib/words";
-
-// Full class names, so Tailwind sees them, by Mark (0 Absent, 1 Present, 2 Correct). `text-ink-*` is the
-// readable text colour for small type (tokens.css), as <Mark> uses.
-const PAINT = ["bg-absent text-ink-absent", "bg-present text-ink-present", "bg-correct text-ink-correct"] as const;
-const PLAIN = "border border-rule-strong text-text";
-
-// One small letter tile: mono caps on the tile radius, sized to the prose so it does not grow the line.
-const TILE = "inline-flex h-[1.45em] w-[1.3em] items-center justify-center rounded-sm font-mono text-[0.72em] leading-none font-semibold uppercase";
+import { INLINE, PAINT, PLAIN, TILE } from "./letter-tile";
 
 /**
  * A word in prose, drawn as five small letter tiles. `<Word>speed</Word>` shows plain tiles;
@@ -42,7 +35,7 @@ export function Word({ children, feedback, answer }: { children: string; feedbac
     : word.toUpperCase();
 
   return (
-    <span role="img" aria-label={label} className="inline-flex gap-[0.12em] align-middle whitespace-nowrap">
+    <span role="img" aria-label={label} className={`inline-flex gap-[0.12em] ${INLINE}`}>
       {[...word].map((letter, i) => (
         <span key={i} aria-hidden className={`${TILE} ${marks ? PAINT[marks[i]] : PLAIN}`}>
           {letter}
