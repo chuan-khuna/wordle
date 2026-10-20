@@ -3,7 +3,7 @@
 //! Each theme is in its own file and maps its palette onto the same roles. To add one, add a file
 //! and list it in `THEMES`.
 
-use wordle_gpui::rules::feedback::Mark;
+use wordle_gpui::engine::feedback::Mark;
 
 mod catppuccin_latte;
 mod catppuccin_mocha;
@@ -12,7 +12,6 @@ mod flexoki_dark;
 mod flexoki_light;
 mod kanagawa;
 mod nord;
-pub mod picker;
 mod rose_pine;
 mod rose_pine_dawn;
 mod tokyo_night;
@@ -91,7 +90,7 @@ pub static THEMES: [&Theme; 10] = [
 /// The themes whose name (or "dark"/"light") matches `query`, in order.
 /// See `search::matches`: "cmo" finds Catppuccin Mocha, and "rose" finds Rosé Pine.
 pub fn search(query: &str) -> Vec<&'static Theme> {
-    THEMES.iter().copied().filter(|theme| crate::search::matches(query, &format!("{} {}", theme.name, theme.appearance()))).collect()
+    THEMES.iter().copied().filter(|theme| crate::overlays::search::matches(query, &format!("{} {}", theme.name, theme.appearance()))).collect()
 }
 
 #[cfg(test)]

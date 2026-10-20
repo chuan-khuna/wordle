@@ -2,7 +2,7 @@
 //! score the Feedback matrices (1, 2, 4 or 8). Up and Down move, Enter runs, Escape goes back.
 //! Typing 1, 2, 4 or 8 jumps to that count.
 
-use wordle_gpui::rules::matrix::THREAD_CHOICES;
+use wordle_gpui::solver::matrix::THREAD_CHOICES;
 
 pub struct ThreadPicker {
     /// Which of `THREAD_CHOICES` is highlighted.

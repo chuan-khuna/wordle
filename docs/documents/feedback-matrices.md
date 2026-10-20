@@ -115,4 +115,4 @@ The matrices are dense and have no column names, so a table format (CSV, Parquet
 
 ## The gpui app builds them too
 
-The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/rules/matrix.rs`. Both writers give byte-identical files, so either can build them and the other can read them.
+The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`. Both writers give byte-identical files, so either can build them and the other can read them.

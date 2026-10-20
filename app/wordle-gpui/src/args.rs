@@ -1,6 +1,6 @@
 //! The command-line options: `--answer WORD`, `--seed N`, `--unlimited`.
 
-use wordle_gpui::rules::game::{Game, MAX_GUESSES, MAX_SEED, random_seed};
+use wordle_gpui::engine::game::{Game, MAX_GUESSES, MAX_SEED, random_seed};
 
 /// How the player started the app.
 pub struct Args {

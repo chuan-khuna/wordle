@@ -1,3 +1,4 @@
-//! Wordle's rules, with no window or terminal. `main.rs` draws them with gpui.
+//! Wordle with no window or terminal: the game's rules and the Solver. `main.rs` draws them with gpui.
 
-pub mod rules;
+pub mod engine;
+pub mod solver;

@@ -1,10 +1,8 @@
 //! The desktop game, drawn with gpui: parse the options, then open the window.
 
 mod args;
-mod commands;
 mod dictionary;
-mod precompute;
-mod search;
+mod overlays;
 mod theme;
 mod ui;
 

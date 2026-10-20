@@ -1,9 +1,9 @@
 //! The board of tiles and the on-screen keyboard.
 
 use gpui::{Context, Div, FontWeight, Pixels, SharedString, Stateful, div, prelude::*, px, rgb};
-use wordle_gpui::rules::feedback::Mark;
-use wordle_gpui::rules::hints::{best_marks, live_hint};
-use wordle_gpui::rules::words::WORD_LENGTH;
+use wordle_gpui::engine::feedback::Mark;
+use wordle_gpui::engine::hints::{best_marks, live_hint};
+use wordle_gpui::engine::words::WORD_LENGTH;
 
 use super::WordleApp;
 

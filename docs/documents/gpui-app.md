@@ -20,33 +20,37 @@ The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `wi
 
 ## Layout
 
-The crate is split into three layers. Each one only uses the ones above it:
+The crate is split into layers. Each one only uses the ones above it:
 
 ```
 app/wordle-gpui/
-  data/         the word lists, copied from packages/wordle
+  data/           the word lists, copied from packages/wordle
   src/
-    rules/      the game itself: Feedback, Game, Seeds, the Feedback matrices. No window code.
-    (top level) state and keys with no drawing: commands.rs, precompute.rs, theme/picker.rs
-    ui/         drawing: WordleApp (ui/mod.rs) holds the state; every other file draws one part
+    lib.rs        the library: `engine` and `solver`, usable from tests with no window
+    engine/       the game itself: Feedback, the word lists, Seeds, Game, live hints
+    solver/       the Feedback matrices and the Strategy that ranks Suggestions
+    overlays/     state and keys with no drawing: the command palette, the pickers, the search
+    theme/        one file per theme, and the Theme roles
+    ui/           drawing: WordleApp (ui/mod.rs) holds the state; every other file draws one part
+    main.rs       opens the window; args.rs reads the options, dictionary.rs does the lookups
 ```
 
-- **`rules/`** is the library (`lib.rs`), so tests can use it with no window. `feedback.rs` and `game.rs` follow [feedback-scoring.md](feedback-scoring.md) and [game-and-state.md](game-and-state.md), and their tests check against values printed by the Python game.
-- **State and keys** live in plain structs that know nothing about gpui: a key goes in, an outcome comes out (`Outcome::Run(command)`, `Outcome::Close`). That makes them easy to unit-test.
+- **`engine/` and `solver/`** are the library, and mirror the Python package's `wordle.engine` and `wordle.solver`. `engine/feedback.rs` and `engine/game.rs` follow [feedback-scoring.md](feedback-scoring.md) and [game-and-state.md](game-and-state.md), and their tests check against values printed by the Python game.
+- **`overlays/`** holds plain structs that know nothing about gpui: a key goes in, an outcome comes out (`Outcome::Run(command)`, `Outcome::Close`). That makes them easy to unit-test.
 - **`ui/`** turns that state into elements. Each file adds an `impl WordleApp` block that draws one part of the window.
 
 Take the command palette as the example of how the layers fit together:
 
 | Layer | File | What it does |
 | --- | --- | --- |
-| State and keys | `commands.rs` | `CommandPalette` holds the query and the highlighted row; `press("down")` moves it, `press("enter")` returns `Outcome::Run(command)` |
-| Tests | `commands_tests.rs` | Types into a `CommandPalette` and checks the outcomes, with no window |
+| State and keys | `overlays/commands.rs` | `CommandPalette` holds the query and the highlighted row; `press("down")` moves it, `press("enter")` returns `Outcome::Run(command)` |
+| Tests | `overlays/commands_tests.rs` | Types into a `CommandPalette` and checks the outcomes, with no window |
 | Drawing | `ui/palette.rs` | Draws a `CommandPalette` as a search field and a list of rows |
 | Wiring | `ui/mod.rs` | Sends each real key press to the open overlay, and runs the `Outcome` |
 
 Tests sit next to the code they test as `<name>_tests.rs`, pulled in with `#[cfg(test)] #[path = "commands_tests.rs"] mod tests;`. Everything with state and keys has them; the drawing files don't.
 
-Other parts follow the same pattern: the theme picker (`theme/picker.rs` and `ui/theme_picker.rs`) and the thread picker for [Precompute matrices](#precompute-matrices) (`precompute.rs` and `ui/precompute_picker.rs`). The rest of the crate is small: `main.rs` opens the window, `args.rs` reads the options, `dictionary.rs` does the lookups, `theme/` has one file per theme, and `Cargo.toml` pulls in gpui, gpui-kit (buttons, icons, shortcut keys), `scraper` and `ureq`.
+The theme picker (`overlays/theme_picker.rs` and `ui/theme_picker.rs`) and the thread picker for [Precompute matrices](#precompute-matrices) (`overlays/precompute.rs` and `ui/precompute_picker.rs`) follow the same pattern. The [Solver](#solver) panel does its scoring in `solver/strategy.rs` and draws it in `ui/solver_panel.rs`. `Cargo.toml` pulls in gpui, gpui-kit (buttons, icons, shortcut keys), `scraper` and `ureq`.
 
 ## Seeds match the Python game
 
@@ -64,7 +68,7 @@ Other parts follow the same pattern: the theme picker (`theme/picker.rs` and `ui
 
 ## Settings menu
 
-The hamburger at the right of the title bar opens a menu. Its rows are the `Command`s in `commands.rs`, so the menu and the command palette always offer the same things:
+The hamburger at the right of the title bar opens a menu. Its rows are the `Command`s in `overlays/commands.rs`, so the menu and the command palette always offer the same things:
 
 Each row is one line: the name on the left and, on the right, a dim detail (the seed, the theme name), a dot for a toggle that is on, or the shortcut drawn as gpui-kit `Kbd` keys (Ctrl+B on Windows and Linux, ⌘B on macOS; a chord such as Ctrl+K Ctrl+T is two keys). The palette uses the same rows.
 
@@ -75,6 +79,7 @@ Each row is one line: the name on the left and, on the right, a dim detail (the 
 - **Unlimited guesses:** dotted when the Game has no Guess Limit. Choosing it switches between six Guesses and unlimited and starts a new Game, since changing the limit mid-Game would change whether it can be lost.
 - **Live hints:** dotted when on (see below).
 - **Show sidebar:** dotted when the sidebar is open (see below).
+- **Show solver:** dotted when the solver is open (see [Solver](#solver)).
 - **Change theme…:** opens the theme picker (below). The row shows the current theme.
 - **Precompute matrices…:** opens a small picker for the thread count (see below).
 - **Reset layout:** closes the sidebar and restores the window size.
@@ -96,7 +101,7 @@ Only one of the menu, the palette and the theme picker is open at a time (`Overl
 
 ## Live hints
 
-With **Live hints** on, the tiles of the Guess being typed show what earlier Guesses already say about each letter, before it is submitted (`rules/hints.rs`):
+With **Live hints** on, the tiles of the Guess being typed show what earlier Guesses already say about each letter, before it is submitted (`engine/hints.rs`):
 
 | Earlier Guesses say | Typed tile |
 | --- | --- |
@@ -167,4 +172,28 @@ gpui normally compiles its Metal shaders at build time with Xcode's `metal` tool
 - A picker asks how many threads to use: 1, 2, 4 or 8. Up and Down move (typing 1, 2, 4 or 8 jumps to it), Enter or a click starts, Escape goes back. It starts on the largest choice the machine has cores for.
 - The work runs on gpui's background executor, so the window stays usable. The status bar says "Precomputing matrices on 4 threads…", then "Saved the matrices to matrices/ in 1.2s (4 threads)" or the error. Starting it again while it runs only says so.
 - Existing files are replaced without asking (the terminal command asks first).
-- `rules/matrix.rs` has the logic, with no window: `pack` scores one pair without allocating, `score_matrix` splits the Guess rows into one block per thread with `std::thread::scope`, and `npy_bytes` writes the file (a 64-byte-aligned header, as numpy does). A test checks `pack` against `feedback`, and the output is byte-for-byte identical to the Python package's files.
+- `solver/matrix.rs` has the logic, with no window: `pack` scores one pair without allocating, `score_matrix` splits the Guess rows into one block per thread with `std::thread::scope`, and `npy_bytes` writes the file (a 64-byte-aligned header, as numpy does). A test checks `pack` against `feedback`, and the output is byte-for-byte identical to the Python package's files.
+
+## Solver
+
+**Show solver**, the panel button at the right end of the status bar, or ⌘⌥B (Ctrl+Alt+B, Zed's right dock) opens the solver on the right. Like the sidebar, the window widens by its width so the board keeps its size.
+
+It ranks Suggestions by Expected Information: how many bits a Guess is expected to tell us about the Answer, averaged over its Feedback Split (`-Σ p·log2 p`, with every Candidate equally likely). Before the first Guess the top one is the best Opener. The scoring is in `solver/strategy.rs`; the panel is `ui/solver_panel.rs`.
+
+Two settings change what is searched:
+
+| Setting | Choice | Guesses tried |
+| --- | --- | --- |
+| **Words** (the matrix set) | Answers | Answer List words, read from `answers_vs_answers.npy` |
+| | Valid guesses | Every Guess List word, read from `guesses_vs_answers.npy` |
+| **Search** (the mode) | Candidates | Only words that could still be the Answer |
+| | All words | Every word in the set, even ruled-out ones, which can split the Candidates better |
+
+- **Suggestions:** the top eight, each with its bits and the Candidates expected to be left (`Σ n²/N`). A dot in the Correct colour marks a word that could be the Answer, so guessing it might win now. Ties go to such a word.
+- **Candidates:** their count, and the words themselves once six or fewer are left.
+- **Chart:** click a Suggestion, or type any Guess List word into **Search a word to chart…**, to see its Feedback Split as horizontal bars. Each bar is one Feedback, drawn as its five Marks in the theme's colours, as long as the number of Candidates that would give it (the Win bar is in the Correct colour). The title gives the expected number of words left and the bits. Every group is drawn, biggest first, in a box that scrolls once it is taller than 320 px. **Type it** puts the word on the board.
+- **Search field:** a click sends the keys there instead of the board. Enter, Escape or a click on the board sends them back. ⌘V (Ctrl+V) pastes letters into it.
+
+The matrices are read from `matrices/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Valid guesses × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
+
+The chart is drawn with plain elements rather than gpui-kit's `BarChart`, so each bar's label can be the five coloured Marks and every colour comes from the app's theme.

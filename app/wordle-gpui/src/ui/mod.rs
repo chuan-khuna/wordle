@@ -8,6 +8,7 @@ mod menu;
 mod palette;
 mod precompute_picker;
 mod sidebar;
+mod solver_panel;
 mod status_bar;
 mod theme_picker;
 pub mod title_bar;
@@ -17,19 +18,20 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
-use wordle_gpui::rules::game::{Game, MAX_GUESSES, random_seed};
-use wordle_gpui::rules::matrix;
-use wordle_gpui::rules::words::WORD_LENGTH;
+use wordle_gpui::engine::game::{Game, MAX_GUESSES, random_seed};
+use wordle_gpui::solver::matrix;
+use wordle_gpui::engine::words::WORD_LENGTH;
 
-use crate::commands::{self, Command, CommandPalette, SeedField, SeedOutcome};
-use crate::precompute::{self, ThreadPicker};
-use crate::theme::picker::{self as theme_picker_state, ThemePicker};
+use crate::overlays::commands::{self, Command, CommandPalette, SeedField, SeedOutcome};
+use crate::overlays::precompute::{self, ThreadPicker};
+use crate::overlays::theme_picker::{self as theme_picker_state, ThemePicker};
 use crate::theme::{self, Theme};
 use board::{BACKSPACE, ENTER};
 use widgets::IconName;
 use sidebar::Meaning;
+use solver_panel::SolverState;
 
-actions!(wordle, [Quit, Paste, ToggleCommandPalette, ToggleSidebar, ToggleThemePicker]);
+actions!(wordle, [Quit, Paste, ToggleCommandPalette, ToggleSidebar, ToggleSolver, ToggleThemePicker]);
 
 const CHEERS: [&str; 6] = ["Genius!", "Magnificent!", "Impressive!", "Splendid!", "Great!", "Phew!"];
 
@@ -48,6 +50,8 @@ impl Shortcut {
 pub const PALETTE_SHORTCUT: Shortcut = Shortcut { keys: "secondary-p" };
 /// Zed's shortcut for its left dock.
 pub const SIDEBAR_SHORTCUT: Shortcut = Shortcut { keys: "secondary-b" };
+/// Zed's shortcut for its right dock.
+pub const SOLVER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-alt-b" };
 /// Zed's shortcut for its theme picker.
 pub const THEME_PICKER_SHORTCUT: Shortcut = Shortcut { keys: "secondary-k secondary-t" };
 
@@ -57,6 +61,7 @@ pub fn bind_keys(cx: &mut App) {
         KeyBinding::new("secondary-v", Paste, None),
         KeyBinding::new(PALETTE_SHORTCUT.keys, ToggleCommandPalette, None),
         KeyBinding::new(SIDEBAR_SHORTCUT.keys, ToggleSidebar, None),
+        KeyBinding::new(SOLVER_SHORTCUT.keys, ToggleSolver, None),
         KeyBinding::new(THEME_PICKER_SHORTCUT.keys, ToggleThemePicker, None),
     ]);
     cx.on_action(|_: &Quit, cx| cx.quit());
@@ -94,6 +99,8 @@ pub struct WordleApp {
     status_serial: u32,
     /// Whether the Answer of a lost Game has been revealed. It stays hidden until clicked.
     answer_shown: bool,
+    /// The solver on the right: its settings, its Suggestions and the chart for the word picked.
+    solver: SolverState,
     overlay: Option<Overlay>,
     /// Whether the Feedback matrices are being precomputed in the background.
     precomputing: bool,
@@ -122,6 +129,7 @@ impl WordleApp {
             status: None,
             status_serial: 0,
             answer_shown: false,
+            solver: SolverState::default(),
             overlay: None,
             precomputing: false,
             sidebar_open: false,
@@ -175,6 +183,7 @@ impl WordleApp {
 
     /// Close whatever is open, and open `overlay` instead.
     fn open(&mut self, overlay: Overlay, cx: &mut Context<Self>) {
+        self.solver.searching = false;
         self.dismiss(cx);
         self.overlay = Some(overlay);
     }
@@ -234,6 +243,10 @@ impl WordleApp {
                 self.dismiss(cx);
                 self.toggle_sidebar(window, cx);
             }
+            Command::ToggleSolver => {
+                self.dismiss(cx);
+                self.toggle_solver(window, cx);
+            }
             Command::ChangeTheme => self.open(Overlay::ThemePicker(ThemePicker::new(self.theme)), cx),
             Command::Precompute if self.precomputing => {
                 self.dismiss(cx);
@@ -243,6 +256,7 @@ impl WordleApp {
             Command::ResetLayout => {
                 self.dismiss(cx);
                 self.sidebar_open = false;
+                self.solver.open = false;
                 self.sidebar_width = sidebar::DEFAULT_WIDTH;
                 if !window.is_maximized() && !window.is_fullscreen() {
                     window.resize(gpui::size(px(520.), px(980.)));
@@ -253,7 +267,7 @@ impl WordleApp {
     }
 
     /// Score every Guess against every Answer on `threads` threads, off the window's thread, and
-    /// save the two Feedback matrices (see `rules/matrix.rs`). The status bar says when it is done.
+    /// save the two Feedback matrices (see `solver/matrix.rs`). The status bar says when it is done.
     fn start_precompute(&mut self, threads: usize, cx: &mut Context<Self>) {
         self.overlay = None;
         self.precomputing = true;
@@ -267,6 +281,7 @@ impl WordleApp {
             let (saved, elapsed) = work.await;
             this.update(cx, |app, cx| {
                 app.precomputing = false;
+                app.reload_matrices(cx);
                 let note = match saved {
                     Ok(_) => format!("Saved the matrices to matrices/ in {:.1}s ({})", elapsed.as_secs_f32(), precompute::threads_label(threads)),
                     Err(error) => format!("Couldn't save the matrices: {error}"),
@@ -302,6 +317,7 @@ impl WordleApp {
     /// A key from the real keyboard: to whatever is open, or else to the board.
     fn key_down(&mut self, key: &str, typed: Option<&str>, window: &mut Window, cx: &mut Context<Self>) {
         match self.overlay.as_mut() {
+            None if self.solver.searching => return self.solver_key(key, cx),
             None => return self.press(key, cx),
             Some(Overlay::ThemePicker(picker)) => match picker.press(key, typed) {
                 theme_picker_state::Outcome::Preview(theme) => self.theme = theme,
@@ -340,6 +356,7 @@ impl WordleApp {
         match self.overlay.as_mut() {
             Some(Overlay::Palette(palette)) => palette.paste(&text),
             Some(Overlay::Menu { seed: Some(field) }) => field.paste(&text),
+            None if self.solver.searching => self.solver_paste(&text),
             _ => return,
         }
         cx.notify();
@@ -351,7 +368,13 @@ impl WordleApp {
             return;
         }
         match key {
-            ENTER => self.submit(),
+            ENTER => {
+                let before = self.game.guesses().len();
+                self.submit();
+                if self.game.guesses().len() != before {
+                    self.refresh_solver(cx);
+                }
+            }
             BACKSPACE => {
                 self.typed.pop();
                 self.message = None;
@@ -400,6 +423,8 @@ impl WordleApp {
         self.answer_shown = false;
         self.selected_word = None;
         self.dismiss(cx);
+        self.solver.selected = None;
+        self.refresh_solver(cx);
     }
 
     /// The command that plays this same Answer again.
@@ -483,6 +508,7 @@ impl Render for WordleApp {
             .on_action(cx.listener(|this, _: &Paste, _, cx| this.paste(cx)))
             .on_action(cx.listener(|this, _: &ToggleCommandPalette, _, cx| this.toggle_palette(cx)))
             .on_action(cx.listener(|this, _: &ToggleSidebar, window, cx| this.toggle_sidebar(window, cx)))
+            .on_action(cx.listener(|this, _: &ToggleSolver, window, cx| this.toggle_solver(window, cx)))
             .on_action(cx.listener(|this, _: &ToggleThemePicker, _, cx| this.toggle_theme_picker(cx)))
             .on_key_down(cx.listener(|this, event: &KeyDownEvent, window, cx| {
                 let keystroke = &event.keystroke;
@@ -521,8 +547,16 @@ impl Render for WordleApp {
                     .child(self.render_board())
                     .child(self.render_footer(cx))
                     .child(self.render_keyboard(cx))
-                    .child(self.render_end_buttons(cx)),
-                ),
+                    .child(self.render_end_buttons(cx))
+                    // Clicking the board leaves the solver's search field, so typing goes to the board again.
+                    .on_mouse_down(gpui::MouseButton::Left, cx.listener(|this, _, _, cx| {
+                        if this.solver.searching {
+                            this.solver.searching = false;
+                            cx.notify();
+                        }
+                    })),
+                )
+                .when(self.solver.open, |row| row.child(div().flex_none().w(solver_panel::GAP)).child(self.render_solver(cx))),
             )
             .child(self.render_status_bar(cx))
             // While anything is open, a click anywhere else closes it (it draws above this).

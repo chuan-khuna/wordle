@@ -5,7 +5,7 @@ use gpui::{Context, Pixels, div, prelude::*, px, rgb};
 
 use super::widgets::{self, IconName};
 use super::WordleApp;
-use crate::commands::{Command, group_digits};
+use crate::overlays::commands::{Command, group_digits};
 
 const HEIGHT: Pixels = px(28.);
 
@@ -55,7 +55,22 @@ impl WordleApp {
                     )
                     .when_some(self.status.clone(), |left, note| left.child(div().text_color(rgb(t.text)).child(note))),
             )
-            .child(div().flex().items_center().gap_2().pr_2().child(mode).child(dot()).child(seed).child(dot()).child(self.guesses_status()))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(mode)
+                    .child(dot())
+                    .child(seed)
+                    .child(dot())
+                    .child(self.guesses_status())
+                    .child(
+                        widgets::icon_button(t, "toggle-solver", widgets::icon(IconName::PanelRight, if self.solver.open { t.text } else { t.subtle }))
+                            .when(self.solver.open, |button| button.bg(rgb(t.overlay)))
+                            .on_click(cx.listener(|this, _, window, cx| this.toggle_solver(window, cx))),
+                    ),
+            )
     }
 }
 

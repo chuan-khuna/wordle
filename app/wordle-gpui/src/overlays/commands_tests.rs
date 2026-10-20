@@ -90,3 +90,8 @@ fn reset_layout_is_in_the_palette() {
 fn precompute_is_in_the_palette() {
     assert_eq!(Command::search("matri"), [Command::Precompute]);
 }
+
+#[test]
+fn the_solver_is_in_the_palette() {
+    assert_eq!(Command::search("solver"), [Command::ToggleSolver]);
+}

@@ -1,11 +1,11 @@
 //! The theme picker, floating near the top of the window like Zed's: a search field, then the
-//! matching themes. Its state and keys are in `theme/picker.rs`.
+//! matching themes. Its state and keys are in `overlays/theme_picker.rs`.
 
 use gpui::{Context, FontWeight, SharedString, div, prelude::*, px, rgb};
 
 use super::WordleApp;
 use super::widgets::{panel, query_field};
-use crate::theme::picker::ThemePicker;
+use crate::overlays::theme_picker::ThemePicker;
 
 impl WordleApp {
     pub(super) fn render_theme_picker(&self, picker: &ThemePicker, cx: &mut Context<Self>) -> impl IntoElement {

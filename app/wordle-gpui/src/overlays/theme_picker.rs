@@ -66,5 +66,5 @@ impl ThemePicker {
 }
 
 #[cfg(test)]
-#[path = "picker_tests.rs"]
+#[path = "theme_picker_tests.rs"]
 mod tests;

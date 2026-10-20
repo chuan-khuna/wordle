@@ -1,12 +1,12 @@
 //! The "Precompute matrices…" picker, in the middle of the window: how many threads to score the
-//! Feedback matrices with. Its state and keys are in `precompute.rs`.
+//! Feedback matrices with. Its state and keys are in `overlays/precompute.rs`.
 
 use gpui::{Context, SharedString, div, prelude::*, px, rgb};
 
 use super::WordleApp;
 use super::widgets::panel;
-use crate::precompute::{ThreadPicker, threads_label};
-use wordle_gpui::rules::matrix::THREAD_CHOICES;
+use crate::overlays::precompute::{ThreadPicker, threads_label};
+use wordle_gpui::solver::matrix::THREAD_CHOICES;
 
 impl WordleApp {
     pub(super) fn render_precompute_picker(&self, picker: &ThreadPicker, cx: &mut Context<Self>) -> impl IntoElement {

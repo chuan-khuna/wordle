@@ -4,8 +4,8 @@
 use gpui::{Anchor, AnyElement, Context, Div, ElementId, SharedString, Stateful, anchored, deferred, div, prelude::*, px, rgb};
 
 use super::widgets::{self, caret, menu_item, panel, separator};
-use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
-use crate::commands::{Command, SeedField, group_digits};
+use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, SOLVER_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
+use crate::overlays::commands::{Command, SeedField, group_digits};
 use crate::theme::Theme;
 
 impl WordleApp {
@@ -26,10 +26,12 @@ impl WordleApp {
             Command::ToggleUnlimited => Some(self.game.is_unlimited()),
             Command::ToggleLiveHints => Some(self.live_hints),
             Command::ToggleSidebar => Some(self.sidebar_open),
+            Command::ToggleSolver => Some(self.solver.open),
             _ => None,
         };
         let shortcut = match command {
             Command::ToggleSidebar => Some(&SIDEBAR_SHORTCUT),
+            Command::ToggleSolver => Some(&SOLVER_SHORTCUT),
             Command::ChangeTheme => Some(&THEME_PICKER_SHORTCUT),
             _ => None,
         };

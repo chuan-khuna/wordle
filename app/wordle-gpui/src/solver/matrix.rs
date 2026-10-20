@@ -12,7 +12,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use super::words::{WORD_LENGTH, word_lists};
+use crate::engine::words::{WORD_LENGTH, word_lists};
 
 /// The cell for a Guess that is the Answer: every letter Correct (3⁵ - 1).
 pub const WIN: u8 = 242;

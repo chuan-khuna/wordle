@@ -1,5 +1,5 @@
 use super::*;
-use crate::rules::game::Game;
+use crate::engine::game::Game;
 
 fn played(answer: &str, guesses: &[&str]) -> Vec<Guess> {
     let mut game = Game::new(answer, None).unwrap();

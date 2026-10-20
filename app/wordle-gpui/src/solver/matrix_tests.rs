@@ -1,5 +1,5 @@
 use super::*;
-use crate::rules::feedback::{Mark, feedback};
+use crate::engine::feedback::{Mark, feedback};
 
 fn pack_marks(marks: &[Mark]) -> u8 {
     marks.iter().fold(0, |code, mark| code * 3 + *mark as u8)

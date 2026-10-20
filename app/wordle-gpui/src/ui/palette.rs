@@ -1,12 +1,12 @@
 //! The command palette, in the middle of the window: a search field, then the matching commands,
-//! or a seed field after "Play a seed…". Its state and keys are in `commands.rs`.
+//! or a seed field after "Play a seed…". Its state and keys are in `overlays/commands.rs`.
 
 use gpui::{Context, SharedString, div, prelude::*, px, rgb};
 
 use super::WordleApp;
 use super::menu::paste_seed_button;
 use super::widgets::{panel, query_field};
-use crate::commands::{CommandPalette, group_digits};
+use crate::overlays::commands::{CommandPalette, group_digits};
 
 impl WordleApp {
     pub(super) fn render_palette(&self, palette: &CommandPalette, cx: &mut Context<Self>) -> impl IntoElement {
