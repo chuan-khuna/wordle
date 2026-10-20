@@ -299,12 +299,22 @@ pub fn write_summary(dir: &Path, feedback: &Matrix) -> io::Result<Vec<PathBuf>> 
     Ok(paths)
 }
 
-/// How far a run has got: `done` of the `total` rows of `strategy` it is filling.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Progress {
-    pub strategy: &'static Strategy,
-    pub done: usize,
-    pub total: usize,
+/// What a run reports as it goes, for a progress bar and a log. Sent from any thread; a row's event
+/// comes after the row is written, outside the file's lock.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Event {
+    /// Before any pass, once the manifest check has passed: for each chosen Strategy, the rows
+    /// already finished and the rows this run will play.
+    Planned { strategy: &'static Strategy, finished: usize, to_fill: usize },
+    /// A Strategy's pass starts: the rows finished before it and the rows it will play.
+    PassStarted { strategy: &'static Strategy, finished: usize, to_fill: usize },
+    /// One Opener's row was written: `done` of the pass's `total` rows so far (threads report out
+    /// of order), with the row's Average Guess Count (Losses at their real count) and Losses.
+    RowDone { strategy: &'static Strategy, word: &'static str, done: usize, total: usize, average_guess_count: f64, losses: usize },
+    /// The rows written so far were synced to disk (every 10 s): `done` rows of this pass.
+    Flushed { strategy: &'static Strategy, done: usize },
+    /// The pass ended: `filled` rows written, `stopped` if the stop flag cut it short.
+    PassEnded { strategy: &'static Strategy, filled: usize, stopped: bool },
 }
 
 /// What `build` is asked to do.
@@ -314,8 +324,8 @@ pub struct Options<'a> {
     pub strategies: Vec<&'static Strategy>,
     /// Only these Openers' rows (if still unfinished); None for every row.
     pub openers: Option<Vec<String>>,
-    /// Called as each pass starts and after each row is written, from any thread.
-    pub progress: &'a (dyn Fn(Progress) + Sync),
+    /// Called with each `Event`, from any thread.
+    pub events: &'a (dyn Fn(Event) + Sync),
     /// Set it to stop: rows already written are kept, the summary is still written.
     pub stop: &'a AtomicBool,
 }
@@ -375,18 +385,25 @@ struct Output {
 /// anything is written.
 pub fn build(dir: &Path, feedback: &Matrix, options: Options) -> Result<Built, BuildError> {
     let (rows, columns) = (feedback.rows.len(), feedback.columns.len());
-    for strategy in &options.strategies {
-        if filled_rows(dir, strategy, feedback)? > 0
-            && let Some(reason) = mismatch(dir, strategy, feedback)
-        {
-            return Err(BuildError::Mismatch { strategy: strategy.id, reason });
-        }
-    }
     let asked: Option<Vec<usize>> = match &options.openers {
         None => None,
         Some(words) => Some(words.iter().map(|word| feedback.rows.binary_search(&word.as_str()).map_err(|_| BuildError::UnknownOpener(word.clone()))).collect::<Result<_, _>>()?),
     };
+    let mut plan = Vec::new();
+    for &strategy in &options.strategies {
+        let cells = read_cells(&matrix_path(dir, strategy), rows, columns)?.unwrap_or_default();
+        if cells.iter().any(|&cell| cell != 0)
+            && let Some(reason) = mismatch(dir, strategy, feedback)
+        {
+            return Err(BuildError::Mismatch { strategy: strategy.id, reason });
+        }
+        let (finished_rows, todo) = rows_to_fill(&cells, rows, columns, asked.as_deref());
+        plan.push(Event::Planned { strategy, finished: finished_rows, to_fill: todo.len() });
+    }
     write_manifest(dir, &options.strategies, feedback)?;
+    for event in plan {
+        (options.events)(event);
+    }
 
     let mut paths = Vec::new();
     let mut filled = 0;
@@ -397,17 +414,30 @@ pub fn build(dir: &Path, feedback: &Matrix, options: Options) -> Result<Built, B
         let path = matrix_path(dir, strategy);
         let (file, cells) = open_matrix(&path, rows, columns)?;
         paths.push(path);
-        let unfinished = |&row: &usize| !finished(&cells[row * columns..(row + 1) * columns]);
-        let todo: Vec<usize> = match &asked {
-            None => (0..rows).filter(unfinished).collect(),
-            Some(asked) => asked.iter().copied().filter(unfinished).collect(),
-        };
+        let (finished_rows, todo) = rows_to_fill(&cells, rows, columns, asked.as_deref());
         drop(cells);
-        filled += fill(strategy, &todo, file, feedback, &options)?;
+        (options.events)(Event::PassStarted { strategy, finished: finished_rows, to_fill: todo.len() });
+        let filled_now = fill(strategy, &todo, file, feedback, &options)?;
+        filled += filled_now;
+        (options.events)(Event::PassEnded { strategy, filled: filled_now, stopped: filled_now < todo.len() });
     }
     paths.extend(write_summary(dir, feedback)?);
     let stopped = options.stop.load(Ordering::Relaxed);
     Ok(Built { paths, stopped, filled })
+}
+
+/// How many rows of `cells` are finished, and the rows to play: the unfinished ones, of `asked` if
+/// given. `cells` is empty for a matrix not written yet.
+fn rows_to_fill(cells: &[u8], rows: usize, columns: usize, asked: Option<&[usize]>) -> (usize, Vec<usize>) {
+    if cells.is_empty() {
+        return (0, asked.map_or_else(|| (0..rows).collect(), <[usize]>::to_vec));
+    }
+    let unfinished = |&row: &usize| !finished(&cells[row * columns..(row + 1) * columns]);
+    let todo = match asked {
+        None => (0..rows).filter(unfinished).collect(),
+        Some(asked) => asked.iter().copied().filter(unfinished).collect(),
+    };
+    (cells.chunks(columns).filter(|row| finished(row)).count(), todo)
 }
 
 /// Play the Openers in `todo` (rows) and write each row into `file`. Returns how many it wrote.
@@ -415,7 +445,6 @@ fn fill(strategy: &'static Strategy, todo: &[usize], file: File, feedback: &Matr
     let columns = feedback.columns.len();
     let header = npy_header(feedback.rows.len(), columns).len() as u64;
     let total = todo.len();
-    (options.progress)(Progress { strategy, done: 0, total });
     let output = Mutex::new(Output { file, flushed: Instant::now() });
     let next_chunk = AtomicUsize::new(0);
     let done = AtomicUsize::new(0);
@@ -433,7 +462,7 @@ fn fill(strategy: &'static Strategy, todo: &[usize], file: File, feedback: &Matr
                             let Some(counts) = player.guess_counts(strategy, row, Some(options.stop)) else {
                                 return Ok(());
                             };
-                            {
+                            let flushed = {
                                 let mut output = output.lock().expect("a writer thread panicked");
                                 let offset = header + (row * columns) as u64;
                                 // A stop mid-write leaves zeros, never a mix of old and new counts.
@@ -441,13 +470,20 @@ fn fill(strategy: &'static Strategy, todo: &[usize], file: File, feedback: &Matr
                                 output.file.write_all(&zeros)?;
                                 output.file.seek(SeekFrom::Start(offset))?;
                                 output.file.write_all(&counts)?;
-                                if output.flushed.elapsed() >= FLUSH_TIME {
+                                let flush = output.flushed.elapsed() >= FLUSH_TIME;
+                                if flush {
                                     output.file.sync_data()?;
                                     output.flushed = Instant::now();
                                 }
-                            }
+                                flush
+                            };
                             let done = done.fetch_add(1, Ordering::Relaxed) + 1;
-                            (options.progress)(Progress { strategy, done, total });
+                            let (sum, losses) = counts.iter().fold((0u64, 0), |(sum, losses), &cell| (sum + u64::from(cell), losses + usize::from(usize::from(cell) > GUESS_LIMIT)));
+                            let average_guess_count = sum as f64 / columns as f64;
+                            (options.events)(Event::RowDone { strategy, word: feedback.rows[row], done, total, average_guess_count, losses });
+                            if flushed {
+                                (options.events)(Event::Flushed { strategy, done });
+                            }
                         }
                     }
                     Ok(())

@@ -22,7 +22,7 @@ fn build_some(dir: &Path, strategies: &[&str], openers: &[&str], threads: usize)
         threads,
         strategies: strategies.iter().map(|id| strategy(id)).collect(),
         openers: Some(openers.iter().map(|word| word.to_string()).collect()),
-        progress: &|_| {},
+        events: &|_| {},
         stop: &stop,
     };
     build(dir, feedback(), options).unwrap()
@@ -118,16 +118,53 @@ fn an_unfinished_row_is_played_again() {
 }
 
 #[test]
+fn a_run_reports_its_plan_each_pass_and_each_row() {
+    let dir = temp_dir("events");
+    build_some(&dir, &["bits-candidates"], &["salet"], 1);
+    let events = std::sync::Mutex::new(Vec::new());
+    let stop = AtomicBool::new(false);
+    let record = |event: Event| events.lock().unwrap().push(event);
+    let options = Options {
+        threads: 2,
+        strategies: vec![strategy("bits-candidates"), strategy("expected-candidates")],
+        openers: Some(vec!["salet".into(), "crane".into()]),
+        events: &record,
+        stop: &stop,
+    };
+    build(&dir, feedback(), options).unwrap();
+    let events = events.into_inner().unwrap();
+    let (bits, expected) = (strategy("bits-candidates"), strategy("expected-candidates"));
+    // The plan for every Strategy comes first, then each pass from start to end.
+    assert_eq!(events[0], Event::Planned { strategy: bits, finished: 1, to_fill: 1 });
+    assert_eq!(events[1], Event::Planned { strategy: expected, finished: 0, to_fill: 2 });
+    assert_eq!(events[2], Event::PassStarted { strategy: bits, finished: 1, to_fill: 1 });
+    let crane = played("bits-candidates", "crane");
+    let average = crane.iter().map(|&cell| f64::from(cell)).sum::<f64>() / crane.len() as f64;
+    let losses = crane.iter().filter(|&&cell| cell > 6).count();
+    assert_eq!(events[3], Event::RowDone { strategy: bits, word: "crane", done: 1, total: 1, average_guess_count: average, losses });
+    assert_eq!(events[4], Event::PassEnded { strategy: bits, filled: 1, stopped: false });
+    assert_eq!(events[5], Event::PassStarted { strategy: expected, finished: 0, to_fill: 2 });
+    let mut words: Vec<&str> = events[6..8].iter().map(|event| if let Event::RowDone { word, .. } = event { *word } else { panic!("{event:?}") }).collect();
+    words.sort();
+    assert_eq!(words, ["crane", "salet"]);
+    assert_eq!(events[8], Event::PassEnded { strategy: expected, filled: 2, stopped: false });
+    assert_eq!(events.len(), 9);
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn the_stop_flag_keeps_the_finished_rows() {
     let dir = temp_dir("stop");
     let stop = AtomicBool::new(false);
     let openers: Vec<String> = feedback().rows.iter().step_by(500).map(|word| word.to_string()).collect();
-    let progress = |progress: Progress| {
-        if progress.done >= 3 {
+    let events = |event: Event| {
+        if let Event::RowDone { done, .. } = event
+            && done >= 3
+        {
             stop.store(true, Ordering::Relaxed);
         }
     };
-    let options = Options { threads: 2, strategies: vec![strategy("bits-candidates"), strategy("expected-candidates")], openers: Some(openers.clone()), progress: &progress, stop: &stop };
+    let options = Options { threads: 2, strategies: vec![strategy("bits-candidates"), strategy("expected-candidates")], openers: Some(openers.clone()), events: &events, stop: &stop };
     let built = build(&dir, feedback(), options).unwrap();
     assert!(built.stopped);
     assert!(built.filled >= 3 && built.filled < openers.len());
@@ -172,7 +209,7 @@ fn a_matrix_the_manifest_does_not_vouch_for_is_not_resumed() {
     std::fs::write(dir.join(MANIFEST_FILE), manifest.replace("\"ranked_by\":\"bits\"", "\"ranked_by\":\"expected\"")).unwrap();
     let before = std::fs::read(matrix_path(&dir, strategy("bits-candidates"))).unwrap();
     let stop = AtomicBool::new(false);
-    let options = Options { threads: 1, strategies: vec![strategy("bits-candidates")], openers: None, progress: &|_| {}, stop: &stop };
+    let options = Options { threads: 1, strategies: vec![strategy("bits-candidates")], openers: None, events: &|_| {}, stop: &stop };
     match build(&dir, feedback(), options) {
         Err(BuildError::Mismatch { strategy, reason }) => {
             assert_eq!(strategy, "bits-candidates");
@@ -325,7 +362,7 @@ fn measure_a_build() {
     let openers = (step > 1).then(|| feedback().rows.iter().step_by(step).map(|word| word.to_string()).collect());
     let stop = AtomicBool::new(false);
     let started = Instant::now();
-    let options = Options { threads, strategies: vec![strategy(&id)], openers, progress: &|_| {}, stop: &stop };
+    let options = Options { threads, strategies: vec![strategy(&id)], openers, events: &|_| {}, stop: &stop };
     let built = build(&dir, feedback(), options).unwrap();
     let seconds = started.elapsed().as_secs_f64();
     eprintln!("{id}: {} rows on {threads} threads in {seconds:.1}s, {:.3}s a row", built.filled, seconds / built.filled.max(1) as f64);

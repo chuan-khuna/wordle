@@ -6,6 +6,7 @@ use gpui::{Anchor, AnyElement, Context, Div, ElementId, SharedString, Stateful, 
 use super::widgets::{self, caret, menu_item, panel, separator};
 use super::{Overlay, PALETTE_SHORTCUT, SIDEBAR_SHORTCUT, SOLVER_SHORTCUT, THEME_PICKER_SHORTCUT, WordleApp};
 use crate::overlays::commands::{Command, SeedField, group_digits};
+use crate::overlays::precompute_run::Kind;
 use crate::theme::Theme;
 
 impl WordleApp {
@@ -15,7 +16,8 @@ impl WordleApp {
             Command::Restart => self.game.seed.map(|seed| format!("seed {}", group_digits(&seed.to_string())).into()),
             Command::CopySeed => self.game.seed.map(|seed| group_digits(&seed.to_string()).into()),
             Command::ChangeTheme => Some(self.theme.name.into()),
-            Command::PrecomputeGuessCounts if self.guess_counts.is_some() => Some("running".into()),
+            Command::Precompute if self.running_precompute() == Some(Kind::Matrices) => Some("running".into()),
+            Command::PrecomputeGuessCounts if self.running_precompute() == Some(Kind::GuessCounts) => Some("running".into()),
             _ => None,
         }
     }

@@ -74,17 +74,6 @@ fn enter_stops_a_run_and_escape_keeps_it_going() {
 }
 
 #[test]
-fn progress_says_the_strategy_the_rows_and_the_time_left() {
-    let bits_all = &STRATEGIES[2];
-    let progress = Progress { strategy: bits_all, done: 1234, total: 14855 };
-    // 1,234 rows in 100 s: 13,621 rows left take about 1,104 s.
-    assert_eq!(progress_note(&progress, Duration::from_secs(100)), "Guess counts: bits-all 1,234 / 14,855, about 18 min left");
-    assert_eq!(progress_note(&Progress { done: 0, ..progress }, Duration::ZERO), "Guess counts: bits-all 0 / 14,855");
-    assert_eq!(progress_note(&Progress { done: 14000, ..progress }, Duration::from_secs(100)), "Guess counts: bits-all 14,000 / 14,855, under a minute left");
-    assert_eq!(progress_note(&Progress { done: 100, ..progress }, Duration::from_secs(100)), "Guess counts: bits-all 100 / 14,855, about 4 h 05 min left");
-}
-
-#[test]
 fn the_end_note_says_where_the_files_went_and_how_long_it_took() {
     let built = |stopped| Ok(Built { paths: vec![PathBuf::from("summary.json")], stopped, filled: 14855 });
     assert_eq!(end_note(&built(false), Duration::from_secs(185), 8), "Saved guess counts to precompute-cache/guess-counts-rust/ in 3 min 05s (14,855 rows, 8 threads)");

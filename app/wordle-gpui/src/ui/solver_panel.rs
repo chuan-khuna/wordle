@@ -541,7 +541,8 @@ impl WordleApp {
             .items_center()
             .justify_between()
             .child(div().font_family(widgets::MONO_FONT).font_weight(FontWeight::BOLD).text_color(rgb(t.heading)).child(chart.word.to_uppercase()))
-            .when(self.assist.as_ref().map_or(!self.game.is_over(), Assist::can_type), |header| {
+            // Not while the precompute view hides the board.
+            .when(self.precompute.is_none() && self.assist.as_ref().map_or(!self.game.is_over(), Assist::can_type), |header| {
                 header.child(widgets::button(t, "solver-type", "Type it").on_click(cx.listener(move |this, _, _, cx| this.type_solver_word(word.clone(), cx))))
             });
         let title = div()

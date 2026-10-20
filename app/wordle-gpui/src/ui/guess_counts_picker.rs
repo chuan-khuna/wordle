@@ -105,7 +105,7 @@ impl WordleApp {
 
     pub(super) fn render_stop_guess_counts(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let note = self.guess_counts.as_ref().map(|run| run.note()).unwrap_or_default();
+        let note = self.precompute.as_ref().map(|run| run.state().progress_line(run.started.elapsed())).unwrap_or_default();
         div().absolute().inset_0().flex().items_center().justify_center().child(
             panel(t, "stop-guess-counts").w(px(400.)).child(
                 div()

@@ -1,12 +1,12 @@
 //! The "Precompute guess counts…" picker's state, testable without a window: the thread count (as
 //! for Precompute matrices) and which Strategies to compute, all on by default. Up and Down move
 //! between the Strategies, Space turns the highlighted one on or off, Left and Right (or typing 1, 2,
-//! 4 or 8) change the thread count, Enter runs, Escape goes back. Also the words the status bar
-//! shows while a run goes on and when it ends.
+//! 4 or 8) change the thread count, Enter runs, Escape goes back. Also the words the precompute
+//! view's log ends a run with.
 
 use std::time::Duration;
 
-use wordle_gpui::solver::guess_count_matrix::{BuildError, Built, Progress};
+use wordle_gpui::solver::guess_count_matrix::{BuildError, Built};
 use wordle_gpui::solver::matrix::THREAD_CHOICES;
 use wordle_gpui::solver::strategy::{STRATEGIES, Strategy};
 
@@ -112,23 +112,7 @@ pub fn duration_label(time: Duration) -> String {
     }
 }
 
-/// The status bar while a run goes on, `elapsed` since this Strategy's pass started:
-/// "Guess counts: bits-all 1,234 / 14,855, about 12 min left".
-pub fn progress_note(progress: &Progress, elapsed: Duration) -> String {
-    let counts = format!("Guess counts: {} {} / {}", progress.strategy.id, with_commas(progress.done), with_commas(progress.total));
-    if progress.done == 0 || progress.done >= progress.total {
-        return counts;
-    }
-    let left = elapsed.as_secs_f64() / progress.done as f64 * (progress.total - progress.done) as f64;
-    let left = match left as u64 {
-        0..60 => "under a minute left".to_string(),
-        seconds @ 60..5400 => format!("about {} min left", (seconds + 30) / 60),
-        seconds => format!("about {} h {:02} min left", seconds / 3600, seconds / 60 % 60),
-    };
-    format!("{counts}, {left}")
-}
-
-/// The status bar when a run has ended, after `elapsed` on `threads` threads.
+/// The last line of the precompute view's log when a run has ended, after `elapsed` on `threads` threads.
 pub fn end_note(result: &Result<Built, BuildError>, elapsed: Duration, threads: usize) -> String {
     let time = duration_label(elapsed);
     match result {

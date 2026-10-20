@@ -1,6 +1,8 @@
 //! The window: the title bar and its settings menu, the sidebar, the board and the on-screen
 //! keyboard, the status bar, and the command palette and theme picker that float above them.
-//! In Solver mode the board is replaced by one whose Feedback is clicked in by hand (`ui/assist.rs`).
+//! In Solver mode the board is replaced by one whose Feedback is clicked in by hand (`ui/assist.rs`),
+//! and while a precompute runs (and after, until the player goes back) by the precompute view
+//! (`ui/precompute_view.rs`).
 //!
 //! `WordleApp` holds the state and routes keys; each submodule draws one part of it.
 
@@ -10,6 +12,7 @@ mod guess_counts_picker;
 mod menu;
 mod palette;
 mod precompute_picker;
+mod precompute_view;
 mod sidebar;
 mod solver_panel;
 mod status_bar;
@@ -22,17 +25,18 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
+use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, UniformListScrollHandle, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::engine::game::{Game, Guess, MAX_GUESSES, random_seed};
 use wordle_gpui::solver::assist::Assist;
-use wordle_gpui::solver::guess_count_matrix::{self, Progress};
+use wordle_gpui::solver::guess_count_matrix;
 use wordle_gpui::solver::matrix;
 use wordle_gpui::solver::strategy::{Matrix, MatrixSet, Strategy};
-use wordle_gpui::engine::words::WORD_LENGTH;
+use wordle_gpui::engine::words::{WORD_LENGTH, word_lists};
 
 use crate::overlays::commands::{self, Command, CommandPalette, SeedField, SeedOutcome};
 use crate::overlays::guess_counts::{self as guess_counts_state, GuessCountPicker, StopOutcome};
 use crate::overlays::precompute::{self, ThreadPicker};
+use crate::overlays::precompute_run::{self, Area, Kind, RunState};
 use crate::overlays::theme_picker::{self as theme_picker_state, ThemePicker};
 use crate::theme::{self, Theme};
 use board::{BACKSPACE, ENTER};
@@ -100,21 +104,27 @@ enum Overlay {
     StopGuessCounts,
 }
 
-/// A Guess Count Matrix run going on in the background.
-struct GuessCountRun {
-    /// Set to stop the run; finished rows are kept.
-    stop: Arc<AtomicBool>,
-    /// The latest progress, with when its Strategy's pass started. None until the first pass starts.
-    progress: Arc<Mutex<Option<(Progress, Instant)>>>,
+/// A precompute (the Feedback matrices or the Guess Count Matrices) running in the background, or
+/// ended and still shown in the precompute view.
+struct PrecomputeRun {
+    /// Its progress and log, filled in from the worker threads (see `overlays/precompute_run.rs`).
+    state: Arc<Mutex<RunState>>,
+    started: Instant,
+    /// Set to stop a Guess Count run; finished rows are kept. None for the matrices.
+    stop: Option<Arc<AtomicBool>>,
+    /// The log's scroll position. It follows the newest line while it is at the end.
+    log_scroll: UniformListScrollHandle,
+    /// Log lines seen at the last draw (dropped ones included), to tell when new ones came.
+    lines_seen: usize,
 }
 
-impl GuessCountRun {
-    /// What the status bar says about the run.
-    fn note(&self) -> String {
-        match *self.progress.lock().expect("the progress lock") {
-            Some((progress, started)) => guess_counts_state::progress_note(&progress, started.elapsed()),
-            None => "Guess counts: reading the Feedback matrices…".into(),
-        }
+impl PrecomputeRun {
+    fn new(state: RunState, stop: Option<Arc<AtomicBool>>) -> Self {
+        Self { state: Arc::new(Mutex::new(state)), started: Instant::now(), stop, log_scroll: UniformListScrollHandle::new(), lines_seen: 0 }
+    }
+
+    fn state(&self) -> std::sync::MutexGuard<'_, RunState> {
+        self.state.lock().expect("the precompute state lock")
     }
 }
 
@@ -135,10 +145,8 @@ pub struct WordleApp {
     /// Solver mode, while it is on: the State of a game played elsewhere, entered by hand.
     assist: Option<Assist>,
     overlay: Option<Overlay>,
-    /// Whether the Feedback matrices are being precomputed in the background.
-    precomputing: bool,
-    /// The Guess Count Matrix run going on in the background, if any.
-    guess_counts: Option<GuessCountRun>,
+    /// The precompute going on, or ended and still shown in place of the board.
+    precompute: Option<PrecomputeRun>,
     sidebar_open: bool,
     /// How wide the sidebar is (with its gap), dragged by `render_sidebar_handle`.
     sidebar_width: gpui::Pixels,
@@ -167,8 +175,7 @@ impl WordleApp {
             solver: SolverState::default(),
             assist: None,
             overlay: None,
-            precomputing: false,
-            guess_counts: None,
+            precompute: None,
             sidebar_open: false,
             sidebar_width: sidebar::DEFAULT_WIDTH,
             resizing_sidebar: false,
@@ -187,6 +194,11 @@ impl WordleApp {
             Some(assist) => &assist.guesses,
             None => self.game.guesses(),
         }
+    }
+
+    /// Which precompute is running, if one is (an ended one still shown is not).
+    fn running_precompute(&self) -> Option<Kind> {
+        self.precompute.as_ref().map(|run| run.state()).filter(|state| state.is_running()).map(|state| state.kind)
     }
 
     fn tone_colour(&self, tone: Tone) -> u32 {
@@ -297,13 +309,17 @@ impl WordleApp {
                 self.toggle_solver_mode(window, cx);
             }
             Command::ChangeTheme => self.open(Overlay::ThemePicker(ThemePicker::new(self.theme)), cx),
-            Command::Precompute if self.precomputing => {
+            Command::Precompute if self.running_precompute() == Some(Kind::Matrices) => {
                 self.dismiss(cx);
                 self.show_status("Already precomputing the matrices", cx);
             }
+            Command::Precompute if self.running_precompute() == Some(Kind::GuessCounts) => {
+                self.dismiss(cx);
+                self.show_status("Stop the guess counts first: they read the matrices", cx);
+            }
             Command::Precompute => self.open(Overlay::Precompute(ThreadPicker::default()), cx),
-            Command::PrecomputeGuessCounts if self.guess_counts.is_some() => self.open(Overlay::StopGuessCounts, cx),
-            Command::PrecomputeGuessCounts if self.precomputing => {
+            Command::PrecomputeGuessCounts if self.running_precompute() == Some(Kind::GuessCounts) => self.open(Overlay::StopGuessCounts, cx),
+            Command::PrecomputeGuessCounts if self.running_precompute() == Some(Kind::Matrices) => {
                 self.dismiss(cx);
                 self.show_status("Wait for the matrices to finish precomputing", cx);
             }
@@ -327,26 +343,26 @@ impl WordleApp {
     }
 
     /// Score every Guess against every Answer on `threads` threads, off the window's thread, and
-    /// save the two Feedback matrices (see `solver/matrix.rs`). The status bar says when it is done.
+    /// save the two Feedback matrices (see `solver/matrix.rs`). The precompute view shows it.
     fn start_precompute(&mut self, threads: usize, cx: &mut Context<Self>) {
         self.overlay = None;
-        self.precomputing = true;
-        self.show_status_for(format!("Precomputing matrices on {}…", precompute::threads_label(threads)), Duration::from_secs(600), cx);
+        let lists = word_lists();
+        let run = PrecomputeRun::new(RunState::matrices(threads, lists.guesses.len(), lists.answers.len()), None);
+        let (state, started) = (run.state.clone(), run.started);
+        self.precompute = Some(run);
+        let events = state.clone();
         let work = cx.background_spawn(async move {
-            let started = Instant::now();
-            let saved = matrix::build(&matrix::default_dir(), threads);
+            let report = move |event| events.lock().expect("the precompute state lock").apply_matrix(event, started.elapsed());
+            let saved = matrix::build_with(&matrix::default_dir(), threads, &report);
             (saved, started.elapsed())
         });
+        self.redraw_while_running(cx);
         cx.spawn(async move |this, cx| {
             let (saved, elapsed) = work.await;
             this.update(cx, |app, cx| {
-                app.precomputing = false;
                 app.reload_matrices(cx);
-                let note = match saved {
-                    Ok(_) => format!("Saved the matrices to precompute-cache/feedback-rust/ in {:.1}s ({})", elapsed.as_secs_f32(), precompute::threads_label(threads)),
-                    Err(error) => format!("Couldn't save the matrices: {error}"),
-                };
-                app.show_status_for(note, Duration::from_secs(5), cx);
+                state.lock().expect("the precompute state lock").finish_matrices(&saved, elapsed);
+                cx.notify();
             })
             .ok();
         })
@@ -355,56 +371,35 @@ impl WordleApp {
     }
 
     /// Fill the Guess Count Matrices of `strategies` on `threads` threads, off the window's thread
-    /// (see `solver/guess_count_matrix.rs`), resuming rows left unfinished. The status bar shows the
-    /// progress, and says where the files went when it ends.
+    /// (see `solver/guess_count_matrix.rs`), resuming rows left unfinished. The precompute view
+    /// shows its progress and log.
     fn start_guess_counts(&mut self, threads: usize, strategies: Vec<&'static Strategy>, cx: &mut Context<Self>) {
         self.overlay = None;
         let stop = Arc::new(AtomicBool::new(false));
-        let progress: Arc<Mutex<Option<(Progress, Instant)>>> = Arc::new(Mutex::new(None));
-        self.guess_counts = Some(GuessCountRun { stop: stop.clone(), progress: progress.clone() });
+        let run = PrecomputeRun::new(RunState::guess_counts(threads, &strategies, word_lists().guesses.len()), Some(stop.clone()));
+        let (state, started) = (run.state.clone(), run.started);
+        self.precompute = Some(run);
+        let events = state.clone();
         let work = cx.background_spawn(async move {
-            let started = Instant::now();
-            let report = move |now: Progress| {
-                let mut latest = progress.lock().expect("the progress lock");
-                let pass_started = match *latest {
-                    Some((before, pass_started)) if before.strategy.id == now.strategy.id => pass_started,
-                    _ => Instant::now(),
-                };
-                // Threads report out of order; keep the furthest.
-                if latest.is_none_or(|(before, _)| before.strategy.id != now.strategy.id || before.done <= now.done) {
-                    *latest = Some((now, pass_started));
-                }
-            };
+            // One lock per finished row (a row takes about 0.1 s of a thread), none per Answer.
+            let report = move |event| events.lock().expect("the precompute state lock").apply_guess_counts(event, started.elapsed());
             let result = Matrix::load(&matrix::default_dir(), MatrixSet::ValidGuesses).map_err(guess_count_matrix::BuildError::Io).and_then(|feedback| {
-                let options = guess_count_matrix::Options { threads, strategies, openers: None, progress: &report, stop: &stop };
+                let options = guess_count_matrix::Options { threads, strategies, openers: None, events: &report, stop: &stop };
                 guess_count_matrix::build(&guess_count_matrix::default_dir(), &feedback, options)
             });
             (result, started.elapsed())
         });
-        // Redraw the status bar every second while the run goes on.
-        cx.spawn(async move |this, cx| {
-            loop {
-                cx.background_executor().timer(Duration::from_secs(1)).await;
-                let running = this.update(cx, |app, cx| {
-                    cx.notify();
-                    app.guess_counts.is_some()
-                });
-                if !matches!(running, Ok(true)) {
-                    break;
-                }
-            }
-        })
-        .detach();
+        self.redraw_while_running(cx);
         cx.spawn(async move |this, cx| {
             let (result, elapsed) = work.await;
             this.update(cx, |app, cx| {
-                app.guess_counts = None;
+                state.lock().expect("the precompute state lock").finish_guess_counts(&result, elapsed);
                 if matches!(app.overlay, Some(Overlay::StopGuessCounts)) {
                     app.overlay = None;
                 }
                 // The run rewrote summary.json, finished or stopped.
                 app.reload_summary(cx);
-                app.show_status_for(guess_counts_state::end_note(&result, elapsed, threads), Duration::from_secs(10), cx);
+                cx.notify();
             })
             .ok();
         })
@@ -412,12 +407,40 @@ impl WordleApp {
         cx.notify();
     }
 
+    /// Redraw the precompute view twice a second while its run goes on.
+    fn redraw_while_running(&self, cx: &mut Context<Self>) {
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor().timer(Duration::from_millis(500)).await;
+                let running = this.update(cx, |app, cx| {
+                    cx.notify();
+                    app.running_precompute().is_some()
+                });
+                if !matches!(running, Ok(true)) {
+                    break;
+                }
+            }
+        })
+        .detach();
+    }
+
     /// Ask the Guess Count Matrix run to stop; it keeps the rows it has finished.
     fn stop_guess_counts(&mut self, cx: &mut Context<Self>) {
         self.overlay = None;
-        if let Some(run) = &self.guess_counts {
-            run.stop.store(true, Ordering::Relaxed);
-            self.show_status_for("Stopping guess counts…", Duration::from_secs(30), cx);
+        if let Some(run) = &self.precompute
+            && let Some(stop) = &run.stop
+            && run.state().can_stop()
+        {
+            stop.store(true, Ordering::Relaxed);
+            run.state().ask_stop(run.started.elapsed());
+        }
+        cx.notify();
+    }
+
+    /// Close the precompute view once its run has ended: the game shows again, as it was.
+    fn back_to_game(&mut self, cx: &mut Context<Self>) {
+        if self.running_precompute().is_none() {
+            self.precompute = None;
         }
         cx.notify();
     }
@@ -446,6 +469,13 @@ impl WordleApp {
     fn key_down(&mut self, key: &str, typed: Option<&str>, window: &mut Window, cx: &mut Context<Self>) {
         match self.overlay.as_mut() {
             None if self.solver.searching => return self.solver_key(key, cx),
+            // The precompute view hides the board: keys never reach it.
+            None if self.precompute.is_some() => {
+                if self.precompute.as_ref().is_some_and(|run| run.state().press(key) == precompute_run::Outcome::BackToGame) {
+                    self.back_to_game(cx);
+                }
+                return;
+            }
             None => return self.board_key(key, cx),
             Some(Overlay::ThemePicker(picker)) => match picker.press(key, typed) {
                 theme_picker_state::Outcome::Preview(theme) => self.theme = theme,
@@ -655,6 +685,7 @@ impl WordleApp {
 impl Render for WordleApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
+        self.follow_precompute_log();
 
         div()
             .track_focus(&self.focus_handle)
@@ -692,9 +723,10 @@ impl Render for WordleApp {
                     .px_2()
                     .pb_1()
                     .when(self.sidebar_open, |row| row.child(self.render_sidebar(cx)).child(self.render_sidebar_handle(cx)))
-                    .map(|row| match &self.assist {
-                        Some(assist) => row.child(self.render_assist(assist, cx)),
-                        None => row.child(self.render_game(cx)),
+                    .map(|row| match (precompute_run::main_area(self.precompute.is_some(), self.assist.is_some()), &self.assist) {
+                        (Area::Precompute, _) => row.child(self.render_precompute_view(cx)),
+                        (Area::SolverMode, Some(assist)) => row.child(self.render_assist(assist, cx)),
+                        _ => row.child(self.render_game(cx)),
                     })
                     .when(self.solver.open, |row| row.child(div().flex_none().w(solver_panel::GAP)).child(self.render_solver(cx))),
             )
