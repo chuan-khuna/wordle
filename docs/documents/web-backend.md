@@ -12,6 +12,8 @@ app/backend/
     feedback.py           the two-pass Feedback rule and Feedback Codes
     candidates.py         the Candidate Set for a State
     matrices.py           the vectorised Feedback matrices (build, load)
+    strategy.py           ranking Guesses by Expected Information and Expected Candidates
+    api.py                the FastAPI app (`wordle_backend.api:app`)
     precompute.py         the command behind `just backend-precompute`
     data/                 answers.txt, guesses.txt, SOURCES.md (copies of packages/wordle/src/wordle/data/)
   matrices/               generated .npy files (gitignored)
@@ -36,11 +38,34 @@ A State is a tuple of `Turn(guess, feedback)`, where `feedback` is a Feedback Co
 
 `tests/test_matrices.py` checks the shapes, sampled cells against `feedback()`, that the thread count does not change the bytes, and that the output equals what `uv run src/precompute.py` builds at the repo root. That last test is skipped if `uv` is missing or the reference build fails.
 
+## Strategy
+
+`strategy.py` holds `Strategy`, the same maths and tie-breaks as the Python package's Solver (see [solver-strategy.md](solver-strategy.md)), written again so this project stays standalone. `rank(candidates, pool=, scope=, by=, top=)` counts each Feedback Code in a matrix row restricted to the Candidate columns, then orders by the chosen measure, then (a Candidate first) the other measure, then alphabetically. Once two or fewer Candidates are left it searches Candidates only, whatever `scope` says. Candidates are Answer List indices; the matrices are never copied.
+
+## API
+
+`api.py` loads the matrices once at startup with mmap (in FastAPI's lifespan). They are never built there: if missing, startup fails with a message pointing to `just backend-precompute`. Run it with `just backend` (uvicorn, `http://127.0.0.1:8000`; extra arguments go to uvicorn, e.g. `--port 8001 --reload`).
+
+Words are lowercase five-letter strings. A Feedback is written as **five digits, one per letter: 0 Absent, 1 Present, 2 Correct** (`"20102"`), the base-3 digits of its Feedback Code; the emoji squares are for display only. Every response with a Feedback gives both `marks` (that string) and `code` (the Feedback Code). A State is `[{guess, feedback}]` with `feedback` as the digit string. `pool`, `scope` and `by` are as in [solver-strategy.md](solver-strategy.md) (defaults `guesses`, `global`, `bits`). A "WordStats" below is `{word, bits, expected_candidates, groups, largest_group, is_candidate, win_chance}`.
+
+| Endpoint | Request | Response |
+| --- | --- | --- |
+| `GET /api/feedback` | `guess`, `answer` (any Guess List words) | `{guess, answer, marks, code}` |
+| `POST /api/candidates` | `{state}` | `{count, words}` |
+| `POST /api/split` | `{guess, state}` | WordStats fields of the Guess, plus `candidates` and `split`: `[{marks, code, count, words}]`, biggest group first |
+| `POST /api/suggestions` | `{state, pool, scope, by, top}` (`top` default 10) | `{candidates, suggestions: [WordStats]}`, best first |
+| `GET /api/solve` | `answer` (Answer List word), `pool`, `scope`, `by` | `{answer, solved, guesses, steps}`; each step is `{number, guess, marks, code, candidates_before, candidates_after, alternatives: [WordStats]}`, with the top 5 for that step (the first is the Guess played) |
+
+Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`, a missing parameter, `top` below 1, an empty Candidate Set for `/api/split`) returns HTTP 400 with `{"detail": "<message>"}`; the `RequestValidationError` handler replaces FastAPI's 422. `/api/solve` stops after 12 Guesses as a safety limit.
+
+`tests/test_api.py` uses FastAPI's `TestClient`; `tests/conftest.py` builds the matrices once only if they are missing.
+
 ## Commands
 
 | Command | What it does |
 | --- | --- |
 | `just backend-precompute` | Write the Feedback matrices to `app/backend/matrices/`. Takes `--threads N`, `--out DIR`, `--yes` |
+| `just backend` | Serve the API with uvicorn from `app/backend/`. Takes uvicorn options, e.g. `--port 8001` |
 | `just test-backend` | Run the backend's tests (`uv run pytest` in `app/backend/`) |
 
 The tests reuse the repeated-letter examples from [feedback-scoring.md](feedback-scoring.md).
