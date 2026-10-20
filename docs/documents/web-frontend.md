@@ -133,15 +133,15 @@ The Article page header shows its Part and number (`Part 2 · Solving Wordle · 
 
 **The Series** (`content/series.mdx`): frontmatter `title`, `intro`, `parts` and optional `video` (a YouTube id or URL), then optional MDX body text. The home page `/` is the Series page: the title, intro and video (if any), then each Part (number, title, intro) with its Articles in number order, each with its number, title and summary, plus a "Watch from m:ss" link when both the Series and the Article have a video time. There is no `/series/...` route.
 
-**Parts.** `parts` is an ordered list of `{id, title, intro}`. The Series has two: `wordle` (Part 1, Articles 01-03: the game) and `solving-wordle` (Part 2, Articles 04-11: the road to the best Opener). Every Article names its Part's `id` in `part`, and the file numbers run through the whole Series, so a Part's Articles are consecutive.
+**Parts.** `parts` is an ordered list of `{id, title, intro}`. The Series has two: `wordle` (Part 1, Articles 01-03: the game) and `solving-wordle` (Part 2, Articles 04-10: the road to the best Opener). Every Article names its Part's `id` in `part`, and the file numbers run through the whole Series, so a Part's Articles are consecutive.
 
-**Numbering.** An Article's number is the `NN` of its file name (1 to 11), and `lib/parts.ts` `formatNumber` is the one formatter: always two digits with leading zeros (`01` ... `11`). It is shown in the sidebar, on the home page, in the Article header and in the previous/next links, always in `font-mono` with tabular figures.
+**Numbering.** An Article's number is the `NN` of its file name (1 to 10), and `lib/parts.ts` `formatNumber` is the one formatter: always two digits with leading zeros (`01` ... `10`). It is shown in the sidebar, on the home page, in the Article header and in the previous/next links, always in `font-mono` with tabular figures.
 
 **Video timestamps.** An Article's `video` is a start time in the Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or a Series without one, has no link; none of the current content has a video yet (ticket 10).
 
 **Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, the file names (`parseArticleFiles`: not `NN-slug.mdx` with exactly two digits, a repeated number, a repeated slug, or numbers that are not exactly 01..N with no gaps), and missing or malformed frontmatter. Parts (`lib/parts.ts` `validateParts`): an Article without `part` (`frontmatter "part" is missing`), an unknown Part (`unknown Part "x". Known Parts: ...`), a Part with no Articles (named against `content/series.mdx`), a Part whose Articles are not consecutive in number (names the Article of another Part between them), and a Part id used twice.
 
-**The content.** The eleven Articles follow the spec's outline. Prerequisites form a chain, with extra edges where an idea depends on an earlier one.
+**The content.** The ten Articles follow the spec's outline. Prerequisites form a chain, with extra edges where an idea depends on an earlier one.
 
 | No. | Slug (file `NN-slug.mdx`) | Part | Prerequisites | Body |
 | --- | --- | --- | --- | --- |
@@ -150,12 +150,11 @@ The Article page header shows its Part and number (`Part 2 · Solving Wordle · 
 | 03 | `building-the-game` | 1 | `feedback` | stub |
 | 04 | `solving-introduction` | 2 | `building-the-game` | stub |
 | 05 | `candidate-set` | 2 | `solving-introduction`, `feedback` | Candidate filter |
-| 06 | `feedback-split` | 2 | `candidate-set` | Split explorer |
-| 07 | `expected-information` | 2 | `feedback-split` | Split explorer |
-| 08 | `openers` | 2 | `expected-information` | Opener table |
-| 09 | `greedy-strategy` | 2 | `openers`, `candidate-set` | Step-through Game |
-| 10 | `benchmark` | 2 | `greedy-strategy` | Benchmark chart |
-| 11 | `greedy-vs-optimal` | 2 | `benchmark` | stub |
+| 06 | `feedback-split` | 2 | `candidate-set` | Split explorer, without then with bits (Feedback Split and Expected Information) |
+| 07 | `openers` | 2 | `feedback-split` | Opener table |
+| 08 | `greedy-strategy` | 2 | `openers`, `candidate-set` | Step-through Game |
+| 09 | `benchmark` | 2 | `greedy-strategy` | Benchmark chart |
+| 10 | `greedy-vs-optimal` | 2 | `benchmark` | stub |
 
 Articles with a stub body carry `{/* TODO(ticket 10): draft */}`; ticket 10 writes the full text.
 
@@ -215,10 +214,10 @@ A row's feedback is five digits, 0 Absent, 1 Present, 2 Correct (`crane:00102`);
 | --- | --- | --- |
 | `guess` | `guess` (or `<id>.guess`) | the Guess to split on |
 | `state` | `state` (or `<id>.state`) | optional State, `guess:feedback` rows joined by commas; the Candidate Set it leaves is what is split (default: the whole Answer List) |
-| `bits` | | default `true`; `bits={false}` hides Expected Information (Article 06 shows the Split without it, Article 07 adds it) |
+| `bits` | | default `true`; `bits={false}` hides Expected Information (Article 06 shows the Split without it first, then adds it) |
 | `id` | | namespace for the params |
 
-One `POST /api/split` (after a short pause) gives the groups, shown as a bar chart (one bar per Feedback, height = words in the group, x labelled with the Feedback digits) with Expected Candidates, the Candidate count, the group count and largest group, and Expected Information in bits unless hidden. A Guess can have up to about 150 groups, so the chart draws the 30 largest (`CHART_BARS`) and a scrollable list below holds every group, each with its tiles, Feedback and word count. Clicking a bar, or a list row (a button with `aria-pressed`), selects that group and lists its words (the first 60, with a button for all). An invalid Guess or State shows the API's message. Example link: `/articles/expected-information?ei.guess=crane&ei.state=slate:01200`.
+One `POST /api/split` (after a short pause) gives the groups, shown as a bar chart (one bar per Feedback, height = words in the group, x labelled with the Feedback digits) with Expected Candidates, the Candidate count, the group count and largest group, and Expected Information in bits unless hidden. A Guess can have up to about 150 groups, so the chart draws the 30 largest (`CHART_BARS`) and a scrollable list below holds every group, each with its tiles, Feedback and word count. Clicking a bar, or a list row (a button with `aria-pressed`), selects that group and lists its words (the first 60, with a button for all). An invalid Guess or State shows the API's message. Example link: `/articles/feedback-split?ei.guess=crane&ei.state=slate:01200`.
 
 ### Step-through Game
 

@@ -1,6 +1,6 @@
 ---
-title: "Feedback Split"
-summary: "A Guess sorts the Candidate Set into groups, one per possible Feedback."
+title: "Feedback Split and Expected Information"
+summary: "A Guess sorts the Candidate Set into groups, one per possible Feedback; Expected Information scores that split in bits."
 prerequisites: [candidate-set]
 part: solving-wordle
 ---
@@ -10,3 +10,7 @@ A Guess sorts the <Term>Candidate Set</Term> into groups, one per possible <Term
 A good Guess makes many small groups; a bad one leaves a few big ones. Select a bar to see which words share that Feedback:
 
 <SplitExplorer id="fs" guess="crane" bits={false} />
+
+Score a Guess by its <Term>Expected Information</Term> and by the number of Candidates it is expected to leave:
+
+<SplitExplorer id="ei" guess="slate" state="crane:00102" />

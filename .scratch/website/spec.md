@@ -35,7 +35,7 @@ The Benchmark runs three Strategies, each from its own best Opener:
 
 - **Articles**: `app/frontend/content/articles/<slug>.mdx`, with frontmatter `title`, `summary`, `prerequisites: [slug]`, `part`, and an optional `video` timestamp. The file is named `NN-slug.mdx` (two-digit number, then the URL slug); the number is the Article's place in the Series and the build fails on a bad prefix, a repeated number or slug, or numbers that are not 01..N. Each Article page lists its Prerequisites and shows backlinks (the Articles that list it as a Prerequisite).
 - **Series**: the site has exactly one Series, "Solving Wordle", in `content/series.mdx` (title, intro, video embed). Every Article belongs to it; there is no Series index and no `/series/` route. Each Article shows prev/next links.
-- **Parts**: defined in order in `content/series.mdx` (an id, a title and a short intro each). Every Article names its `part`, and the file numbers run through the whole Series, so a Part's Articles are consecutive. Article numbers always show as two digits with leading zeros (`01` … `11`).
+- **Parts**: defined in order in `content/series.mdx` (an id, a title and a short intro each). Every Article names its `part`, and the file numbers run through the whole Series, so a Part's Articles are consecutive. Article numbers always show as two digits with leading zeros (`01` … `10`).
 - **Home page**: the Series itself: its title, intro and video, then each Part with its intro and its Articles in number order.
 - **Math**: `@next/mdx` with `remark-math` and `rehype-katex`.
 - **`<Term>Candidate Set</Term>`**: shows that term's definition from the root `GLOSSARY.md`, parsed at build time. An unknown term fails the build.
@@ -63,12 +63,11 @@ English, written in glossary terms only. Colours appear only in the Widgets and 
 
 4. Introduction: what makes a good first Guess? → no Widget
 5. Candidate Set → Candidate filter
-6. Feedback Split → Split explorer
-7. Expected Information (bits, $-\sum p \log_2 p$, "entropy" named once) → Split explorer with bits
-8. Openers → Opener table
-9. Greedy Strategy (non-Candidate Guesses, the _ATCH trap) → Step-through Game
-10. Benchmark → Benchmark chart
-11. Greedy vs optimal (the true optimum is cited, not computed) → no Widget
+6. Feedback Split and Expected Information (one Article: the groups first, then scoring them in bits, $-\sum p \log_2 p$, "entropy" named once) → Split explorer, without then with bits
+7. Openers → Opener table
+8. Greedy Strategy (non-Candidate Guesses, the _ATCH trap) → Step-through Game
+9. Benchmark → Benchmark chart
+10. Greedy vs optimal (the true optimum is cited, not computed) → no Widget
 
 ## Out of scope
 
