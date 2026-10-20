@@ -12,6 +12,14 @@
 - [ ] Ctrl+C mid-run keeps finished rows and writes a partial summary with the complete-row counts
 - [ ] The Guess Count Matrix document describes resuming
 
+The file format decided in [ADR 0001](../../../docs/adr/0001-guess-count-matrix-file-format.md) (from [RFC 01](../../../docs/rfc/01-guess-count-matrix-file-format.md)) lands here too:
+
+- [ ] `guess-counts/manifest.json` (format version, `rows` = sorted Guess List, `columns` = Answer List, each Strategy's id, name, pool, scope, ranked by, and the safety limit, and the tool that wrote it) is written before any row; a resume refuses, and says to use `--fresh`, when the word lists or a chosen Strategy's definition differ (test)
+- [ ] A finished row played again (`--opener`) is zeroed before it is rewritten
+- [ ] `summary.json` is written compact (no indent)
+- [ ] Each run also writes `<id>.ranking.csv` per Strategy (`rank,opener,average_guess_count,losses,won_in_1,…,won_in_6,bits,is_answer`) from the same data as the summary, with the standard library's `csv` (test: it matches the summary)
+- [ ] The Guess Count Matrix document describes the manifest and the ranking CSV, and links the ADR
+
 See [spec](../spec.md).
 
 ## Comments
