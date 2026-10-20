@@ -149,6 +149,22 @@ fn the_stop_flag_keeps_the_finished_rows() {
 }
 
 #[test]
+fn a_folder_copied_from_the_python_command_is_resumed() {
+    // A copy of `precompute-cache/guess-counts/` differs only in the manifest's `tool`, which is not checked.
+    let dir = temp_dir("from-python");
+    build_some(&dir, &["bits-candidates"], &["salet"], 1);
+    let manifest = std::fs::read_to_string(dir.join(MANIFEST_FILE)).unwrap();
+    std::fs::write(dir.join(MANIFEST_FILE), manifest.replace(TOOL, "wordle precompute-guess-counts (python)")).unwrap();
+    assert_eq!(mismatch(&dir, strategy("bits-candidates"), feedback()), None);
+    let built = build_some(&dir, &["bits-candidates"], &["salet", "crane"], 1);
+    assert_eq!(built.filled, 1); // salet's row was finished in the copy, so only crane is played
+    let cells = cells(&dir, "bits-candidates");
+    assert_eq!(row_of(&cells, "salet"), played("bits-candidates", "salet"));
+    assert_eq!(row_of(&cells, "crane"), played("bits-candidates", "crane"));
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+#[test]
 fn a_matrix_the_manifest_does_not_vouch_for_is_not_resumed() {
     let dir = temp_dir("mismatch");
     build_some(&dir, &["bits-candidates"], &["salet"], 1);

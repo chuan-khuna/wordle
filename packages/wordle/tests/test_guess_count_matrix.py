@@ -6,8 +6,8 @@ import pytest
 
 from wordle.engine.feedback import feedback
 from wordle.solver import cli
-from wordle.solver.guess_count_matrix import ManifestMismatch, build, matrix_path, ranking_path, summarize
-from wordle.solver.guess_counts import UNSOLVED
+from wordle.solver.guess_count_matrix import ManifestMismatch, build, matrix_path, mismatch, ranking_path, summarize
+from wordle.solver.guess_counts import UNSOLVED, guess_counts
 from wordle.solver.matrix import WIN
 from wordle.solver.strategy import STRATEGIES, Solver, pack
 
@@ -196,6 +196,17 @@ def test_resume_refuses_when_the_manifest_differs(solver, tmp_path):
             build(tmp_path, (HOW,), ["salet"], solver)
         assert matrix_path(tmp_path, HOW).read_bytes() == before  # nothing was written
         build(tmp_path, (HOW,), ["raise"], solver, fresh=True)  # start over repairs the manifest
+
+
+def test_a_folder_copied_from_the_gpui_app_is_resumed(solver, tmp_path):
+    # A copy of `precompute-cache/guess-counts-rust/` differs only in the manifest's `tool`, which is not checked.
+    build(tmp_path, (HOW,), ["raise"], solver)
+    edit_manifest(tmp_path, lambda manifest: manifest.update(tool="wordle-gpui Precompute guess counts (rust)"))
+    assert mismatch(tmp_path, HOW, solver) is None
+    build(tmp_path, (HOW,), ["salet"], solver)
+    matrix = saved(tmp_path)
+    for word in ("raise", "salet"):
+        assert (matrix[solver.guesses.index(word)] == guess_counts(solver, HOW, word)).all(), word
 
 
 def test_resume_refuses_without_a_manifest(solver, tmp_path):
