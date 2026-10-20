@@ -93,5 +93,6 @@ fn precompute_is_in_the_palette() {
 
 #[test]
 fn the_solver_is_in_the_palette() {
-    assert_eq!(Command::search("solver"), [Command::ToggleSolver]);
+    assert_eq!(Command::search("solver"), [Command::ToggleSolver, Command::ToggleSolverMode]);
+    assert_eq!(Command::search("mode"), [Command::ToggleSolverMode]);
 }

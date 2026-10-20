@@ -89,19 +89,19 @@ impl WordleApp {
         let t = self.theme;
         let subtle = (t.subtle << 8) | 0x99;
         let mut words = div().flex().flex_col().gap_1().p_2();
-        for guess in self.game.guesses() {
+        for guess in self.shown_guesses() {
             let tiles = guess.word.chars().zip(&guess.feedback).map(|(letter, mark)| {
                 let (fill, text) = t.mark(*mark);
                 mini_tile(letter, fill, fill, text)
             });
             words = words.child(self.word_row(&guess.word, tiles.collect(), None, cx));
         }
-        if self.game.is_lost() && self.answer_shown {
+        if self.assist.is_none() && self.game.is_lost() && self.answer_shown {
             let answer = self.game.answer();
             let tiles = answer.chars().map(|letter| mini_tile(letter, t.surface, t.highlight_med, t.text)).collect();
             words = words.child(self.word_row(answer, tiles, Some("Answer"), cx));
         }
-        if self.game.guesses().is_empty() {
+        if self.shown_guesses().is_empty() {
             words = words.child(div().px_1().text_xs().text_color(rgb(t.muted)).child("Your Guesses show here. Pick one to see what it means."));
         }
 

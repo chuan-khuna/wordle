@@ -28,7 +28,7 @@ app/wordle-gpui/
   src/
     lib.rs        the library: `engine` and `solver`, usable from tests with no window
     engine/       the game itself: Feedback, the word lists, Seeds, Game, live hints
-    solver/       the Feedback matrices and the Strategy that ranks Suggestions
+    solver/       the Feedback matrices, the Strategy that ranks Suggestions, and Solver mode's State
     overlays/     state and keys with no drawing: the command palette, the pickers, the search
     theme/        one file per theme, and the Theme roles
     ui/           drawing: WordleApp (ui/mod.rs) holds the state; every other file draws one part
@@ -80,6 +80,7 @@ Each row is one line: the name on the left and, on the right, a dim detail (the 
 - **Live hints:** dotted when on (see below).
 - **Show sidebar:** dotted when the sidebar is open (see below).
 - **Show solver:** dotted when the solver is open (see [Solver](#solver)).
+- **Solver mode:** dotted while it is on (see [Solver mode](#solver-mode)).
 - **Change theme…:** opens the theme picker (below). The row shows the current theme.
 - **Precompute matrices…:** opens a small picker for the thread count (see below).
 - **Reset layout:** closes the sidebar and restores the window size.
@@ -201,3 +202,17 @@ From top to bottom the panel shows the settings, the Candidates, the best guess 
 The matrices are read from `app/wordle-gpui/matrices/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Valid guesses × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
 
 The chart is drawn with plain elements rather than gpui-kit's `BarChart`, so each bar's label can be the five coloured Marks and every colour comes from the app's theme.
+
+## Solver mode
+
+**Solver mode** (menu or palette; search `mode`) is for a Wordle played somewhere else, such as the real one in a browser. The window becomes two columns: on the left a board whose Feedback you click in by hand, on the right the [Solver](#solver), opened if it was closed. Since there is no Answer here, the app never works out a Feedback itself.
+
+- Type the Guess you made there (real or on-screen keyboard) and press Enter. It must be on the Guess List; its tiles start Absent.
+- Click a tile to move it on to its next Mark: Absent, Present, Correct, then Absent again. Every click works out the Candidates again and re-ranks the Suggestions.
+- Backspace with nothing typed takes the last Guess back off the board to be edited.
+- **Type it** in the solver's chart puts that word in as the Guess being typed.
+- Up to six Guesses. A Guess clicked to all Correct is a Win: "Solved in N" shows and nothing more can be typed.
+- **Start over** forgets every Guess; **Back to the game**, the command again, or any command that starts a Game (Play a new word, Try this word again, Play a seed…, Unlimited guesses) leaves it. Leaving keeps the solver open. **Reset layout** leaves it too.
+- While it is on, the solver can't be closed, the keyboard and the sidebar's Guesses show the entered State, and the status bar says how many Guesses are entered instead of the Game's Seed and Guesses left.
+
+The State and its keys are `solver/assist.rs` (`Assist`, tested in `assist_tests.rs` with no window); `ui/assist.rs` draws the board. The solver panel reads `shown_guesses()`, which is the entered State in Solver mode and the Game's otherwise.

@@ -55,7 +55,7 @@ impl WordleApp {
     }
 
     pub(super) fn render_keyboard(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let known = best_marks(self.game.guesses());
+        let known = best_marks(self.shown_guesses());
         let unused = (self.theme.highlight_med, self.theme.text);
         let mut rows = Vec::new();
         for (row_index, letters) in KEYBOARD_ROWS.iter().enumerate() {
@@ -98,17 +98,17 @@ impl WordleApp {
             .hover(|style| style.opacity(0.85))
             .on_click(cx.listener(move |this, _, window, cx| {
                 window.focus(&this.focus_handle, cx);
-                this.press(&key, cx);
+                this.board_key(&key, cx);
             }))
             .child(label)
     }
 }
 
-fn row(tiles: impl Iterator<Item = Div>) -> Div {
+pub(super) fn row(tiles: impl IntoIterator<Item = impl IntoElement>) -> Div {
     div().flex().gap_1p5().children(tiles)
 }
 
-fn tile(letter: Option<char>, fill: Option<u32>, border: u32, text: u32) -> Div {
+pub(super) fn tile(letter: Option<char>, fill: Option<u32>, border: u32, text: u32) -> Div {
     div()
         .size(px(58.))
         .flex()

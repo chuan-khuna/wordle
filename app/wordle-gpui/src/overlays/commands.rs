@@ -14,6 +14,7 @@ pub enum Command {
     ToggleLiveHints,
     ToggleSidebar,
     ToggleSolver,
+    ToggleSolverMode,
     ChangeTheme,
     Precompute,
     ResetLayout,
@@ -21,7 +22,7 @@ pub enum Command {
 
 impl Command {
     /// In menu order.
-    pub const ALL: [Command; 11] = [
+    pub const ALL: [Command; 12] = [
         Command::Reset,
         Command::Restart,
         Command::PlaySeed,
@@ -30,6 +31,7 @@ impl Command {
         Command::ToggleLiveHints,
         Command::ToggleSidebar,
         Command::ToggleSolver,
+        Command::ToggleSolverMode,
         Command::ChangeTheme,
         Command::Precompute,
         Command::ResetLayout,
@@ -45,6 +47,7 @@ impl Command {
             Command::ToggleLiveHints => "Live hints",
             Command::ToggleSidebar => "Show sidebar",
             Command::ToggleSolver => "Show solver",
+            Command::ToggleSolverMode => "Solver mode",
             Command::ChangeTheme => "Change theme…",
             Command::Precompute => "Precompute matrices…",
             Command::ResetLayout => "Reset layout",
@@ -56,7 +59,7 @@ impl Command {
         match self {
             Command::Reset | Command::Restart | Command::PlaySeed | Command::CopySeed => 0,
             Command::ToggleUnlimited | Command::ToggleLiveHints => 1,
-            Command::ToggleSidebar | Command::ToggleSolver | Command::ChangeTheme | Command::ResetLayout => 2,
+            Command::ToggleSidebar | Command::ToggleSolver | Command::ToggleSolverMode | Command::ChangeTheme | Command::ResetLayout => 2,
             Command::Precompute => 3,
         }
     }

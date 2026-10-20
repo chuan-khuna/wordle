@@ -1,7 +1,9 @@
 //! The bar along the bottom of the window, like Zed's: the sidebar button on the left; the Guess
-//! Limit, the Seed (with a button that copies it) and the Guesses left on the right.
+//! Limit, the Seed (with a button that copies it) and the Guesses left on the right; in Solver mode,
+//! how many Guesses have been entered instead.
 
 use gpui::{Context, Pixels, div, prelude::*, px, rgb};
+use wordle_gpui::engine::game::MAX_GUESSES;
 
 use super::widgets::{self, IconName};
 use super::WordleApp;
@@ -60,11 +62,10 @@ impl WordleApp {
                     .flex()
                     .items_center()
                     .gap_2()
-                    .child(mode)
-                    .child(dot())
-                    .child(seed)
-                    .child(dot())
-                    .child(self.guesses_status())
+                    .map(|right| match &self.assist {
+                        Some(assist) => right.child("solver mode").child(dot()).child(format!("{} of {MAX_GUESSES} guesses entered", assist.guesses.len())),
+                        None => right.child(mode).child(dot()).child(seed).child(dot()).child(self.guesses_status()),
+                    })
                     .child(
                         widgets::icon_button(t, "toggle-solver", widgets::icon(IconName::PanelRight, if self.solver.open { t.text } else { t.subtle }))
                             .when(self.solver.open, |button| button.bg(rgb(t.overlay)))

@@ -2,6 +2,8 @@
 //! before the first Guess), and a chart of how the picked word would split the Candidates. The
 //! scoring is in `solver/strategy.rs`; this file holds the panel's state and draws it.
 //!
+//! In Solver mode it works from the State entered by hand instead of the Game's.
+//!
 //! The Feedback matrices are read from `matrices/` the first time they are needed, on a
 //! background thread, and kept until the app closes. Ranking runs on a background thread too.
 
@@ -10,6 +12,7 @@ use std::sync::Arc;
 
 use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude::*, px, relative, rgb, size};
 use wordle_gpui::engine::feedback::Mark;
+use wordle_gpui::solver::assist::Assist;
 use wordle_gpui::solver::matrix::default_dir;
 use wordle_gpui::solver::strategy::{self, Distribution, Matrix, MatrixSet, SearchMode, Suggestion};
 use wordle_gpui::engine::words::{WORD_LENGTH, word_lists};
@@ -89,7 +92,11 @@ impl Default for SolverState {
 
 impl WordleApp {
     /// Open or close the solver, widening or narrowing the window by its width so the board keeps its size.
+    /// Solver mode keeps it open.
     pub(super) fn toggle_solver(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.assist.is_some() && self.solver.open {
+            return self.show_status("Solver mode keeps the solver open", cx);
+        }
         self.solver.open = !self.solver.open;
         self.solver.searching = false;
         if !window.is_maximized() && !window.is_fullscreen() {
@@ -101,13 +108,28 @@ impl WordleApp {
         cx.notify();
     }
 
+    /// Turn Solver mode on, opening the solver beside its board, or off, back to the Game. Leaving
+    /// it keeps the solver open.
+    pub(super) fn toggle_solver_mode(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.solver.searching = false;
+        self.solver.selected = None;
+        if self.assist.take().is_none() {
+            if !self.solver.open {
+                self.toggle_solver(window, cx);
+            }
+            self.assist = Some(Assist::default());
+        }
+        self.refresh_solver(cx);
+        cx.notify();
+    }
+
     /// Work out the Candidates again and rank the Suggestions, reading the matrix first if needed.
     /// Does nothing while the solver is closed; opening it calls this.
     pub(super) fn refresh_solver(&mut self, cx: &mut Context<Self>) {
         if !self.solver.open {
             return;
         }
-        let state = self.game.guesses().iter().map(|guess| (guess.word.as_str(), guess.feedback.as_slice()));
+        let state = self.shown_guesses().iter().map(|guess| (guess.word.as_str(), guess.feedback.as_slice()));
         self.solver.candidates = strategy::candidates(state);
         self.solver.serial += 1;
 
@@ -191,7 +213,9 @@ impl WordleApp {
 
     /// Put the charted word on the board as the Guess being typed, ready to submit.
     fn type_solver_word(&mut self, word: String, cx: &mut Context<Self>) {
-        if !self.game.is_over() {
+        if let Some(assist) = self.assist.as_mut() {
+            assist.type_word(&word);
+        } else if !self.game.is_over() {
             self.typed = word;
             self.message = None;
         }
@@ -238,7 +262,7 @@ impl WordleApp {
 
     pub(super) fn render_solver(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let opener = self.game.guesses().is_empty();
+        let opener = self.shown_guesses().is_empty();
 
         let settings = div()
             .flex()
@@ -445,7 +469,7 @@ impl WordleApp {
             .items_center()
             .justify_between()
             .child(div().font_family(widgets::MONO_FONT).font_weight(FontWeight::BOLD).text_color(rgb(t.heading)).child(chart.word.to_uppercase()))
-            .when(!self.game.is_over(), |header| {
+            .when(self.assist.as_ref().map_or(!self.game.is_over(), Assist::can_type), |header| {
                 header.child(widgets::button(t, "solver-type", "Type it").on_click(cx.listener(move |this, _, _, cx| this.type_solver_word(word.clone(), cx))))
             });
         let title = div()

@@ -1,8 +1,10 @@
 //! The window: the title bar and its settings menu, the sidebar, the board and the on-screen
 //! keyboard, the status bar, and the command palette and theme picker that float above them.
+//! In Solver mode the board is replaced by one whose Feedback is clicked in by hand (`ui/assist.rs`).
 //!
 //! `WordleApp` holds the state and routes keys; each submodule draws one part of it.
 
+mod assist;
 mod board;
 mod menu;
 mod palette;
@@ -18,7 +20,8 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
-use wordle_gpui::engine::game::{Game, MAX_GUESSES, random_seed};
+use wordle_gpui::engine::game::{Game, Guess, MAX_GUESSES, random_seed};
+use wordle_gpui::solver::assist::Assist;
 use wordle_gpui::solver::matrix;
 use wordle_gpui::engine::words::WORD_LENGTH;
 
@@ -101,6 +104,8 @@ pub struct WordleApp {
     answer_shown: bool,
     /// The solver on the right: its settings, its Suggestions and the chart for the word picked.
     solver: SolverState,
+    /// Solver mode, while it is on: the State of a game played elsewhere, entered by hand.
+    assist: Option<Assist>,
     overlay: Option<Overlay>,
     /// Whether the Feedback matrices are being precomputed in the background.
     precomputing: bool,
@@ -130,6 +135,7 @@ impl WordleApp {
             status_serial: 0,
             answer_shown: false,
             solver: SolverState::default(),
+            assist: None,
             overlay: None,
             precomputing: false,
             sidebar_open: false,
@@ -141,6 +147,14 @@ impl WordleApp {
             meaning_scroll: ScrollHandle::new(),
             theme: &theme::ROSE_PINE,
             focus_handle: cx.focus_handle(),
+        }
+    }
+
+    /// The State on screen: the one entered in Solver mode, or else the Game's.
+    fn shown_guesses(&self) -> &[Guess] {
+        match &self.assist {
+            Some(assist) => &assist.guesses,
+            None => self.game.guesses(),
         }
     }
 
@@ -247,6 +261,10 @@ impl WordleApp {
                 self.dismiss(cx);
                 self.toggle_solver(window, cx);
             }
+            Command::ToggleSolverMode => {
+                self.dismiss(cx);
+                self.toggle_solver_mode(window, cx);
+            }
             Command::ChangeTheme => self.open(Overlay::ThemePicker(ThemePicker::new(self.theme)), cx),
             Command::Precompute if self.precomputing => {
                 self.dismiss(cx);
@@ -255,6 +273,7 @@ impl WordleApp {
             Command::Precompute => self.open(Overlay::Precompute(ThreadPicker::default()), cx),
             Command::ResetLayout => {
                 self.dismiss(cx);
+                self.assist = None;
                 self.sidebar_open = false;
                 self.solver.open = false;
                 self.sidebar_width = sidebar::DEFAULT_WIDTH;
@@ -318,7 +337,7 @@ impl WordleApp {
     fn key_down(&mut self, key: &str, typed: Option<&str>, window: &mut Window, cx: &mut Context<Self>) {
         match self.overlay.as_mut() {
             None if self.solver.searching => return self.solver_key(key, cx),
-            None => return self.press(key, cx),
+            None => return self.board_key(key, cx),
             Some(Overlay::ThemePicker(picker)) => match picker.press(key, typed) {
                 theme_picker_state::Outcome::Preview(theme) => self.theme = theme,
                 theme_picker_state::Outcome::Confirm => self.overlay = None,
@@ -362,7 +381,21 @@ impl WordleApp {
         cx.notify();
     }
 
-    /// Handle one key on the board, from the real keyboard or a click on the on-screen one.
+    /// A key for the board, from the real keyboard or a click on the on-screen one: to Solver
+    /// mode's board while it is on, or else to the Game.
+    fn board_key(&mut self, key: &str, cx: &mut Context<Self>) {
+        match self.assist.as_mut() {
+            Some(assist) => {
+                if assist.press(key) {
+                    self.refresh_solver(cx);
+                }
+                cx.notify();
+            }
+            None => self.press(key, cx),
+        }
+    }
+
+    /// Handle one key on the Game's board.
     fn press(&mut self, key: &str, cx: &mut Context<Self>) {
         if self.game.is_over() {
             return;
@@ -415,9 +448,10 @@ impl WordleApp {
         self.play(Game::random(random_seed(), max_guesses), cx);
     }
 
-    /// Switch to `game` and close the menu or palette.
+    /// Switch to `game` and close the menu or palette. This leaves Solver mode, to play it.
     fn play(&mut self, game: Game, cx: &mut Context<Self>) {
         self.game = game;
+        self.assist = None;
         self.typed.clear();
         self.message = None;
         self.answer_shown = false;
@@ -530,33 +564,20 @@ impl Render for WordleApp {
             .bg(rgb(t.background))
             .child(title_bar::render(t, self.render_menu_button(cx), window))
             // The sidebar and the board are islands: rounded panels floating on the window, with a gap between them.
+            // In Solver mode the board is the one whose Feedback is clicked in, beside the solver.
             .child(
-                div().flex().flex_1().min_h_0().px_2().pb_1().when(self.sidebar_open, |row| row.child(self.render_sidebar(cx)).child(self.render_sidebar_handle(cx))).child(
                 div()
-                    .flex_1()
-                    .min_h(px(770.))
-                    .min_w(px(440.))
-                    .rounded_xl()
-                    .bg(rgb(t.surface))
                     .flex()
-                    .flex_col()
-                    .items_center()
-                    .gap_3()
-                    .p_4()
-                    .child(div().text_3xl().font_weight(FontWeight::BOLD).text_color(rgb(t.heading)).child("WORDLE"))
-                    .child(self.render_board())
-                    .child(self.render_footer(cx))
-                    .child(self.render_keyboard(cx))
-                    .child(self.render_end_buttons(cx))
-                    // Clicking the board leaves the solver's search field, so typing goes to the board again.
-                    .on_mouse_down(gpui::MouseButton::Left, cx.listener(|this, _, _, cx| {
-                        if this.solver.searching {
-                            this.solver.searching = false;
-                            cx.notify();
-                        }
-                    })),
-                )
-                .when(self.solver.open, |row| row.child(div().flex_none().w(solver_panel::GAP)).child(self.render_solver(cx))),
+                    .flex_1()
+                    .min_h_0()
+                    .px_2()
+                    .pb_1()
+                    .when(self.sidebar_open, |row| row.child(self.render_sidebar(cx)).child(self.render_sidebar_handle(cx)))
+                    .map(|row| match &self.assist {
+                        Some(assist) => row.child(self.render_assist(assist, cx)),
+                        None => row.child(self.render_game(cx)),
+                    })
+                    .when(self.solver.open, |row| row.child(div().flex_none().w(solver_panel::GAP)).child(self.render_solver(cx))),
             )
             .child(self.render_status_bar(cx))
             // While anything is open, a click anywhere else closes it (it draws above this).
@@ -570,5 +591,37 @@ impl Render for WordleApp {
                 Some(Overlay::Precompute(picker)) => root.child(self.render_precompute_picker(picker, cx)),
                 _ => root,
             })
+    }
+}
+
+impl WordleApp {
+    /// The Game's island: the board, its messages, the keyboard and the buttons for after the end.
+    fn render_game(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        div()
+            .flex_1()
+            .min_h(px(770.))
+            .min_w(px(440.))
+            .rounded_xl()
+            .bg(rgb(t.surface))
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap_3()
+            .p_4()
+            .child(div().text_3xl().font_weight(FontWeight::BOLD).text_color(rgb(t.heading)).child("WORDLE"))
+            .child(self.render_board())
+            .child(self.render_footer(cx))
+            .child(self.render_keyboard(cx))
+            .child(self.render_end_buttons(cx))
+            .on_mouse_down(gpui::MouseButton::Left, cx.listener(|this, _, _, cx| this.leave_solver_search(cx)))
+    }
+
+    /// Clicking the board leaves the solver's search field, so typing goes to the board again.
+    pub(super) fn leave_solver_search(&mut self, cx: &mut Context<Self>) {
+        if self.solver.searching {
+            self.solver.searching = false;
+            cx.notify();
+        }
     }
 }

@@ -27,6 +27,7 @@ impl WordleApp {
             Command::ToggleLiveHints => Some(self.live_hints),
             Command::ToggleSidebar => Some(self.sidebar_open),
             Command::ToggleSolver => Some(self.solver.open),
+            Command::ToggleSolverMode => Some(self.assist.is_some()),
             _ => None,
         };
         let shortcut = match command {
