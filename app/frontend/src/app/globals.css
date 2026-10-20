@@ -204,3 +204,7 @@ body {
   overflow-y: hidden;
   padding-block: 0.25rem;
 }
+/* Code blocks keep to the prose measure, like the text around them; Widgets and display maths use the full column. */
+.prose-theme > figure[data-rehype-pretty-code-figure] {
+  max-width: var(--container-measure);
+}

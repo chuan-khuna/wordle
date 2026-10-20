@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { postCandidates } from "@/lib/api";
 import { marksToString } from "@/lib/feedback";
 import { rowsFromState } from "@/lib/state-board";
@@ -13,7 +12,6 @@ import { useParamInitial, useParamSync } from "./useWidgetParam";
 type Outcome = { count: number; words: string[] } | { error: string };
 type Result = { key: string; outcomes: Outcome[] };
 
-const SHOWN = 48;
 
 /**
  * Widget 2: build a State (Guesses with their Feedback), watch the Candidate Set shrink.
@@ -32,10 +30,9 @@ export function CandidateFilter(props: { state?: string; id?: string }) {
 function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) {
   const propText = formatState(rowsFromState(stateProp));
   const initial = useParamInitial(id, "state", propText);
-  const [rows, setRowsState] = useState<Row[]>(() => rowsFromState(initial));
+  const [rows, setRows] = useState<Row[]>(() => rowsFromState(initial));
   const text = formatState(rows);
   useParamSync(id, "state", text, propText);
-  const [showAll, setShowAll] = useState(false);
 
   // Every row is a complete Guess; each one narrows the Candidate Set.
   const key = rows.map((r) => `${r.guess}:${marksToString(r.marks)}`).join(",");
@@ -71,10 +68,6 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
   const firstError = fresh?.findIndex((o) => "error" in o) ?? -1;
   const finalOutcome = fresh && firstError === -1 ? last : undefined;
 
-  const setRows = (next: Row[]) => {
-    setShowAll(false);
-    setRowsState(next);
-  };
 
   return (
     <WidgetFrame title="Candidate filter">
@@ -121,23 +114,12 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
               {finalOutcome.count === 0 && ": no Answer fits this State."}
             </p>
             {finalOutcome.count > 0 && (
-              <>
-                <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-sm">
-                  {(showAll ? finalOutcome.words : finalOutcome.words.slice(0, SHOWN)).map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
-                {finalOutcome.count > SHOWN && (
-                  <Button
-                    type="button"
-                    onClick={() => setShowAll((s) => !s)}
-                    aria-expanded={showAll}
-                    className="mt-2"
-                  >
-                    {showAll ? "Show fewer" : `Show all ${finalOutcome.count}`}
-                  </Button>
-                )}
-              </>
+              // Every Candidate, in a box that scrolls once the list is long (the whole Answer List is 2315 words).
+              <ul className="mt-2 grid max-h-64 grid-cols-[repeat(auto-fill,minmax(6ch,1fr))] content-start gap-x-2 gap-y-1 overflow-y-auto overscroll-contain border-y border-rule py-2 font-mono text-sm">
+                {finalOutcome.words.map((w) => (
+                  <li key={w}>{w}</li>
+                ))}
+              </ul>
             )}
           </>
         ) : null}
