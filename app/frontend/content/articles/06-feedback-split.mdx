@@ -7,10 +7,6 @@ part: solving-wordle
 
 A Guess sorts the <Term>Candidate Set</Term> into groups, one per possible <Term>Feedback</Term>. That sorting is the <Term>Feedback Split</Term>.
 
-A good Guess makes many small groups; a bad one leaves a few big ones. Select a bar to see which words share that Feedback:
+A good Guess makes many small groups; a bad one leaves a few big ones. Select a bar to see which words share that Feedback, and score the whole split with two numbers, both in the chart's title: the number of Candidates the Guess is expected to leave, and its <Term>Expected Information</Term> in bits.
 
-<SplitExplorer id="fs" guess="crane" bits={false} />
-
-Score a Guess by its <Term>Expected Information</Term> and by the number of Candidates it is expected to leave:
-
-<SplitExplorer id="ei" guess="slate" state="crane:00102" />
+<SplitExplorer id="fs" guess="crane" />

@@ -1,12 +1,13 @@
 "use client";
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { WORD_LENGTH } from "@/lib/feedback";
 import { rowsFromState } from "@/lib/state-board";
+import { orderGroups } from "@/lib/split-chart";
 import { formatState } from "@/lib/widget-state";
 import { SplitChart } from "./SplitChart";
+import { SplitWords } from "./SplitWords";
 import { StateBoard } from "./StateBoard";
 import { WidgetFrame } from "./ui";
 import { WordRow, cleanWord } from "./WordRow";
@@ -15,16 +16,14 @@ import { useWidgetParam } from "./useWidgetParam";
 
 type Result = { key: string; data: SplitResponse | null; error: string | null };
 
-const WORDS_SHOWN = 60;
-
 /**
- * Widget 3 (and 4, with bits): the Feedback Split of a Guess over the Candidate Set a State leaves.
- * The gpui app's chart (SplitChart): one horizontal bar per Feedback, with the Expected Candidates and, unless
- * `bits={false}`, the Expected Information in its title. Select a bar to see the group's words.
- * Props: `guess`, `state` ("crane:00102,slate:01200"), `bits` (default true), `id` (URL params `id.guess`, `id.state`).
+ * Widget 3: the Feedback Split of a Guess over the Candidate Set a State leaves, in two columns.
+ * Left, the gpui app's chart (SplitChart): one horizontal bar per Feedback, titled with the Expected Candidates
+ * and the Expected Information. Right (SplitWords): the words of the selected Feedback (the largest group at first).
+ * Props: `guess`, `state` ("crane:00102,slate:01200"), `id` (URL params `id.guess`, `id.state`).
  * URL params `guess` and `state` override the props.
  */
-export function SplitExplorer(props: { guess?: string; state?: string; bits?: boolean; id?: string }) {
+export function SplitExplorer(props: { guess?: string; state?: string; id?: string }) {
   return (
     <Suspense fallback={<WidgetFrame title="Feedback Split explorer">Loading…</WidgetFrame>}>
       <Explorer {...props} />
@@ -32,7 +31,7 @@ export function SplitExplorer(props: { guess?: string; state?: string; bits?: bo
   );
 }
 
-function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, id }: { guess?: string; state?: string; bits?: boolean; id?: string }) {
+function Explorer({ guess: guessProp = "", state: stateProp = "", id }: { guess?: string; state?: string; id?: string }) {
   const uid = useId();
   const [guess, setGuess] = useWidgetParam(id, "guess", cleanWord(guessProp));
   const [stateText, setStateText] = useWidgetParam(id, "state", formatState(rowsFromState(stateProp)));
@@ -46,7 +45,6 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
 
   const [result, setResult] = useState<Result | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
-  const [showAllWords, setShowAllWords] = useState(false);
   useEffect(() => {
     if (!ready) return;
     const ctl = new AbortController();
@@ -54,8 +52,7 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
       postSplit(g, turns, ctl.signal).then(
         (data) => {
           setResult({ key, data, error: null });
-          setPicked(null);
-          setShowAllWords(false);
+          setPicked(orderGroups(data.split)[0]?.marks ?? null);
         },
         (e: Error) => {
           if (e.name !== "AbortError") setResult({ key, data: null, error: e.message });
@@ -96,44 +93,24 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
       </div>
 
       {data && (
-        <>
-          <SplitChart
-            word={letters}
-            groups={data.split}
-            candidates={data.candidates}
-            expectedCandidates={data.expected_candidates}
-            bits={data.bits}
-            showBits={bits}
-            selected={picked}
-            onSelect={(m) => {
-              setPicked(m);
-              setShowAllWords(false);
-            }}
-          />
-
-          {group && (
-            <div className="mt-3" aria-live="polite">
-              <p className="text-sm">
-                <span className="font-mono">{group.marks}</span>: {group.count} word{group.count === 1 ? "" : "s"}
-              </p>
-              <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-sm">
-                {(showAllWords ? group.words : group.words.slice(0, WORDS_SHOWN)).map((w) => (
-                  <li key={w}>{w}</li>
-                ))}
-              </ul>
-              {group.count > WORDS_SHOWN && (
-                <Button
-                  type="button"
-                  onClick={() => setShowAllWords((s) => !s)}
-                  aria-expanded={showAllWords}
-                  className="mt-2"
-                >
-                  {showAllWords ? "Show fewer" : `Show all ${group.count}`}
-                </Button>
-              )}
+        <div className="@container">
+          <div className="grid gap-x-8 gap-y-6 @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+            <SplitChart
+              word={letters}
+              groups={data.split}
+              candidates={data.candidates}
+              expectedCandidates={data.expected_candidates}
+              bits={data.bits}
+              selected={picked}
+              onSelect={setPicked}
+            />
+            <div className="flex min-w-0 flex-col @2xl:relative">
+              <div className="flex min-h-0 flex-1 flex-col @2xl:absolute @2xl:inset-0">
+                <SplitWords key={group?.marks ?? ""} word={letters} group={group} candidates={data.candidates} />
+              </div>
             </div>
-          )}
-        </>
+          </div>
+        </div>
       )}
     </WidgetFrame>
   );

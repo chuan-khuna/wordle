@@ -31,8 +31,7 @@ export function formatLeft(left: number): string {
   return left < 10 ? left.toFixed(1) : left.toFixed(0);
 }
 
-/** The chart's title: "Expected 31 words left · 4.12 bits"; the bits are left out when `bits` is false. */
-export function chartTitle(expectedCandidates: number, bitsValue: number, showBits: boolean): string {
-  const left = `Expected ${formatLeft(expectedCandidates)} words left`;
-  return showBits ? `${left} · ${bitsValue.toFixed(2)} bits` : left;
+/** The chart's title: "Expected 31 words left · 4.12 bits" (this Guess's Expected Candidates and Expected Information). */
+export function chartTitle(expectedCandidates: number, bitsValue: number): string {
+  return `Expected ${formatLeft(expectedCandidates)} words left · ${bitsValue.toFixed(2)} bits`;
 }

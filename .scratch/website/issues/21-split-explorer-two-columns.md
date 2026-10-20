@@ -1,6 +1,6 @@
 # Split explorer: chart beside the remaining words, one per Article
 
-Status: ready-for-agent
+Status: done
 Blocked by: 20
 
 Lay the Split explorer out in two columns:
@@ -12,3 +12,7 @@ Lay the Split explorer out in two columns:
 - Keep the URL params (`guess`, `state`) and the selection behaviour. Update `docs/documents/web-frontend.md` and the spec's Widget line.
 
 See [spec](../spec.md).
+
+## Comments
+
+Done. Container query `@2xl` on the Widget: chart `3fr` | words `2fr`, equal height via the chart's scroll box, stacked below. The largest Feedback is selected on load, so clicking the selected bar no longer deselects. The chart's hover caption moved to the right column's selection caption. Article 06 has one explorer (`crane`). `bits` prop removed.

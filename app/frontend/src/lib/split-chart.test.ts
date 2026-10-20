@@ -33,6 +33,5 @@ test("barPercent is relative to the largest group, with a visible minimum", () =
 test("title matches the gpui app", () => {
   expect(formatLeft(3.456)).toBe("3.5");
   expect(formatLeft(61.3)).toBe("61");
-  expect(chartTitle(61.3, 5.1234, true)).toBe("Expected 61 words left · 5.12 bits");
-  expect(chartTitle(61.3, 5.1234, false)).toBe("Expected 61 words left");
+  expect(chartTitle(61.3, 5.1234)).toBe("Expected 61 words left · 5.12 bits");
 });
