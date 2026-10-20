@@ -33,3 +33,33 @@ Ties go to a Candidate, then to the other measure, then to alphabetical order. `
 - Scoring uses `uint8` Feedback Codes and vectorised counting instead of per-column pandas work.
 
 Tests: `packages/wordle/tests/test_strategy.py` checks the stats against a brute-force count with `wordle.engine.feedback.feedback`.
+
+## Where a Candidates-only search struggles
+
+Searching only the Candidates (`scope="candidates"`, or **Search: Candidates** in the gpui Solver panel) loses on word families: Answers that share four letters, such as _ATCH, _OWER/_OVER, GRA_E, _ASTE or _ILLY. Every Candidate it can guess rules out only itself, so it works through the family one word at a time. Searching all words (`scope="global"`, **All words**) gets out of this trap by guessing a word that isn't a Candidate but tests several of the missing letters at once.
+
+These numbers come from playing every Answer with the panel's Candidates search: the highest Expected Information each turn, ties to the alphabetically first word, Opener RAISE. With the Answers set and the Valid guesses set the results are the same, because both try only Candidates. The Guess Distribution over the 2,315 Answers:
+
+| Guess Count | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Games | 1 | 131 | 999 | 919 | 207 | 47 | 9 | 2 |
+
+The Average Guess Count is 3.60. 11 Answers need more than six Guesses, so they are Losses under the Guess Limit. The Seed plays that Answer (`just wordle --seed N`, or **Play a seed…** in the gpui app):
+
+| Seed | Answer | Guesses | Path |
+| --- | --- | --- | --- |
+| 1906 | goner | 8 | raise › deter › cower › hover › joker › boxer › foyer › goner |
+| 5924 | watch | 8 | raise › tangy › caput › batch › hatch › latch › match › watch |
+| 2708 | foyer | 7 | raise › deter › cower › hover › joker › boxer › foyer |
+| 877 | graze | 7 | raise › grace › grade › grape › grate › grave › graze |
+| 2888 | match | 7 | raise › tangy › caput › batch › hatch › latch › match |
+| 2701 | swore | 7 | raise › scree › shore › snore › spore › store › swore |
+| 391 | tatty | 7 | raise › tangy › tabby › tacky › taffy › tally › tatty |
+| 5452 | waste | 7 | raise › caste › baste › haste › paste › taste › waste |
+| 1594 | water | 7 | raise › taper › cater › eater › hater › later › water |
+| 2619 | wight | 7 | raise › pilot › fight › might › night › tight › wight |
+| 1476 | willy | 7 | raise › pilot › filly › billy › dilly › hilly › willy |
+
+Some that only just win in six, from the same families: stare (4898), store (2081), taste (3400), latch (6543), tight (2161), power (9558), grave (158), later (5429), boxer (6394).
+
+Seed 5924 (watch) shows the trap well: after caput the Candidates are the _ATCH family. Switching to **All words** at that point lets the Solver pick a word outside the family that tests several of its first letters at once.

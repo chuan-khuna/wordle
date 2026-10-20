@@ -189,6 +189,8 @@ Two settings change what is searched:
 | **Search** (the mode) | Candidates | Only words that could still be the Answer |
 | | All words | Every word in the set, even ruled-out ones, which can split the Candidates better |
 
+With **Candidates**, word families such as _ATCH or GRA_E can take seven or eight Guesses; [solver-strategy.md](solver-strategy.md
+
 From top to bottom the panel shows the settings, the Candidates, the best guess and then the search field with its chart.
 
 - **Candidates:** every word that could still be the Answer, with their count. Up to 20 are laid out as a grid, five to a row; more are one run of text in a box that scrolls. Clicking the heading folds the list away.
