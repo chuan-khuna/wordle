@@ -23,9 +23,9 @@ pub const GUESSES_FILE: &str = "guesses_vs_answers.npy";
 /// The thread counts the app offers.
 pub const THREAD_CHOICES: [usize; 4] = [1, 2, 4, 8];
 
-/// Where the matrices go: `matrices/` at the repo root, the same folder as the Python package's.
+/// Where the matrices go: `matrices/` in this app's own folder, apart from the Python package's.
 pub fn default_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../matrices")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("matrices")
 }
 
 type Letters = [u8; WORD_LENGTH];

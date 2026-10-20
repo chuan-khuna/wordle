@@ -107,7 +107,7 @@ An `.npy` file is a short header (128 bytes here, text such as `{'descr': '|u1',
 
 ## File format: `.npy`
 
-The matrices are dense and have no column names, so a table format (CSV, Parquet) adds only cost. CSV is huge and slow to parse (the reference project's matrix is 99 MB as text); Parquet is columnar, built for tables. `.npy` stores the raw bytes (5 MB and 34 MB here), loads in milliseconds, and `np.load(..., mmap_mode="r")` reads rows straight from disk. Rust can read it with the `npyz` crate.
+The matrices are dense and have no column names, so a table format (CSV, Parquet) adds only cost. CSV is huge and slow to parse (the reference project's matrix is 99 MB as text); Parquet is columnar, built for tables. `.npy` stores the raw bytes (5 MB and 34 MB here), loads in milliseconds, and `np.load(..., mmap_mode="r")` reads rows straight from disk. Rust reads it with a few lines of header parsing.
 
 ## Generating
 
@@ -115,4 +115,4 @@ The matrices are dense and have no column names, so a table format (CSV, Parquet
 
 ## The gpui app builds them too
 
-The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`. Both writers give byte-identical files, so either can build them and the other can read them.
+The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`, into its own `app/wordle-gpui/matrices/` (also gitignored). It is a separate app, so it never reads the Python package's `matrices/`. Both writers still give byte-identical files, so copying one folder into the other also works. The app reads the files with a small `.npy` header parser of its own in `solver/strategy.rs`, not the `npyz` crate.

@@ -167,10 +167,10 @@ gpui normally compiles its Metal shaders at build time with Xcode's `metal` tool
 
 ## Precompute matrices
 
-**Precompute matrices…** (menu or palette; search `matri`) builds the two Feedback matrices the Python package builds with `just matrices`, as the same `.npy` files in `matrices/` at the repo root. See [feedback-matrices.md](feedback-matrices.md) for what they hold.
+**Precompute matrices…** (menu or palette; search `matri`) builds the two Feedback matrices the Python package builds with `just matrices`, as the same `.npy` files, but in the app's own `app/wordle-gpui/matrices/` (gitignored), so the two apps never share or overwrite each other's files. See [feedback-matrices.md](feedback-matrices.md) for what they hold.
 
 - A picker asks how many threads to use: 1, 2, 4 or 8. Up and Down move (typing 1, 2, 4 or 8 jumps to it), Enter or a click starts, Escape goes back. It starts on the largest choice the machine has cores for.
-- The work runs on gpui's background executor, so the window stays usable. The status bar says "Precomputing matrices on 4 threads…", then "Saved the matrices to matrices/ in 1.2s (4 threads)" or the error. Starting it again while it runs only says so.
+- The work runs on gpui's background executor, so the window stays usable. The status bar says "Precomputing matrices on 4 threads…", then "Saved the matrices to app/wordle-gpui/matrices/ in 1.2s (4 threads)" or the error. Starting it again while it runs only says so.
 - Existing files are replaced without asking (the terminal command asks first).
 - `solver/matrix.rs` has the logic, with no window: `pack` scores one pair without allocating, `score_matrix` splits the Guess rows into one block per thread with `std::thread::scope`, and `npy_bytes` writes the file (a 64-byte-aligned header, as numpy does). A test checks `pack` against `feedback`, and the output is byte-for-byte identical to the Python package's files.
 
@@ -198,6 +198,6 @@ From top to bottom the panel shows the settings, the Candidates, the best guess 
 - **Chart:** click a Suggestion, or type any Guess List word into **Search a word to chart…**, to see its Feedback Split as horizontal bars. Each bar is one Feedback, drawn as its five Marks in the theme's colours, as long as the number of Candidates that would give it (the Win bar is in the Correct colour). The title gives the expected number of words left and the bits. Every group is drawn, biggest first, in a box that scrolls once it is taller than 320 px. **Type it** puts the word on the board.
 - **Search field:** a click sends the keys there instead of the board. Enter, Escape or a click on the board sends them back. ⌘V (Ctrl+V) pastes letters into it.
 
-The matrices are read from `matrices/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Valid guesses × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
+The matrices are read from `app/wordle-gpui/matrices/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Valid guesses × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
 
 The chart is drawn with plain elements rather than gpui-kit's `BarChart`, so each bar's label can be the five coloured Marks and every colour comes from the app's theme.
