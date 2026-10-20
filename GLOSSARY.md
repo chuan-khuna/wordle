@@ -135,6 +135,10 @@ _Avoid_: dependency, parent
 An ordered path through several Articles that tells one story, such as "Solving Wordle". A video follows a Series.
 _Avoid_: course, collection, playlist
 
+**Part**:
+A group of consecutive Articles in a Series that share one core idea, such as learning and building Wordle, or solving it. Each Article belongs to exactly one Part.
+_Avoid_: chapter, section, module, unit
+
 **Widget**:
 An interactive figure inside an Article that lets the reader try the idea, such as scoring a Guess or exploring a Feedback Split.
 _Avoid_: demo, playground, component

@@ -33,9 +33,10 @@ The Benchmark runs three Strategies, each from its own best Opener:
 
 ## Frontend
 
-- **Articles**: `app/frontend/content/articles/<slug>.mdx`, with frontmatter `title`, `summary`, `prerequisites: [slug]`, `order`, and an optional `video` timestamp. Each Article page lists its Prerequisites and shows backlinks (the Articles that list it as a Prerequisite).
+- **Articles**: `app/frontend/content/articles/<slug>.mdx`, with frontmatter `title`, `summary`, `prerequisites: [slug]`, `part`, `order`, and an optional `video` timestamp. Each Article page lists its Prerequisites and shows backlinks (the Articles that list it as a Prerequisite).
 - **Series**: the site has exactly one Series, "Solving Wordle", in `content/series.mdx` (title, intro, video embed). Every Article belongs to it; there is no Series index and no `/series/` route. Each Article shows prev/next links.
-- **Home page**: the Series itself: its title, intro, video and its Articles in `order`.
+- **Parts**: defined in order in `content/series.mdx` (an id, a title and a short intro each). Every Article names its `part`, and `order` runs through the whole Series, so a Part's Articles are consecutive. Article numbers always show as two digits with leading zeros (`01` … `11`).
+- **Home page**: the Series itself: its title, intro and video, then each Part with its intro and its Articles in `order`.
 - **Math**: `@next/mdx` with `remark-math` and `rehype-katex`.
 - **`<Term>Candidate Set</Term>`**: shows that term's definition from the root `GLOSSARY.md`, parsed at build time. An unknown term fails the build.
 - **Themes**: the gpui app's ten palettes, with the same role names (`background`, `surface`, `overlay`, `text`, `correct`, `present`, `absent`, `heading`, `accent`, …) as CSS variables. The default follows the system setting (Rosé Pine Dawn for light, Rosé Pine for dark). The picker's choice is saved in `localStorage`.
@@ -50,16 +51,24 @@ The Benchmark runs three Strategies, each from its own best Opener:
 
 ## The "Solving Wordle" Series
 
-English, written in glossary terms only. Colours appear only in the Widgets.
+English, written in glossary terms only. Colours appear only in the Widgets. The Articles are grouped into two Parts; each Part has a title and a short intro.
 
-1. Feedback → Feedback scorer
-2. Candidate Set → Candidate filter
-3. Feedback Split → Split explorer
-4. Expected Information (bits, $-\sum p \log_2 p$, "entropy" named once) → Split explorer with bits
-5. Greedy Strategy (non-Candidate Guesses, the _ATCH trap) → Step-through Game
-6. Openers → Opener table
-7. Benchmark → Benchmark chart
-8. Greedy vs optimal (the true optimum is cited, not computed) → no Widget
+**Part 1: Wordle** (learn the game, then build it)
+
+1. The rules: Answer, Guess, Answer List and Guess List, a Win within six Guesses → no Widget
+2. Feedback (the two-pass repeated-letter rule) → Feedback scorer
+3. Building the Game in Python: State, Turns and the game loop → no Widget
+
+**Part 2: Solving Wordle** (an introduction that guides the reader's thinking towards the best Opener)
+
+4. Introduction: what makes a good first Guess? → no Widget
+5. Candidate Set → Candidate filter
+6. Feedback Split → Split explorer
+7. Expected Information (bits, $-\sum p \log_2 p$, "entropy" named once) → Split explorer with bits
+8. Openers → Opener table
+9. Greedy Strategy (non-Candidate Guesses, the _ATCH trap) → Step-through Game
+10. Benchmark → Benchmark chart
+11. Greedy vs optimal (the true optimum is cited, not computed) → no Widget
 
 ## Out of scope
 
