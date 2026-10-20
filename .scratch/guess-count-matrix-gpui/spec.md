@@ -30,7 +30,7 @@ The gpui app gets the whole feature:
 10. As a gpui app user, I want a run to resume from rows left unfinished, whichever tool started them, so that no work is repeated.
 11. As a gpui app user, I want a status bar message when the run ends, with where the files went and how long it took, as Precompute matrices does.
 12. As a gpui app user, I want to be told when the Feedback Matrices are missing, so that I know to precompute them first.
-13. As a researcher, I want the gpui app's matrix files to be byte-for-byte the same as the Python command's, so that either tool can build them.
+13. As a researcher, I want the gpui app's matrix files to be in the same format as the Python command's, with the same Guess Count in every cell, so that files can be copied from Python to Rust or from Rust to Python and resumed there.
 14. As a researcher, I want the gpui app's `summary.json` to hold the same entries as the Python command's, so that the website and the notebooks can read either.
 15. As a researcher, I want the global Strategies to finish in far less time than the Python command, so that a full run is practical.
 16. As a gpui app user, I want to see an Opener's Average Guess Count in the Solver panel, so that I can pick an Opener by how it actually plays out.
