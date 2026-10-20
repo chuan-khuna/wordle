@@ -6,14 +6,16 @@ The command is built like `just precompute`: a questionary checkbox "Which Strat
 
 **Blocked by:** 01, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `just precompute-guess-counts --strategy bits-candidates` writes the matrix and `summary.json` into `precompute-cache/guess-counts/`
-- [ ] Without `--strategy` the command asks which Strategies; Ctrl+C at the question exits without writing
-- [ ] Tests at the build function, with a temporary folder and a few Openers: each filled row equals playing each Game alone from that Opener, for all four Strategies, on a subset of Answers; rows not asked for stay zero
-- [ ] A test on a hand-filled matrix (with a Loss in it) checks the summary's ranking, Average Guess Count, Losses and Guess Distribution
-- [ ] A new implementation document for the Guess Count Matrix and its command, a line for it in the documents index, and the `justfile` recipe
+- [x] `just precompute-guess-counts --strategy bits-candidates` writes the matrix and `summary.json` into `precompute-cache/guess-counts/`
+- [x] Without `--strategy` the command asks which Strategies; Ctrl+C at the question exits without writing
+- [x] Tests at the build function, with a temporary folder and a few Openers: each filled row equals playing each Game alone from that Opener, for all four Strategies, on a subset of Answers; rows not asked for stay zero
+- [x] A test on a hand-filled matrix (with a Loss in it) checks the summary's ranking, Average Guess Count, Losses and Guess Distribution
+- [x] A new implementation document for the Guess Count Matrix and its command, a line for it in the documents index, and the `justfile` recipe
 
 See [spec](../spec.md).
 
 ## Comments
+
+Built in `solver/guess_count_matrix.py` (`build`, `summarize`, `write_summary`) and `cli.precompute_guess_counts`. `summary.json` covers every Strategy that has a matrix file, not only the ones chosen in the run, so a single-Strategy run does not drop the others. Full `bits-candidates` run: 334 s on one thread; salet ranks first (3.528, 8 Losses). `--opener WORD` (repeatable) was added for quick checks.
