@@ -9,15 +9,15 @@ The <Term>Benchmark</Term> played one <Term>Opener</Term> for each <Term>Strateg
 
 For each Strategy, every word is the Opener of 2,315 Games, one for each Answer, and the Solver finishes each Game on its own. That is 14,855 × 2,315 Games, and we keep one number for each: the <Term>Guess Count</Term>. The table of all of them is the <Term>Guess Count Matrix</Term>. Average each row and you have the <Term>Average Guess Count</Term> of every Opener: how many Guesses it needs, on average, to win.
 
-Now count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. Each block is one Opener, and they are stacked in bars 0.01 wide, the best at the bottom. The Solver here uses Expected Information over all words. Only words from the <Term>Answer List</Term> are drawn, and <Word>raise</Word> and <Word>crane</Word> are marked:
+Now count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. Each block is one Opener, and they are stacked in bars 0.01 wide, the best at the bottom. The Solver here uses Expected Information over all words. All 14,855 words are drawn: one colour for the words on the <Term>Answer List</Term>, another for the rest. Four words are marked, and each has a card with its numbers. Click a bar to list the Openers in it:
 
-<OpenerDistribution id="od" strategy="bits-all" answersOnly controls={false} highlight="tarse,salet,raise,crane" />
+<OpenerDistribution id="od" strategy="bits-all" controls={false} highlight="tarse,salet,raise,crane" />
 
 ## What it shows
 
 The best Opener is <Word>tarse</Word>, with an Average Guess Count of **3.429**. The worst is <Word>qajaq</Word>, with **4.117**. That is less than one Guess between the best start and the worst. Choosing the Opener matters, but not nearly as much as playing the rest of the Game well.
 
-<Word>tarse</Word> is not an Answer, so it is not in the chart above. It shows on the full page, with the Answer List filter off, as the best block.
+<Word>tarse</Word> is not an Answer, and neither is <Word>salet</Word>. They are on the <Term>Guess List</Term>, so both are in the chart, and <Word>tarse</Word> is the best block of all. On the full page you can turn on Answer List only to see just the words that can be the answer.
 
 <Word>crane</Word> comes seventh, with 3.437, less than a hundredth of a Guess behind <Word>tarse</Word>. <Word>raise</Word> is 95th, with 3.471. Both are good Openers, and the gap between them is about three hundredths of a Guess.
 

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { ANSWER_COUNT, barOf, filterOpeners, groupOpeners, labelRows } from "@/lib/opener-bars";
+import { ANSWER_COUNT, barDomain, chartDomain, barOf, filterOpeners, groupOpeners, labelRows } from "@/lib/opener-bars";
 
 const average = (total: number) => total / ANSWER_COUNT;
 const opener = (rank: number, total: number) => ({ rank, average_guess_count: average(total) });
@@ -70,4 +70,32 @@ test("labelRows puts labels that would touch on different rows", () => {
   expect(labelRows([100, 110, 300, 105], 40)).toEqual([0, 2, 0, 1]);
   expect(labelRows([0, 40, 80], 40)).toEqual([0, 0, 0]);
   expect(labelRows([], 40)).toEqual([]);
+});
+
+
+test("barDomain is the first and last occupied bar and the tallest stack", () => {
+  expect(barDomain([opener(1, 8160), opener(2, 8200), opener(3, 8200)])).toEqual({ first: 352, last: 354, tallest: 2 });
+  expect(barDomain([])).toBeNull();
+});
+
+test("groupOpeners with the full domain gives a filtered list the same bars as the full list", () => {
+  const all = [withAnswer(1, 8160, true), withAnswer(2, 8161, false), withAnswer(3, 8200, false), withAnswer(4, 8300, true)];
+  const domain = barDomain(all)!;
+  const full = groupOpeners(all);
+  const answers = groupOpeners(filterOpeners(all, true), domain);
+  expect(answers.map((b) => b.hundredths)).toEqual(full.map((b) => b.hundredths));
+  expect(answers.reduce((n, b) => n + b.openers.length, 0)).toBe(2);
+  expect(answers.find((b) => b.hundredths === 354)?.openers).toEqual([]);
+  expect(groupOpeners([], domain)).toHaveLength(domain.last - domain.first + 1);
+});
+
+test("chartDomain takes x from every Opener and the tallest stack from the Openers shown", () => {
+  const all = [withAnswer(1, 8160, true), withAnswer(2, 8161, false), withAnswer(3, 8161, false), withAnswer(4, 8300, true)];
+  const everything = chartDomain(all, false)!;
+  const answers = chartDomain(all, true)!;
+  expect(everything.tallest).toBe(2);
+  expect(answers.tallest).toBe(1);
+  expect([answers.first, answers.last]).toEqual([everything.first, everything.last]);
+  expect(chartDomain(all.filter((o) => !o.is_answer), true)).toMatchObject({ first: 353, last: 353, tallest: 1 });
+  expect(chartDomain([], true)).toBeNull();
 });

@@ -14,8 +14,8 @@ export default function OpenersPage() {
           Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.
         </p>
         <p className="text-base text-meta">
-          Each block is one Opener. Hover or tap a block to see its stats, pick a Strategy, show only Answer List words, highlight a few words, or find one
-          Opener by name.
+          Each block is one Opener. Hover a block to see its stats, or click a bar to list the Openers in it. Pick a Strategy, show only Answer List words, or
+          highlight a few words by name.
           {" "}
           <Link href="/articles/opener-distribution" className="underline">How it works</Link>.
         </p>
