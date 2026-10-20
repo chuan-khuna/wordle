@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { OpenerDistribution } from "@/components/widgets/OpenerDistribution";
 
 export const metadata = { title: "Opener Distribution" };
@@ -15,7 +16,8 @@ export default function OpenersPage() {
         <p className="text-base text-meta">
           Each block is one Opener. Hover or tap a block to see its stats, pick a Strategy, show only Answer List words, highlight a few words, or find one
           Opener by name.
-          {/* Ticket 03 adds the link to Article 11 here ("How it works"). */}
+          {" "}
+          <Link href="/articles/opener-distribution" className="underline">How it works</Link>.
         </p>
       </header>
       <OpenerDistribution />

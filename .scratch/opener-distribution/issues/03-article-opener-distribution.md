@@ -13,10 +13,10 @@ The Article ends with "See the full Opener Distribution →" linking to `/opener
 
 **Status:** ready-for-agent
 
-- [ ] The Article is numbered 11, in Part `solving-wordle`, with Prerequisite `benchmark`. Existing Article numbers stay unchanged.
-- [ ] Its figures match `summary.json`, rechecked when the Article is written.
-- [ ] It embeds the fixed Widget and links to `/openers`, and `/openers` links back to it.
-- [ ] The Series intro says "eleven short Articles", and the Solving Wordle Part intro adds that every possible Opener is played out.
-- [ ] The glossary terms are used (Opener, Average Guess Count, Guess Count Matrix, Opener Distribution), with `<Term>` where the other Articles use it.
-- [ ] The Article build validation passes.
-- [ ] `web-frontend.md` and its `INDEX.md` summary mention Article 11.
+- [x] The Article is numbered 11, in Part `solving-wordle`, with Prerequisite `benchmark`. Existing Article numbers stay unchanged.
+- [x] Its figures match `summary.json`, rechecked when the Article is written.
+- [x] It embeds the fixed Widget and links to `/openers`, and `/openers` links back to it.
+- [x] The Series intro says "eleven short Articles", and the Solving Wordle Part intro adds that every possible Opener is played out.
+- [x] The glossary terms are used (Opener, Average Guess Count, Guess Count Matrix, Opener Distribution), with `<Term>` where the other Articles use it.
+- [x] The Article build validation passes.
+- [x] `web-frontend.md` and its `INDEX.md` summary mention Article 11.

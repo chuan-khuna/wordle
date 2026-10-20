@@ -157,13 +157,13 @@ The Article page header shows its Part and number (`Part 2 · Solving Wordle · 
 
 **Parts.** `parts` is an ordered list of `{id, title, intro}`. The Series has two: `wordle` (Part 1, Articles 01-03: the game) and `solving-wordle` (Part 2, Articles 04-10: the road to the best Opener). Every Article names its Part's `id` in `part`, and the file numbers run through the whole Series, so a Part's Articles are consecutive.
 
-**Numbering.** An Article's number is the `NN` of its file name (1 to 10), and `lib/parts.ts` `formatNumber` is the one formatter: always two digits with leading zeros (`01` ... `10`). It is shown in the sidebar, on the home page, in the Article header and in the previous/next links, always in `font-mono` with tabular figures.
+**Numbering.** An Article's number is the `NN` of its file name (1 to 11), and `lib/parts.ts` `formatNumber` is the one formatter: always two digits with leading zeros (`01` ... `11`). It is shown in the sidebar, on the home page, in the Article header and in the previous/next links, always in `font-mono` with tabular figures.
 
 **Video timestamps.** An Article's `video` is a start time in the Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or a Series without one, has no link; none of the current content has a video yet (ticket 10).
 
 **Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, the file names (`parseArticleFiles`: not `NN-slug.mdx` with exactly two digits, a repeated number, a repeated slug, or numbers that are not exactly 01..N with no gaps), and missing or malformed frontmatter. Parts (`lib/parts.ts` `validateParts`): an Article without `part` (`frontmatter "part" is missing`), an unknown Part (`unknown Part "x". Known Parts: ...`), a Part with no Articles (named against `content/series.mdx`), a Part whose Articles are not consecutive in number (names the Article of another Part between them), and a Part id used twice.
 
-**The content.** The ten Articles follow the spec's outline. Prerequisites form a chain, with extra edges where an idea depends on an earlier one.
+**The content.** The eleven Articles follow the spec's outline. Prerequisites form a chain, with extra edges where an idea depends on an earlier one.
 
 | No. | Slug (file `NN-slug.mdx`) | Part | Prerequisites | Body |
 | --- | --- | --- | --- | --- |
@@ -177,8 +177,9 @@ The Article page header shows its Part and number (`Part 2 · Solving Wordle · 
 | 08 | `greedy-strategy` | 2 | `openers`, `candidate-set` | two Step-through Games on `watch`: Candidates only (the _ATCH trap), then all words |
 | 09 | `benchmark` | 2 | `greedy-strategy` | Benchmark chart |
 | 10 | `greedy-vs-optimal` | 2 | `benchmark` | text, cites Selby and Bertsimas & Paskov (no Widget) |
+| 11 | `opener-distribution` | 2 | `benchmark` | Opener Distribution (fixed: `bits-all`, Answer List only, no controls, highlights `tarse,salet,raise,crane`), the findings from `summary.json`, a link to `/openers` |
 
-The text of all ten Articles is a first draft (ticket 10) for the user to edit. Every number in it comes from the repo's code or the API, logged when it was written; Article 10's optimum is cited from Alex Selby's write-up.
+The text of all eleven Articles is a first draft (ticket 10; Article 11 is ticket 03 of the Opener Distribution spec) for the user to edit. Every number in it comes from the repo's code or the API, logged when it was written; Article 10's optimum is cited from Alex Selby's write-up.
 
 ## `<Term>`
 
@@ -337,7 +338,7 @@ Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api
 
 **Pure functions** (`lib/opener-bars.ts`, `lib/opener-lookup.ts`, tested with `bun test`): `barOf` rounds half-up on the exact integer Guess Count total (the average times 2,315, with the float error rounded away) as `floor((200 * total + 2315) / 4630)`, so no float error puts an Opener in the wrong bar; it is pinned in `opener-bars.test.ts` at the .xx5 edges (8160 and 8161 around 3.525). `groupOpeners` keeps the empty bars between the first and last occupied bar and sorts each stack by `rank`; `filterOpeners` is the Answer List filter (tested through the grouping); `labelRows` gives non-overlapping label rows; `lookupOpener` gives the found Opener, its bar and the size of its bar, or "incomplete" / "unknown".
 
-The page `/openers` (`app/openers/page.tsx`, title "Opener Distribution") shows the Widget at the full width of `<main>`, with all controls and the Answer List toggle off (all 14,855 Openers), under a heading and a two-paragraph intro. The link to Article 11 is not there yet. The sidebar's "Explore" heading links to the page.
+The page `/openers` (`app/openers/page.tsx`, title "Opener Distribution") shows the Widget at the full width of `<main>`, with all controls and the Answer List toggle off (all 14,855 Openers), under a heading and a two-paragraph intro. The intro ends with a "How it works" link to Article 11. The sidebar's "Explore" heading links to the page.
 
 ### Charts
 

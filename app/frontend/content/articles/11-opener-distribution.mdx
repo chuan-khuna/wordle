@@ -1,0 +1,34 @@
+---
+title: "Opener Distribution"
+summary: "Play every Opener on the Guess List out to the end and see how far apart the best and the worst really are."
+prerequisites: [benchmark]
+part: solving-wordle
+---
+
+The <Term>Benchmark</Term> played one <Term>Opener</Term> for each <Term>Strategy</Term>. But the Solver can start with any of the 14,855 words on the <Term>Guess List</Term>. So let us play them all.
+
+For each Strategy, every word is the Opener of 2,315 Games, one for each Answer, and the Solver finishes each Game on its own. That is 14,855 × 2,315 Games, and we keep one number for each: the <Term>Guess Count</Term>. The table of all of them is the <Term>Guess Count Matrix</Term>. Average each row and you have the <Term>Average Guess Count</Term> of every Opener: how many Guesses it needs, on average, to win.
+
+Now count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. Each block is one Opener, and they are stacked in bars 0.01 wide, the best at the bottom. The Solver here uses Expected Information over all words. Only words from the <Term>Answer List</Term> are drawn, and <Word>raise</Word> and <Word>crane</Word> are marked:
+
+<OpenerDistribution id="od" strategy="bits-all" answersOnly controls={false} highlight="tarse,salet,raise,crane" />
+
+## What it shows
+
+The best Opener is <Word>tarse</Word>, with an Average Guess Count of **3.429**. The worst is <Word>qajaq</Word>, with **4.117**. That is less than one Guess between the best start and the worst. Choosing the Opener matters, but not nearly as much as playing the rest of the Game well.
+
+<Word>tarse</Word> is not an Answer, so it is not in the chart above. It shows on the full page, with the Answer List filter off, as the best block.
+
+<Word>crane</Word> comes seventh, with 3.437, less than a hundredth of a Guess behind <Word>tarse</Word>. <Word>raise</Word> is 95th, with 3.471. Both are good Openers, and the gap between them is about three hundredths of a Guess.
+
+The Strategy matters. With Expected Information over Candidates only, the best Opener is <Word>salet</Word> with **3.528**, and <Word>raise</Word> falls to 420th. The Opener that is best depends on how the Solver plays the rest of the Game.
+
+## Two rankings that disagree
+
+Article 7 ranked the Openers by Expected Information, before any Game was played. Playing them out gives a second ranking, and the two do not agree.
+
+<Word>raise</Word> is fifth by Expected Information, with 5.878 bits, but 95th when played. <Word>crane</Word> is only 35th by Expected Information, with 5.743 bits, and seventh when played. Only <Word>tarse</Word> is first in both.
+
+Expected Information measures one step: how much the first Guess tells you. A Game is several steps. A high score on the first step does not promise a good finish.
+
+[See the full Opener Distribution →](/openers)
