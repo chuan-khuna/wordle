@@ -15,6 +15,7 @@ impl WordleApp {
             Command::Restart => self.game.seed.map(|seed| format!("seed {}", group_digits(&seed.to_string())).into()),
             Command::CopySeed => self.game.seed.map(|seed| group_digits(&seed.to_string()).into()),
             Command::ChangeTheme => Some(self.theme.name.into()),
+            Command::PrecomputeGuessCounts if self.guess_counts.is_some() => Some("running".into()),
             _ => None,
         }
     }

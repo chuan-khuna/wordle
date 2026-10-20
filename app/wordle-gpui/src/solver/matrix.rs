@@ -95,17 +95,23 @@ pub fn score_matrix(guesses: &[&str], answers: &[&str], threads: usize) -> Vec<u
 /// package's `np.load(..., mmap_mode="r")` read it.
 pub fn npy_bytes(rows: usize, cols: usize, cells: &[u8]) -> Vec<u8> {
     assert_eq!(rows * cols, cells.len());
+    let mut bytes = npy_header(rows, cols);
+    bytes.extend_from_slice(cells);
+    bytes
+}
+
+/// The header that `npy_bytes` puts before the cells: magic, version, length and the padded dict.
+pub fn npy_header(rows: usize, cols: usize) -> Vec<u8> {
     let mut header = format!("{{'descr': '|u1', 'fortran_order': False, 'shape': ({rows}, {cols}), }}");
     // Magic (6) + version (2) + header length (2) + the header and its closing newline.
     let unpadded = 10 + header.len() + 1;
     header.push_str(&" ".repeat(unpadded.next_multiple_of(64) - unpadded));
     header.push('\n');
 
-    let mut bytes = Vec::with_capacity(10 + header.len() + cells.len());
+    let mut bytes = Vec::with_capacity(10 + header.len());
     bytes.extend_from_slice(b"\x93NUMPY\x01\x00");
     bytes.extend_from_slice(&(header.len() as u16).to_le_bytes());
     bytes.extend_from_slice(header.as_bytes());
-    bytes.extend_from_slice(cells);
     bytes
 }
 

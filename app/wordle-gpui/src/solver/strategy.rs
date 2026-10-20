@@ -30,7 +30,7 @@ use super::matrix::{ANSWERS_FILE, GUESSES_FILE, pack};
 use crate::engine::words::{WORD_LENGTH, word_lists};
 
 /// How many different Feedback Codes there are (3⁵).
-const CODES: usize = 243;
+pub(crate) const CODES: usize = 243;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MatrixSet {
@@ -133,7 +133,7 @@ impl Matrix {
         Ok(Matrix::new(rows, lists.answers.clone(), bytes[start..].to_vec()))
     }
 
-    fn row(&self, index: usize) -> &[u8] {
+    pub(crate) fn row(&self, index: usize) -> &[u8] {
         let width = self.columns.len();
         &self.cells[index * width..(index + 1) * width]
     }
@@ -203,15 +203,44 @@ fn split_stats(codes: impl Iterator<Item = u8>, total: usize) -> (f64, f64) {
     }
     let total = total as f64;
     // As the Python Solver: Σ p·log2(1/p) = log2 N − Σ n·log2 n / N, and Σ n² / N.
-    let mut n_log_n = 0.0;
+    let mut n_log_n = [0.0; CODES];
     let mut sum_squares = 0.0;
-    for &size in sizes.iter().filter(|&&size| size > 0) {
-        let size = f64::from(size);
-        n_log_n += size * size.log2();
-        sum_squares += size * size;
+    for (slot, &size) in n_log_n.iter_mut().zip(&sizes) {
+        if size > 0 {
+            let size = f64::from(size);
+            *slot = size * size.log2();
+            sum_squares += size * size;
+        }
     }
     // A one-group split can come out a rounding error below 0; show it as 0.
-    ((total.log2() - n_log_n / total).max(0.0), sum_squares / total)
+    ((total.log2() - numpy_sum(&n_log_n) / total).max(0.0), sum_squares / total)
+}
+
+/// The sum of `values` added in the order numpy's `sum` adds them (pairwise summation: blocks of
+/// up to 128 values, each added in eight interleaved running sums), so the bits come out the
+/// same as the Python Solver's to the last binary digit, not just to rounding error.
+pub(crate) fn numpy_sum(values: &[f64]) -> f64 {
+    let n = values.len();
+    if n < 8 {
+        values.iter().fold(0.0, |sum, value| sum + value)
+    } else if n <= 128 {
+        let mut lanes = [0.0; 8];
+        lanes.copy_from_slice(&values[..8]);
+        let whole = n - n % 8;
+        for block in values[8..whole].chunks_exact(8) {
+            for (lane, value) in lanes.iter_mut().zip(block) {
+                *lane += value;
+            }
+        }
+        let mut sum = ((lanes[0] + lanes[1]) + (lanes[2] + lanes[3])) + ((lanes[4] + lanes[5]) + (lanes[6] + lanes[7]));
+        for value in &values[whole..] {
+            sum += value;
+        }
+        sum
+    } else {
+        let half = n / 2 - (n / 2) % 8;
+        numpy_sum(&values[..half]) + numpy_sum(&values[half..])
+    }
 }
 
 /// One group of a Feedback Split: the Candidates that would give the same Feedback.
@@ -275,7 +304,7 @@ pub fn distribution(word: &str, candidates: &[usize]) -> Option<Distribution> {
 
 /// `x` rounded to 9 decimals the way numpy's `np.round(x, 9)` does: scaled, rounded to the nearest
 /// even, scaled back. Measures within that of each other are a tie.
-fn round9(x: f64) -> f64 {
+pub(crate) fn round9(x: f64) -> f64 {
     (x * 1e9).round_ties_even() / 1e9
 }
 

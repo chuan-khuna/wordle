@@ -28,7 +28,8 @@ app/wordle-gpui/
   src/
     lib.rs        the library: `engine` and `solver`, usable from tests with no window
     engine/       the game itself: Feedback, the word lists, Seeds, Game, live hints
-    solver/       the Feedback matrices, the Strategy that ranks Suggestions, and Solver mode's State
+    solver/       the Feedback matrices, the Strategy that ranks Suggestions, the tree play and the
+                  Guess Count Matrix, and Solver mode's State
     overlays/     state and keys with no drawing: the command palette, the pickers, the search
     theme/        one file per theme, and the Theme roles
     ui/           drawing: WordleApp (ui/mod.rs) holds the state; every other file draws one part
@@ -50,7 +51,7 @@ Take the command palette as the example of how the layers fit together:
 
 Tests sit next to the code they test as `<name>_tests.rs`, pulled in with `#[cfg(test)] #[path = "commands_tests.rs"] mod tests;`. Everything with state and keys has them; the drawing files don't.
 
-The theme picker (`overlays/theme_picker.rs` and `ui/theme_picker.rs`) and the thread picker for [Precompute matrices](#precompute-matrices) (`overlays/precompute.rs` and `ui/precompute_picker.rs`) follow the same pattern. The [Solver](#solver) panel does its scoring in `solver/strategy.rs` and draws it in `ui/solver_panel.rs`. `Cargo.toml` pulls in gpui, gpui-kit (buttons, icons, shortcut keys), `scraper` and `ureq`.
+The theme picker (`overlays/theme_picker.rs` and `ui/theme_picker.rs`) the thread picker for [Precompute matrices](#precompute-matrices) (`overlays/precompute.rs` and `ui/precompute_picker.rs`) and the picker for [Precompute guess counts](#precompute-guess-counts) (`overlays/guess_counts.rs` and `ui/guess_counts_picker.rs`) follow the same pattern. The [Solver](#solver) panel does its scoring in `solver/strategy.rs` and draws it in `ui/solver_panel.rs`. `Cargo.toml` pulls in gpui, gpui-kit (buttons, icons, shortcut keys), `scraper`, `ureq` and `serde_json` (with `preserve_order`, for the Guess Count Matrix's `manifest.json` and `summary.json`; gpui already depends on it).
 
 ## Seeds match the Python game
 
@@ -64,7 +65,7 @@ The theme picker (`overlays/theme_picker.rs` and `ui/theme_picker.rs`) and the t
 - The title bar holds only the hamburger (and the window buttons).
 - The status bar along the bottom has the sidebar button on the left, and on the right the Guess Limit (`classic` or `unlimited`), the Seed (or `chosen answer`) with a button that copies it, and the Guesses left (or the Guess count when unlimited).
 - After a Win or Loss: a cheer, or "Out of guesses" with the Answer hidden as dots until you click the Eye icon (EyeOff hides it again; the sidebar follows); the `just wordle-gpui ...` command that replays the Game, in a monospace font with a copy icon; and three buttons: **Copy results** (the share grid), **Try this word again** (the same Answer, as the menu's row) and **Play a new word** (a new random Answer, as the menu's row).
-- Copying (the seed, the results, the replay command) shows a note in the status bar, next to the sidebar button, that hides itself after 2 seconds.
+- Copying (the seed, the results, the replay command) shows a note in the status bar, next to the sidebar button, that hides itself after 2 seconds. While [Precompute guess counts](#precompute-guess-counts) runs, its progress shows there whenever no note does.
 
 ## Settings menu
 
@@ -83,6 +84,7 @@ Each row is one line: the name on the left and, on the right, a dim detail (the 
 - **Solver mode:** dotted while it is on (see [Solver mode](#solver-mode)).
 - **Change theme…:** opens the theme picker (below). The row shows the current theme.
 - **Precompute matrices…:** opens a small picker for the thread count (see below).
+- **Precompute guess counts…:** opens a picker for the thread count and the Strategies, or, while a run goes on (the row says `running`), offers to stop it (see below).
 - **Reset layout:** closes the sidebar and restores the window size.
 
 The menu's last line shows the command palette's shortcut.
@@ -174,6 +176,23 @@ gpui normally compiles its Metal shaders at build time with Xcode's `metal` tool
 - The work runs on gpui's background executor, so the window stays usable. The status bar says "Precomputing matrices on 4 threads…", then "Saved the matrices to precompute-cache/feedback/ in 1.2s (4 threads)" or the error. Starting it again while it runs only says so.
 - Existing files are replaced without asking (the terminal command asks first).
 - `solver/matrix.rs` has the logic, with no window: `pack` scores one pair without allocating, `score_matrix` splits the Guess rows into one block per thread with `std::thread::scope`, and `npy_bytes` writes the file (a 64-byte-aligned header, as numpy does). A test checks `pack` against `feedback`, and the output is byte-for-byte identical to the Python package's files.
+
+## Precompute guess counts
+
+**Precompute guess counts…** (menu or palette; search `guess count`) fills the [Guess Count Matrices](guess-count-matrix.md) in the repo-root `precompute-cache/guess-counts/`: the same `<strategy id>.npy`, `manifest.json`, `summary.json` and `<strategy id>.ranking.csv` as `just precompute-guess-counts`, so either tool resumes the other's rows (the files are compared byte for byte in the tests; only the manifest's `tool` differs).
+
+- It needs `guesses_vs_answers.npy`; if the Feedback matrices are missing the status bar says to run **Precompute matrices…** first; while they are being precomputed it says to wait for them.
+- The picker has the thread count as four chips (1, 2, 4, 8; Left and Right or typing the number change it; it starts on the largest the machine has cores for) and the four Strategies as toggles, all on (Up and Down move, Space or a click toggles). Enter or **Start** runs, Escape goes back. With no Strategy on, Enter does nothing.
+- The work runs on gpui's background executor. The status bar shows "Guess counts: bits-all 1,234 / 14,855, about 12 min left" (the rows still to fill in this Strategy's pass, with the time left from the pass's rate), redrawn every second.
+- Only rows that are not finished are played, so a run resumes rows left by an earlier run of either tool; finished rows are kept. There is no start over in the app (the terminal command has `--fresh`). A matrix with rows that `manifest.json` does not vouch for stops the run before anything is written, with "Can't resume <id>: <reason>. Start it over with just precompute-guess-counts --fresh".
+- Running the command again while it runs opens "Stop precomputing guess counts?": Enter or **Stop** stops it (each thread drops the Opener it is playing; finished rows are kept, and the summary is still written), Escape or **Keep going** closes it.
+- When it ends the status bar says, for 10 seconds, "Saved guess counts to precompute-cache/guess-counts/ in 31 min 20s (14,855 rows, 8 threads)", "Stopped guess counts after 2 min 05s: 1,024 rows kept in precompute-cache/guess-counts/. Run it again to resume", or the error.
+
+The logic is in the library, with no window:
+
+- `solver/guess_counts.rs`: `Player` is the tree play of `guess_counts.py` over the Guess × Answer matrix, one per thread, with its own next-Guess cache (Candidate Set → Guess, per Strategy). Its search for the next Guess is `strategy::suggest`'s ranking on one thread without sorting every word: it keeps the best row by the same keys, compares Expected Candidates as the exact integer Σ n², and works out the bits only when they count. Bits are summed in numpy's pairwise order (`numpy_sum`, and `sparse_numpy_sum` that skips the empty Feedback groups), so they equal the Python Solver's to the last bit and ties break the same way.
+- `solver/guess_count_matrix.rs`: `build(dir, feedback, Options { threads, strategies, openers, progress, stop })` checks the manifest, writes it, then for each Strategy opens (or creates, full of zeros) the `.npy`, lists the unfinished rows, and has the threads take chunks of 8 consecutive rows from a shared counter. A row is written (zeroed, then its counts, at `128 + row × 2,315`) through one shared file handle once its Opener is fully played; the file is synced every 10 s and at the end of the pass. Then `write_summary` rewrites `summary.json` and the CSVs from the whole files. With `openers` it fills only those rows, and only if unfinished (the Python `--opener` plays them again).
+- Tests (`guess_counts_tests.rs`, `guess_count_matrix_tests.rs`): the next Guess equals `suggest`'s top word for many Candidate Sets under each Strategy; rows equal playing each Game alone; rows equal the Python command's rows (`WORDLE_PYTHON_GUESS_COUNTS=<folder>` or `precompute-cache/guess-counts/` when its manifest says Python wrote it, else skipped), and with that variable the summary and CSVs equal the Python command's byte for byte; rows not asked for stay zero; finished rows are kept and unfinished ones played again; 1 and 4 threads write identical files; the stop flag keeps finished rows; a manifest mismatch writes nothing; the ranking of a hand-filled matrix (both tie-breaks, a Loss, an unfinished row left out). `measure_a_build` (ignored) times a run; see [Cost](guess-count-matrix.md#cost).
 
 ## Solver
 

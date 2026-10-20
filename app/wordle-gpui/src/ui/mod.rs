@@ -6,6 +6,7 @@
 
 mod assist;
 mod board;
+mod guess_counts_picker;
 mod menu;
 mod palette;
 mod precompute_picker;
@@ -17,15 +18,20 @@ pub mod title_bar;
 mod widgets;
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::engine::game::{Game, Guess, MAX_GUESSES, random_seed};
 use wordle_gpui::solver::assist::Assist;
+use wordle_gpui::solver::guess_count_matrix::{self, Progress};
 use wordle_gpui::solver::matrix;
+use wordle_gpui::solver::strategy::{Matrix, MatrixSet, Strategy};
 use wordle_gpui::engine::words::WORD_LENGTH;
 
 use crate::overlays::commands::{self, Command, CommandPalette, SeedField, SeedOutcome};
+use crate::overlays::guess_counts::{self as guess_counts_state, GuessCountPicker, StopOutcome};
 use crate::overlays::precompute::{self, ThreadPicker};
 use crate::overlays::theme_picker::{self as theme_picker_state, ThemePicker};
 use crate::theme::{self, Theme};
@@ -88,6 +94,28 @@ enum Overlay {
     ThemePicker(ThemePicker),
     /// Chooses how many threads precompute the Feedback matrices.
     Precompute(ThreadPicker),
+    /// Chooses the threads and the Strategies of a Guess Count Matrix run.
+    GuessCounts(GuessCountPicker),
+    /// Offers to stop the Guess Count Matrix run that is going on.
+    StopGuessCounts,
+}
+
+/// A Guess Count Matrix run going on in the background.
+struct GuessCountRun {
+    /// Set to stop the run; finished rows are kept.
+    stop: Arc<AtomicBool>,
+    /// The latest progress, with when its Strategy's pass started. None until the first pass starts.
+    progress: Arc<Mutex<Option<(Progress, Instant)>>>,
+}
+
+impl GuessCountRun {
+    /// What the status bar says about the run.
+    fn note(&self) -> String {
+        match *self.progress.lock().expect("the progress lock") {
+            Some((progress, started)) => guess_counts_state::progress_note(&progress, started.elapsed()),
+            None => "Guess counts: reading the Feedback matrices…".into(),
+        }
+    }
 }
 
 pub struct WordleApp {
@@ -109,6 +137,8 @@ pub struct WordleApp {
     overlay: Option<Overlay>,
     /// Whether the Feedback matrices are being precomputed in the background.
     precomputing: bool,
+    /// The Guess Count Matrix run going on in the background, if any.
+    guess_counts: Option<GuessCountRun>,
     sidebar_open: bool,
     /// How wide the sidebar is (with its gap), dragged by `render_sidebar_handle`.
     sidebar_width: gpui::Pixels,
@@ -138,6 +168,7 @@ impl WordleApp {
             assist: None,
             overlay: None,
             precomputing: false,
+            guess_counts: None,
             sidebar_open: false,
             sidebar_width: sidebar::DEFAULT_WIDTH,
             resizing_sidebar: false,
@@ -271,6 +302,16 @@ impl WordleApp {
                 self.show_status("Already precomputing the matrices", cx);
             }
             Command::Precompute => self.open(Overlay::Precompute(ThreadPicker::default()), cx),
+            Command::PrecomputeGuessCounts if self.guess_counts.is_some() => self.open(Overlay::StopGuessCounts, cx),
+            Command::PrecomputeGuessCounts if self.precomputing => {
+                self.dismiss(cx);
+                self.show_status("Wait for the matrices to finish precomputing", cx);
+            }
+            Command::PrecomputeGuessCounts if !matrix::default_dir().join(MatrixSet::ValidGuesses.file()).exists() => {
+                self.dismiss(cx);
+                self.show_status_for("The Feedback matrices are missing: run Precompute matrices… first", Duration::from_secs(5), cx);
+            }
+            Command::PrecomputeGuessCounts => self.open(Overlay::GuessCounts(GuessCountPicker::default()), cx),
             Command::ResetLayout => {
                 self.dismiss(cx);
                 self.assist = None;
@@ -313,6 +354,72 @@ impl WordleApp {
         cx.notify();
     }
 
+    /// Fill the Guess Count Matrices of `strategies` on `threads` threads, off the window's thread
+    /// (see `solver/guess_count_matrix.rs`), resuming rows left unfinished. The status bar shows the
+    /// progress, and says where the files went when it ends.
+    fn start_guess_counts(&mut self, threads: usize, strategies: Vec<&'static Strategy>, cx: &mut Context<Self>) {
+        self.overlay = None;
+        let stop = Arc::new(AtomicBool::new(false));
+        let progress: Arc<Mutex<Option<(Progress, Instant)>>> = Arc::new(Mutex::new(None));
+        self.guess_counts = Some(GuessCountRun { stop: stop.clone(), progress: progress.clone() });
+        let work = cx.background_spawn(async move {
+            let started = Instant::now();
+            let report = move |now: Progress| {
+                let mut latest = progress.lock().expect("the progress lock");
+                let pass_started = match *latest {
+                    Some((before, pass_started)) if before.strategy.id == now.strategy.id => pass_started,
+                    _ => Instant::now(),
+                };
+                // Threads report out of order; keep the furthest.
+                if latest.is_none_or(|(before, _)| before.strategy.id != now.strategy.id || before.done <= now.done) {
+                    *latest = Some((now, pass_started));
+                }
+            };
+            let result = Matrix::load(&matrix::default_dir(), MatrixSet::ValidGuesses).map_err(guess_count_matrix::BuildError::Io).and_then(|feedback| {
+                let options = guess_count_matrix::Options { threads, strategies, openers: None, progress: &report, stop: &stop };
+                guess_count_matrix::build(&guess_count_matrix::default_dir(), &feedback, options)
+            });
+            (result, started.elapsed())
+        });
+        // Redraw the status bar every second while the run goes on.
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor().timer(Duration::from_secs(1)).await;
+                let running = this.update(cx, |app, cx| {
+                    cx.notify();
+                    app.guess_counts.is_some()
+                });
+                if !matches!(running, Ok(true)) {
+                    break;
+                }
+            }
+        })
+        .detach();
+        cx.spawn(async move |this, cx| {
+            let (result, elapsed) = work.await;
+            this.update(cx, |app, cx| {
+                app.guess_counts = None;
+                if matches!(app.overlay, Some(Overlay::StopGuessCounts)) {
+                    app.overlay = None;
+                }
+                app.show_status_for(guess_counts_state::end_note(&result, elapsed, threads), Duration::from_secs(10), cx);
+            })
+            .ok();
+        })
+        .detach();
+        cx.notify();
+    }
+
+    /// Ask the Guess Count Matrix run to stop; it keeps the rows it has finished.
+    fn stop_guess_counts(&mut self, cx: &mut Context<Self>) {
+        self.overlay = None;
+        if let Some(run) = &self.guess_counts {
+            run.stop.store(true, Ordering::Relaxed);
+            self.show_status_for("Stopping guess counts…", Duration::from_secs(30), cx);
+        }
+        cx.notify();
+    }
+
     fn choose_in_palette(&mut self, command: Command, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(Overlay::Palette(palette)) = self.overlay.as_mut() {
             let outcome = palette.choose(command);
@@ -348,6 +455,16 @@ impl WordleApp {
                 precompute::Outcome::Run(threads) => self.start_precompute(threads, cx),
                 precompute::Outcome::Cancel => self.dismiss(cx),
                 precompute::Outcome::None => {}
+            },
+            Some(Overlay::GuessCounts(picker)) => match picker.press(key) {
+                guess_counts_state::Outcome::Run { threads, strategies } => self.start_guess_counts(threads, strategies, cx),
+                guess_counts_state::Outcome::Cancel => self.dismiss(cx),
+                guess_counts_state::Outcome::None => {}
+            },
+            Some(Overlay::StopGuessCounts) => match guess_counts_state::stop_key(key) {
+                StopOutcome::Stop => self.stop_guess_counts(cx),
+                StopOutcome::KeepGoing => self.dismiss(cx),
+                StopOutcome::None => {}
             },
             Some(Overlay::Palette(palette)) => {
                 let outcome = palette.press(key, typed);
@@ -589,6 +706,8 @@ impl Render for WordleApp {
                 Some(Overlay::Palette(palette)) => root.child(self.render_palette(palette, cx)),
                 Some(Overlay::ThemePicker(picker)) => root.child(self.render_theme_picker(picker, cx)),
                 Some(Overlay::Precompute(picker)) => root.child(self.render_precompute_picker(picker, cx)),
+                Some(Overlay::GuessCounts(picker)) => root.child(self.render_guess_counts_picker(picker, cx)),
+                Some(Overlay::StopGuessCounts) => root.child(self.render_stop_guess_counts(cx)),
                 _ => root,
             })
     }

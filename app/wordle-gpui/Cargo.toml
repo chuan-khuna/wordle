@@ -19,4 +19,6 @@ gpui-kit-assets = "0.7.3"
 # The kit's `Kbd` for shortcut hints. It also sets up the theme that gpui-base's scroll bar reads.
 gpui-component = { version = "0.7.3", default-features = false }
 scraper = "0.27.0"
+# manifest.json and summary.json of the Guess Count Matrix, keys kept in the order Python writes them.
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
 ureq = "3.4.2"

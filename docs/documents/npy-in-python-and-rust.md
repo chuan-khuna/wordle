@@ -8,10 +8,10 @@ How the Python package and the gpui app store the precomputed matrices, what one
 | --- | --- | --- |
 | `feedback/answers_vs_answers.npy` | writes (`wordle.solver.matrix.build`, `np.save`) | writes (`solver/matrix.rs` `build`, `npy_bytes`) and reads |
 | `feedback/guesses_vs_answers.npy` | writes (same) and reads | writes (same) and reads |
-| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | nothing yet (gpui ticket 02) |
-| `guess-counts/manifest.json`, `summary.json`, `<id>.ranking.csv` | writes | nothing yet; the Solver panel will read `summary.json` |
+| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | writes in place (`solver/guess_count_matrix.rs` `build`) and reads |
+| `guess-counts/manifest.json`, `summary.json`, `<id>.ranking.csv` | writes | writes (with `serde_json`); the Solver panel will read `summary.json` |
 
-For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. The Guess Count Matrix has only one writer so far, so there is nothing to differ yet. The contract below is what the Rust writer has to follow.
+For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. For the Guess Count Matrix the gpui app follows the contract below: its rows equal the Python command's rows, and from the same matrices it writes `summary.json` and the ranking CSVs byte for byte as Python does (`rows_equal_the_python_commands_rows` and `the_summary_equals_the_python_commands_summary` in `solver/guess_count_matrix_tests.rs`). `manifest.json` differs only in `tool`.
 
 ## One file, byte by byte
 
@@ -99,7 +99,7 @@ m[manifest["rows"].index("salet"), manifest["columns"].index("abase")]   # 4
 | | Python package | gpui app (Rust) |
 | --- | --- | --- |
 | Write a whole matrix | `np.save(path, array)` | `npy_bytes(rows, cols, &cells)` builds the header by hand, then `std::fs::write` |
-| Write rows in place | `np.lib.format.open_memmap(path, mode="w+", …)` creates the file full of zeros, then `matrix[row] = …` and `flush()` | not built; the plan is to open the file and write at `128 + row × 2315` |
+| Write rows in place | `np.lib.format.open_memmap(path, mode="w+", …)` creates the file full of zeros, then `matrix[row] = …` and `flush()` | `npy_header` then `set_len` creates the file full of zeros; each row is written with `seek` + `write_all` at `128 + row × 2315` (zeros first), `sync_data` every 10 s |
 | Read | `np.load(path, mmap_mode="r")`: memory-mapped, rows read from disk on demand | `std::fs::read` (whole file into memory), then `read_npy_header` gives the shape and the data offset |
 | Header checks on read | numpy parses the full dict | `'|u1'` present, `'fortran_order': False` present, 2D shape, file size = offset + rows × columns; then the shape must match the word lists |
 | Dependencies | numpy | none (no `npyz` crate) |
@@ -113,16 +113,16 @@ m[manifest["rows"].index("salet"), manifest["columns"].index("abase")]   # 4
 | Sorting: Python `sorted`, Rust `sort_unstable` | none: both are byte order on lowercase ASCII, and the words are unique | the Feedback matrices are byte-identical across tools |
 | Rust reads the whole file, Python memory-maps it | none on disk; Rust uses 34 MB of memory per Guess matrix | — |
 | The Rust reader did not check `fortran_order` | none for today's files. A column-by-column file (for example `np.save(path, m.T)`) would have been read with rows and columns swapped | `read_npy_header` now refuses it (`a_column_by_column_npy_is_refused`) |
-| Only Python writes the Guess Count Matrix | — | the contract below |
+| Two writers of the Guess Count Matrix | none: the same rows, header, summary and CSV bytes | the contract below, and the tests named above |
 
 ## Contract for a second writer of the Guess Count Matrix
 
-What gpui ticket 02 has to match so that either tool can resume the other's file:
+What the gpui app's writer (gpui ticket 02) matches so that either tool can resume the other's file:
 
 - **`.npy`:** the header from `npy_bytes(14855, 2315, …)`, cells `u8`, rows and columns as above. Create the file full of zeros at full size, and write a finished row at offset `128 + row × 2315`, zeroing it first if it held values. A row is finished when none of its cells is 0.
 - **Cell values:** the Guess Count of the Game played with no Guess Limit, 13 when the safety limit of 12 Guesses is hit. Never 0.
-- **`manifest.json`:** compact JSON (`separators=(",", ":")`) plus a newline, with keys `format_version` (1), `tool`, `safety_limit` (12), `strategies` (`id → {name, pool, scope, ranked_by}`), `rows`, `columns`. Write it to a temporary file and rename it over the old one. Only `tool` differs between writers (`wordle precompute-guess-counts (python)` today).
-- **`summary.json` and `<id>.ranking.csv`:** written from the matrices. Two Python details a port would otherwise miss: the CSV's `is_answer` column is `True`/`False` (Python's `str(bool)`), and floats are Python's shortest round-trip `repr` (`3.52829373650108`). `serde_json` prints the same, and so does Rust's `{}` except for whole numbers (`3` where Python writes `3.0`).
+- **`manifest.json`:** compact JSON (`separators=(",", ":")`) plus a newline, with keys `format_version` (1), `tool`, `safety_limit` (12), `strategies` (`id → {name, pool, scope, ranked_by}`), `rows`, `columns`. Write it to a temporary file and rename it over the old one. Only `tool` differs between writers (`wordle precompute-guess-counts (python)` or `wordle-gpui Precompute guess counts (rust)`).
+- **`summary.json` and `<id>.ranking.csv`:** written from the matrices. Two Python details a port would otherwise miss: the CSV's `is_answer` column is `True`/`False` (Python's `str(bool)`), and floats are Python's shortest round-trip `repr` (`3.52829373650108`). `serde_json` prints the same, and so does Rust's `{}` except for whole numbers (`3` where Python writes `3.0`); the gpui app uses `serde_json` for both files. A third: `bits` must be summed in numpy's pairwise order (blocks of up to 128 values in eight running sums), not left to right, or about half the values differ in the last digit; `strategy::numpy_sum` does this.
 
 ## Checking it yourself
 

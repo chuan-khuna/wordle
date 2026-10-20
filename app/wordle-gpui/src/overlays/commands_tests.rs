@@ -89,6 +89,7 @@ fn reset_layout_is_in_the_palette() {
 #[test]
 fn precompute_is_in_the_palette() {
     assert_eq!(Command::search("matri"), [Command::Precompute]);
+    assert_eq!(Command::search("guess count"), [Command::PrecomputeGuessCounts]);
 }
 
 #[test]

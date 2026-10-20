@@ -97,6 +97,12 @@ A stopped run picks up where it left off:
 
 Both commands share `add_threads_flag` and `ask_threads` in `wordle/solver/cli.py`.
 
+## In the gpui app
+
+The gpui app builds the same files from Rust, with **Precompute guess counts…** in its menu and palette (see [gpui desktop app](gpui-app.md#precompute-guess-counts)): a picker for the thread count (1, 2, 4, 8) and the Strategies, progress in the status bar, and a stop that keeps finished rows. `solver/guess_counts.rs` is the tree play (a `Player` per thread, each with its own next-Guess cache) and `solver/guess_count_matrix.rs` the build, manifest, summary and CSV. It follows the [contract](npy-in-python-and-rust.md#contract-for-a-second-writer-of-the-guess-count-matrix): the same `.npy` header and rows, `manifest.json` that differs only in `tool` (`wordle-gpui Precompute guess counts (rust)`), and `summary.json` and the CSVs byte for byte as Python writes them from the same matrices (the tests compare rows of all four Strategies and the summary files with Python's).
+
+Differences from the Python command: it only resumes (no start over; a manifest mismatch stops it before anything is written and says to use `just precompute-guess-counts --fresh`), and the library's `openers` fills only those rows that are unfinished rather than playing them again. The threads take chunks of 8 consecutive rows; the file is synced every 10 s and at the end of each Strategy's pass; a stop drops the Openers in flight and still writes the summary.
+
 ## Cost
 
 One thread. Measured: `bits-candidates` over all 14,855 Openers took 334 s (about 5.6 minutes); a global Strategy Opener takes about 5 to 9 s (`bits-all` with two Openers: 17 s), so a full global Strategy is an estimated 20 hours (not measured).
@@ -115,6 +121,20 @@ Measured on an Apple M1 Pro (8 performance + 2 efficiency cores, 32 GB, macOS / 
 - **Candidates-only Strategies get slower with threads** (3x slower on 8). Their search is over a small Candidate Set, so the time goes on Python between short numpy calls, which holds the GIL; more threads only add contention. Use 1 thread for them.
 - **Global Strategies speed up, but well short of the thread count**: 2.6x on 4 threads, 3.3x to 3.7x on 8. Each search scores the whole Guess List against the Candidates in numpy, which lets go of the GIL, but the Python around it does not. At about 8.5 s per Opener on one thread (this spread of Openers; the cache warms over a full run), a full global Strategy is roughly 35 hours on 1 thread and 9 to 10 hours on 8 (an estimate, not measured).
 - A run that mixes both kinds uses one thread count for all; choose 1 for Candidates-only runs and 8 for global ones. Running the work in processes instead of threads is left to a follow-up (ticket 07).
+
+### The gpui app (Rust)
+
+Same machine, release build, `measure_a_build` (an ignored test in `solver/guess_count_matrix_tests.rs`) into a temporary folder, each run with fresh caches. Another agent's Python runs kept the load average at 15 to 30 during these runs, so the times are pessimistic.
+
+| Strategy | Openers | Threads | Time | Per Opener |
+| --- | --- | --- | --- | --- |
+| `bits-candidates` | all 14,855 | 8 | 11.0 s | |
+| `expected-candidates` | all 14,855 | 8 | 3.8 s | |
+| `bits-all` | 50 (every 300th) | 1 | 36.2 s | 0.72 s |
+| `bits-all` | 991 (every 15th) | 8 | 102.5 s | 0.103 s |
+| `expected-all` | 199 (every 75th) | 8 | 12.9 s | 0.065 s |
+
+Extrapolated from those samples (not measured): a full `bits-all` takes about 14,855 × 0.103 s ≈ 26 minutes on 8 threads (about 3 hours on 1), and `expected-all` about 16 minutes on 8 threads, against an estimated 9 to 35 hours for the Python command. Ranking by Expected Candidates is cheaper because Σ n² is compared as an integer and the bits are worked out only to break a tie. The full Rust `bits-candidates` matrix equals the 6,442 rows the Python command had finished, and its top 5 are the ones under [Results](#results).
 
 ## Results
 
