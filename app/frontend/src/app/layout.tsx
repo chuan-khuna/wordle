@@ -18,14 +18,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-background font-sans text-text">
         <header className="border-b border-highlight-med bg-surface">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-6 py-3">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
             <Link href="/" className="text-lg font-bold text-heading hover:text-accent">
               Solving Wordle
             </Link>
             <ThemePicker />
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-6 py-10">{children}</main>
+        <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
       </body>
     </html>
   );

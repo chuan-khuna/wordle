@@ -23,7 +23,7 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
   const { default: Body } = await import(`@content/series/${slug}.mdx`);
   const articles = inSeries(slug);
   return (
-    <div className="space-y-8">
+    <div className="max-w-3xl space-y-8">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold text-heading">{series.title}</h1>
         <p className="text-subtle">{series.intro}</p>

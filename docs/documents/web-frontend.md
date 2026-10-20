@@ -91,9 +91,11 @@ Body in MDX. Inline maths $x^2$, display maths in `$$ ... $$`, and <Term>Feedbac
 
 The Article page shows its Series and position, its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links within its Series.
 
-**Add a Series.** Create `content/series/<slug>.mdx` with frontmatter `title`, `intro` and optional `video` (a YouTube id or URL), then optional MDX body text. The Series page embeds the video and lists its Articles in `order`.
+**Series side nav** (`components/SeriesNav.tsx`). It lists the Series title (a link to the Series page) and every Article of the Series in `order`, as number and title; the current Article has `aria-current="page"` and is styled with theme roles (`border-accent bg-highlight-low text-heading`). From the `lg` breakpoint (1024px) it is a column beside the Article (grid `14rem` + the rest), `position: sticky` so it stays in view while scrolling, and it scrolls inside itself if the Series is long. Below that it is a collapsed `<details>` above the Article, so the page never scrolls sideways. The list is rendered twice and CSS shows one of the two, so there is no client JavaScript. The site `<main>` is `max-w-6xl` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at 70ch while Widgets and display maths use the full column. The index and Series pages stay `max-w-3xl`.
 
-**Video timestamps.** An Article's `video` is a start time in its Series' video. The Article page then shows an embed that starts there (`?start=<seconds>`) and an "Open it on YouTube" link (`&t=<seconds>s`), and the Series page links each Article's start time. An Article without `video`, or in a Series without one, shows nothing.
+**Add a Series.** Create `content/series/<slug>.mdx` with frontmatter `title`, `intro` and optional `video` (a YouTube id or URL), then optional MDX body text. The Series page embeds the video and lists its Articles in `order`, each with a "Watch from m:ss" link.
+
+**Video timestamps.** An Article's `video` is a start time in its Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or in a Series without one, has no link.
 
 **Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Series, unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, two Articles with the same `order` in a Series, and missing or malformed frontmatter.
 

@@ -5,7 +5,7 @@ import { content } from "@/lib/content";
 export default function Home() {
   const { series, articles, inSeries } = content();
   return (
-    <div className="space-y-10">
+    <div className="max-w-3xl space-y-10">
       <h1 className="text-3xl font-bold text-heading">Solving Wordle</h1>
       <section className="space-y-4">
         <h2 className="text-xl font-semibold text-heading">Series</h2>
