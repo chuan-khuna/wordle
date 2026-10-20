@@ -47,3 +47,7 @@ export function WordInput({
     </div>
   );
 }
+
+/** The wrapper every chart sits in: `currentColor` text and grid from `text-subtle`, tooltip colours from theme roles. */
+export const CHART_CLASS =
+  "text-subtle [--ts-chart-tooltip-background:var(--overlay)] [--ts-chart-tooltip-color:var(--text)]";

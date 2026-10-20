@@ -97,3 +97,42 @@ export const postSplit = (guess: string, state: { guess: string; feedback: strin
 
 export const getSolve = (answer: string, pool: Pool, scope: Scope, by: Rank, signal?: AbortSignal) =>
   api<SolveResponse>(`/api/solve?answer=${answer}&pool=${pool}&scope=${scope}&by=${by}`, { signal });
+
+export interface Opener {
+  rank: number;
+  word: string;
+  bits: number;
+  expected_candidates: number;
+  groups: number;
+  largest_group: number;
+  is_candidate: boolean;
+}
+
+export interface OpenersResponse {
+  total: number;
+  openers: Opener[];
+}
+
+export const getOpeners = (top: number, signal?: AbortSignal) => api<OpenersResponse>(`/api/openers?top=${top}`, { signal });
+
+export interface BenchmarkStrategy {
+  id: string;
+  name: string;
+  pool: Pool;
+  scope: Scope;
+  by: Rank;
+  opener: string;
+  games: number;
+  /** Games won at Guess Count 1..guess_limit. */
+  distribution: number[];
+  losses: number;
+  lost_answers: string[];
+  average_guess_count: number;
+}
+
+export interface BenchmarkResponse {
+  guess_limit: number;
+  strategies: BenchmarkStrategy[];
+}
+
+export const getBenchmark = (signal?: AbortSignal) => api<BenchmarkResponse>("/api/benchmark", { signal });

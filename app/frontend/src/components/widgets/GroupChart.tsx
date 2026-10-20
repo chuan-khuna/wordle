@@ -6,6 +6,7 @@ import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
+import { CHART_CLASS } from "./ui";
 
 export interface Bar {
   marks: string;
@@ -62,7 +63,7 @@ export function GroupChart({
   );
 
   return (
-    <div className="text-subtle [--ts-chart-tooltip-background:var(--overlay)] [--ts-chart-tooltip-color:var(--text)]">
+    <div className={CHART_CLASS}>
       <Chart
         definition={definition}
         height={300}

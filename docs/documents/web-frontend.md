@@ -24,7 +24,7 @@ app/frontend/
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ThemePicker.tsx
     components/Term.tsx, VideoEmbed.tsx, ArticleList.tsx
-    components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with GroupChart), StepThroughGame, Tile, ui, useWidgetParam
+    components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with GroupChart), StepThroughGame, OpenerTable, BenchmarkChart, Tile, ui, useWidgetParam, useLoad
     lib/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
     lib/widget-state.ts     the `guess:feedback,...` State text format
     lib/api.ts              fetch helpers and response types for /api (errors carry the API's `detail`)
@@ -177,9 +177,17 @@ One `POST /api/split` (after a short pause) gives the groups, shown as a bar cha
 
 The defaults are the main Strategy: Expected Information over all Guesses. One `GET /api/solve` returns the whole Game; the Widget then shows tiles for each Guess so far, Prev and Next buttons (and the Left and Right arrow keys while focus is inside the Widget, outside its inputs), "Guess n of N", the Candidate Set size before and after the Guess, and a table of the Solver's top five Suggestions at that step with their bits, Expected Candidates and whether each is a Candidate (the first row is the Guess played). Example link: `/articles/sample-greedy-strategy?g.answer=watch&g.step=3`.
 
+### Opener table and Benchmark chart (Widgets 5 and 6)
+
+Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api/benchmark`); a 503 from a backend that was not precomputed shows its message (including "Run `just backend-precompute` first.") as the error.
+
+**Opener table** (`OpenerTable`). Props: `top` (default 20, 1 to 500), `highlight` (comma separated words, e.g. `"crane,slate"`), `id`. URL params `top`, `highlight` (`op.top` with `id="op"`) override the props. A table of rank, Opener, bits, Expected Candidates, groups, largest group and Candidate?. Every heading is a button that sorts by that column (click again to reverse; `aria-sort` is set). Highlighted words are emphasised and listed even when they rank below `top`; when `highlight` is set the Widget fetches all 500 rows. The table scrolls horizontally inside its card at phone width. A "Rows to show" input edits `top`.
+
+**Benchmark chart** (`BenchmarkChart`). Props: `strategies` (comma separated ids from `bits-all`, `bits-candidates`, `expected-all`; default all three; unknown ids are dropped, none valid means all), `id`. URL param `strategies` (`bm.strategies`) overrides it. The chart is grouped bars (`barY` with `layout: group()`, `z` = Strategy): x is the Guess Count 1 to 6 plus a final "Lost" group for the Losses, so Losses are on the chart and not folded into the distribution; y is Games. Each Strategy has a fixed theme-role colour by its position in the API list (`--accent`, `--present`, `--correct`, `--error`), so it keeps its colour when a subset is shown. Below the chart a table gives each Strategy's Opener, Average Guess Count, Losses (red when above zero), and the exact Guess Distribution, then the lost Answers of each Strategy. Example link: `/articles/sample-benchmark?bm.strategies=bits-all,expected-all`.
+
 ### Charts
 
-Charts use TanStack Charts: `@tanstack/react-charts` 1.1.0, which re-exports the `<Chart>` of its dependency `@tanstack/charts` (read `node_modules/@tanstack/charts/docs/` and `llms.txt`; it is not the old `react-charts` v3). A chart is a memoised `defineChart({ marks, scales, tooltip })` (marks such as `barY`, compact `scaleBand`/`scaleLinear` from `@tanstack/charts/scales/*`, the `tooltip` extension) passed to `<Chart definition height ariaLabel onSelect />`. `components/widgets/GroupChart.tsx` is the one chart so far.
+Charts use TanStack Charts: `@tanstack/react-charts` 1.1.0, which re-exports the `<Chart>` of its dependency `@tanstack/charts` (read `node_modules/@tanstack/charts/docs/` and `llms.txt`; it is not the old `react-charts` v3). A chart is a memoised `defineChart({ marks, scales, tooltip })` (marks such as `barY`, compact `scaleBand`/`scaleLinear` from `@tanstack/charts/scales/*`, the `tooltip` extension) passed to `<Chart definition height ariaLabel onSelect />`. `components/widgets/GroupChart.tsx` and `BenchmarkChart.tsx` are the charts; both use the shared `CHART_CLASS` wrapper from `ui.tsx`.
 
 - **Theme roles.** Mark paints are CSS variables (`fill: "var(--accent)"`, the selected bar `var(--heading)`), so a theme change repaints with no rebuild; the axes, grid and labels use `currentColor`, set by a `text-subtle` wrapper; the tooltip colours are set from `--overlay` and `--text` through the library's `--ts-chart-tooltip-*` variables. Charts never use fixed colours.
 - **SSR.** `<Chart>` server-renders SVG at `initialWidth` and then measures its container after hydration. The Widgets only mount a chart once the API data has arrived on the client, so no chart markup is rendered on the server and there is nothing to mismatch; a definition must not read `window` or other client-only values if a future chart is rendered on the server.
