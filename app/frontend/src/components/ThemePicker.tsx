@@ -1,6 +1,17 @@
 "use client";
 
+import { PaletteIcon } from "lucide-react";
 import { useSyncExternalStore } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { STORAGE_KEY, SYSTEM } from "@/lib/theme-script";
 import { THEMES } from "@/lib/themes";
 
@@ -13,7 +24,12 @@ function subscribe(onChange: () => void) {
 const getChoice = () => document.documentElement.dataset.themeChoice ?? SYSTEM;
 const getServerChoice = () => SYSTEM;
 
-export function ThemePicker() {
+/**
+ * The theme menu: an icon button that opens a radio list of "System" and the palettes, Light then Dark,
+ * with the current choice checked. The choice is saved in localStorage (`wordle-theme`; System removes it)
+ * and announced with a `wordle-theme` event, which the head script (lib/theme-script.ts) applies.
+ */
+export function ThemePicker({ align = "start" }: { align?: "start" | "end" }) {
   const choice = useSyncExternalStore(subscribe, getChoice, getServerChoice);
 
   function choose(next: string) {
@@ -26,30 +42,35 @@ export function ThemePicker() {
     window.dispatchEvent(new CustomEvent("wordle-theme", { detail: next }));
   }
 
-  const dark = THEMES.filter((theme) => theme.dark);
   const light = THEMES.filter((theme) => !theme.dark);
+  const dark = THEMES.filter((theme) => theme.dark);
 
   return (
-    <label className="block space-y-2">
-      <span className="eyebrow block">Theme</span>
-      <select
-        value={choice}
-        onChange={(event) => choose(event.target.value)}
-        suppressHydrationWarning
-        className="field text-sm"
-      >
-        <option value={SYSTEM}>System</option>
-        <optgroup label="Dark">
-          {dark.map((theme) => (
-            <option key={theme.id} value={theme.id}>{theme.name}</option>
-          ))}
-        </optgroup>
-        <optgroup label="Light">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Theme" title="Theme">
+          <PaletteIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-56">
+        <DropdownMenuRadioGroup value={choice} onValueChange={choose}>
+          <DropdownMenuRadioItem value={SYSTEM}>System</DropdownMenuRadioItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Light</DropdownMenuLabel>
           {light.map((theme) => (
-            <option key={theme.id} value={theme.id}>{theme.name}</option>
+            <DropdownMenuRadioItem key={theme.id} value={theme.id}>
+              {theme.name}
+            </DropdownMenuRadioItem>
           ))}
-        </optgroup>
-      </select>
-    </label>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>Dark</DropdownMenuLabel>
+          {dark.map((theme) => (
+            <DropdownMenuRadioItem key={theme.id} value={theme.id}>
+              {theme.name}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

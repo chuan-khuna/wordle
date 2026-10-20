@@ -7,6 +7,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
 import { type BenchmarkStrategy, getBenchmark } from "@/lib/api";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
@@ -87,40 +88,40 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
           </p>
 
           <div className="mt-5 overflow-x-auto" tabIndex={0} role="region" aria-label="Benchmark results, scrollable">
-            <table className="data-table min-w-[34rem]">
-              <caption className="sr-only">Benchmark results for each Strategy, with its Guess Distribution.</caption>
-              <thead>
-                <tr>
-                  <th scope="col" className="text-left">Strategy</th>
-                  <th scope="col" className="text-left">Opener</th>
-                  <th scope="col" className="text-right">Average Guess Count</th>
-                  <th scope="col" className="text-right">Losses</th>
+            <Table className="min-w-[34rem]">
+              <TableCaption className="sr-only">Benchmark results for each Strategy, with its Guess Distribution.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col" className="text-left">Strategy</TableHead>
+                  <TableHead scope="col" className="text-left">Opener</TableHead>
+                  <TableHead scope="col" className="text-right">Average Guess Count</TableHead>
+                  <TableHead scope="col" className="text-right">Losses</TableHead>
                   {Array.from({ length: limit }, (_, i) => (
-                    <th key={i} scope="col" className="text-right">
+                    <TableHead key={i} scope="col" className="text-right">
                       {i + 1}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {shown.map((s) => (
-                  <tr key={s.id}>
-                    <th scope="row" className="text-left font-normal whitespace-nowrap">
+                  <TableRow key={s.id}>
+                    <TableHead scope="row" className="text-left font-normal text-text whitespace-nowrap">
                       <span aria-hidden className="mr-1.5 inline-block h-3 w-3 rounded-xs align-middle" style={{ background: colors.get(s.id) }} />
                       {s.name}
-                    </th>
-                    <td className="font-mono uppercase">{s.opener}</td>
-                    <td className="text-right font-mono font-semibold text-text">{s.average_guess_count.toFixed(3)}</td>
-                    <td className={`text-right font-mono ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</td>
+                    </TableHead>
+                    <TableCell className="font-mono uppercase">{s.opener}</TableCell>
+                    <TableCell className="text-right font-mono font-semibold text-text">{s.average_guess_count.toFixed(3)}</TableCell>
+                    <TableCell className={`text-right font-mono ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</TableCell>
                     {s.distribution.map((n, i) => (
-                      <td key={i} className="text-right font-mono">
+                      <TableCell key={i} className="text-right font-mono">
                         {n}
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           {shown.some((s) => s.losses > 0) && (
             <dl className="mt-3 space-y-1 text-sm">

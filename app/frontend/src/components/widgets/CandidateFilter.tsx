@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useId, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { postCandidates } from "@/lib/api";
 import { type Mark, WORD_LENGTH, marksToString } from "@/lib/feedback";
 import { MAX_ROWS, type Row, formatState, parseState } from "@/lib/widget-state";
@@ -118,36 +119,35 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
                   <span className="text-meta">—</span>
                 )}
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
                 aria-label={`Remove Guess ${i + 1}`}
-                className="btn border-transparent text-meta"
+                variant="ghost"
               >
                 Remove
-              </button>
+              </Button>
             </li>
           );
         })}
       </ul>
 
       <div className="mt-3 flex gap-2">
-        <button
+        <Button
           type="button"
           disabled={rows.length >= MAX_ROWS}
           onClick={() => setRows((rs) => [...rs, { guess: "", marks: Array(WORD_LENGTH).fill(0) as Mark[] }])}
-          className="btn"
         >
           Add a Guess
-        </button>
+        </Button>
         {rows.length > 0 && (
-          <button
+          <Button
             type="button"
             onClick={() => setRows([])}
-            className="btn border-transparent text-meta"
+            variant="ghost"
           >
             Clear
-          </button>
+          </Button>
         )}
       </div>
       <p className="mt-2 text-xs text-meta">Click a tile to change its Mark: Absent, Present, Correct.</p>
@@ -174,14 +174,14 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
                   ))}
                 </ul>
                 {finalOutcome.count > SHOWN && (
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowAll((s) => !s)}
                     aria-expanded={showAll}
-                    className="btn mt-2"
+                    className="mt-2"
                   >
                     {showAll ? "Show fewer" : `Show all ${finalOutcome.count}`}
-                  </button>
+                  </Button>
                 )}
               </>
             )}

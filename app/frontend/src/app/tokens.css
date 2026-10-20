@@ -87,6 +87,46 @@
   --shadow-lg: none;
 }
 
+/* shadcn/ui variables, mapped onto the roles above. The components in components/ui/ read these (bg-popover,
+   text-foreground, border-input, ...). Two shadcn names would collide with our roles, so they are not mapped:
+   shadcn's `accent` (hover fill) and `muted` (quiet fill) are written in the generated components as
+   `bg-highlight-med` and `bg-highlight-low`, and `muted-foreground` is `text-meta`. There is no `.dark`
+   class: the palettes in themes.css are the only dark mode. */
+@theme inline {
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --foreground: var(--text);
+  --card: var(--background);
+  --card-foreground: var(--text);
+  --popover: var(--overlay);
+  --popover-foreground: var(--text);
+  --primary: var(--text);
+  --primary-foreground: var(--background);
+  --secondary: var(--highlight-low);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--color-meta);
+  --destructive: var(--error);
+  --border: var(--highlight-med);
+  --input: var(--highlight-high);
+  --ring: var(--accent);
+  --radius: 3px;
+}
+
 :root {
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
@@ -124,65 +164,5 @@
   color: var(--color-meta);
 }
 
-/* Text input and select. */
-@utility field {
-  width: 100%;
-  border: var(--rule-width) solid var(--highlight-high);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text);
-  padding: 0.5rem 0.75rem;
-  &::placeholder {
-    color: var(--subtle);
-  }
-}
-
-/* Button: hairline outline, quiet fill on hover. */
-@utility btn {
-  border: var(--rule-width) solid var(--highlight-high);
-  border-radius: var(--radius-sm);
-  padding: 0.375rem 0.875rem;
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  line-height: var(--text-sm--line-height);
-  color: var(--text);
-  cursor: pointer;
-  &:hover:not(:disabled) {
-    background: var(--highlight-low);
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-}
-
-/* A table that reads as typeset data: no box, a rule under the head and between rows. */
-@utility data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-  & thead th {
-    border-bottom: var(--rule-width) solid var(--highlight-high);
-    padding: 0.375rem 0.75rem;
-    font-weight: 500;
-    color: var(--color-meta);
-  }
-  & tbody tr {
-    border-bottom: var(--rule-width) solid var(--highlight-med);
-  }
-  & tbody td,
-  & tbody th {
-    padding: 0.375rem 0.75rem;
-  }
-  & :is(th, td):first-child {
-    padding-left: 0;
-  }
-  & :is(th, td):last-child {
-    padding-right: 0;
-  }
-  & tbody th {
-    font-weight: 400;
-    text-align: left;
-  }
-}
+/* Form controls, buttons and tables are the shadcn components in components/ui/ (Input, Select, Button, Table),
+   restyled there with these tokens. */

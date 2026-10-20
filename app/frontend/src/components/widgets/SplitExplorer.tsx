@@ -1,6 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
 import { parseState } from "@/lib/widget-state";
@@ -83,17 +86,17 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
       <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
         <WordInput id={`${uid}-g`} label="Guess" value={guess} onChange={setGuess} />
         <div>
-          <label htmlFor={`${uid}-s`} className="mb-1 block text-sm text-meta">
+          <Label htmlFor={`${uid}-s`} className="mb-1 block text-sm font-normal text-meta">
             State (optional): <span className="font-mono">guess:feedback</span>, comma separated
-          </label>
-          <input
+          </Label>
+          <Input
             id={`${uid}-s`}
             value={stateText}
             onChange={(e) => setStateText(e.target.value.toLowerCase().replace(/[^a-z0-9:,]/g, ""))}
             autoComplete="off"
             spellCheck={false}
             placeholder="crane:00102,slate:01200"
-            className="field font-mono text-base"
+            className="font-mono"
           />
         </div>
       </div>
@@ -174,14 +177,14 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
                 ))}
               </ul>
               {group.count > WORDS_SHOWN && (
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowAllWords((s) => !s)}
                   aria-expanded={showAllWords}
-                  className="btn mt-2"
+                  className="mt-2"
                 >
                   {showAllWords ? "Show fewer" : `Show all ${group.count}`}
-                </button>
+                </Button>
               )}
             </div>
           )}

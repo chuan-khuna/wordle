@@ -2,6 +2,10 @@
 
 import { Suspense, useId, useMemo, useState } from "react";
 import { type Opener, getOpeners } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
@@ -45,12 +49,12 @@ export function parseHighlight(text: string): Set<string> {
 export function OpenerTable(props: { top?: number; highlight?: string; id?: string }) {
   return (
     <Suspense fallback={<WidgetFrame title="Opener table">Loading…</WidgetFrame>}>
-      <Table {...props} />
+      <OpenerRows {...props} />
     </Suspense>
   );
 }
 
-function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?: number; highlight?: string; id?: string }) {
+function OpenerRows({ top: topProp = 20, highlight: highlightProp = "", id }: { top?: number; highlight?: string; id?: string }) {
   const uid = useId();
   const [topText, setTopText] = useWidgetParam(id, "top", String(topProp));
   const [highlightText] = useWidgetParam(id, "highlight", highlightProp);
@@ -77,10 +81,10 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
   return (
     <WidgetFrame title="Opener table">
       <div className="max-w-40">
-        <label htmlFor={`${uid}-top`} className="mb-1 block text-sm text-meta">
+        <Label htmlFor={`${uid}-top`} className="mb-1 block text-sm font-normal text-meta">
           Rows to show
-        </label>
-        <input
+        </Label>
+        <Input
           id={`${uid}-top`}
           type="number"
           min={1}
@@ -88,7 +92,7 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
           inputMode="numeric"
           value={topText}
           onChange={(e) => setTopText(e.target.value)}
-          className="field font-mono text-base"
+          className="font-mono"
         />
       </div>
 
@@ -104,42 +108,42 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
       {data && (
         <>
           <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Opener table, scrollable">
-            <table className="data-table min-w-[34rem]">
-              <caption className="sr-only">
+            <Table className="min-w-[34rem]">
+              <TableCaption className="sr-only">
                 The {rows.length} best Openers by Expected Information, out of {data.total} scored.
-              </caption>
-              <thead>
-                <tr>
+              </TableCaption>
+              <TableHeader>
+                <TableRow>
                   {COLUMNS.map((c) => {
                     const active = sort.key === c.key;
                     return (
-                      <th
+                      <TableHead
                         key={c.key}
                         scope="col"
                         aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
                         className={c.numeric ? "text-right" : "text-left"}
                       >
-                        <button
-                          type="button"
+                        <Button
+                          variant="ghost"
                           onClick={() => setSort(active ? { key: c.key, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: c.key, dir: c.first })}
-                          className="cursor-pointer hover:text-text"
+                          className="h-auto p-0 font-medium text-inherit hover:bg-transparent hover:text-text"
                         >
                           {c.label}
                           <span aria-hidden className="ml-1 inline-block w-3 text-text">
                             {active ? (sort.dir === "asc" ? "▲" : "▼") : ""}
                           </span>
-                        </button>
-                      </th>
+                        </Button>
+                      </TableHead>
                     );
                   })}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {rows.map((o) => (
                   <Row key={o.word} o={o} on={marked.has(o.word)} />
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
           <p className="mt-2 text-xs text-meta">
             {data.total} Openers are scored; Expected Candidates is the number of Candidates an Opener is expected to leave.
@@ -153,14 +157,14 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
 
 function Row({ o, on }: { o: Opener; on: boolean }) {
   return (
-    <tr className={on ? "bg-highlight-low" : undefined}>
-      <td className="text-right font-mono text-meta">{o.rank}</td>
-      <td className={`font-mono uppercase ${on ? "font-semibold text-text" : ""}`}>{o.word}</td>
-      <td className="text-right font-mono">{o.bits.toFixed(3)}</td>
-      <td className="text-right font-mono">{o.expected_candidates.toFixed(1)}</td>
-      <td className="text-right font-mono">{o.groups}</td>
-      <td className="text-right font-mono">{o.largest_group}</td>
-      <td>{o.is_candidate ? "Yes" : "No"}</td>
-    </tr>
+    <TableRow className={on ? "bg-highlight-low" : undefined}>
+      <TableCell className="text-right font-mono text-meta">{o.rank}</TableCell>
+      <TableCell className={`font-mono uppercase ${on ? "font-semibold text-text" : ""}`}>{o.word}</TableCell>
+      <TableCell className="text-right font-mono">{o.bits.toFixed(3)}</TableCell>
+      <TableCell className="text-right font-mono">{o.expected_candidates.toFixed(1)}</TableCell>
+      <TableCell className="text-right font-mono">{o.groups}</TableCell>
+      <TableCell className="text-right font-mono">{o.largest_group}</TableCell>
+      <TableCell>{o.is_candidate ? "Yes" : "No"}</TableCell>
+    </TableRow>
   );
 }

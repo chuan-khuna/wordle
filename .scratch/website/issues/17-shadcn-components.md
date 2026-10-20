@@ -1,6 +1,6 @@
 # shadcn/ui components and an icon theme menu
 
-Status: ready-for-agent
+Status: done
 Blocked by: 16
 
 Use shadcn/ui for the site's UI components, styled by our design tokens.
@@ -12,3 +12,9 @@ Use shadcn/ui for the site's UI components, styled by our design tokens.
 - Check light and dark at 1280px and 390px, including the theme menu open. Update `docs/documents/web-frontend.md` (shadcn setup, where components live, how tokens map, how to add one).
 
 See [spec](../spec.md).
+
+## Comments
+
+- Done with shadcn CLI 4.21.4 (radix base, radix-nova style); packages added through `bun add`. The CLI's generated palette and Geist font were discarded; its variables map onto our roles in `tokens.css`. Details in `docs/documents/web-frontend.md` ("shadcn/ui").
+- Replaced: theme `<select>` with a DropdownMenu radio group (icon button, `aria-label="Theme"`), the phone menu with Collapsible, `<Term>` with Tooltip (tap toggles), and the hand-rolled `btn`, `field` and `data-table` with Button, Input/Label, Select and Table. Those utilities are removed from `tokens.css`.
+- Not changed: tiles, charts, prose, the Feedback Split group list rows (a list of toggle rows, not buttons in the control sense).

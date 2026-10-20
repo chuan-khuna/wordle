@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import "katex/dist/katex.min.css";
 import { Sidebar } from "@/components/Sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { content } from "@/lib/content";
 import { themeScript } from "@/lib/theme-script";
 import "./globals.css";
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-background font-serif text-text">
+        <TooltipProvider>
         <div className="lg:grid lg:grid-cols-[var(--container-nav)_minmax(0,1fr)]">
           <Sidebar
             title={series.title}
@@ -36,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           <main className="mx-auto w-full min-w-0 max-w-page px-gutter py-12 sm:px-gutter-wide sm:py-16">{children}</main>
         </div>
+        </TooltipProvider>
       </body>
     </html>
   );

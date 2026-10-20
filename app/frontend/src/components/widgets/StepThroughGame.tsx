@@ -3,6 +3,10 @@
 import { Suspense, useEffect, useId, useState } from "react";
 import { type Pool, type Rank, type Scope, type SolveResponse, getSolve } from "@/lib/api";
 import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tile } from "./Tile";
 import { WidgetFrame, WordInput, cleanWord } from "./ui";
 import { useWidgetParam } from "./useWidgetParam";
@@ -86,7 +90,8 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     const t = e.target as HTMLElement;
-    if (t.tagName === "INPUT" || t.tagName === "SELECT" || e.altKey || e.ctrlKey || e.metaKey) return;
+    // Not while typing, nor inside a Select (its trigger or its open list, which is portalled but still bubbles here).
+    if (t.tagName === "INPUT" || t.closest("[role=combobox], [role=listbox]") || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.key === "ArrowLeft") {
       e.preventDefault();
       go(step - 1);
@@ -96,9 +101,6 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
     }
   };
 
-  const select = "field text-base";
-  const button = "btn";
-
   return (
     <WidgetFrame title="Step-through Game">
       <div onKeyDown={onKeyDown}>
@@ -106,9 +108,9 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
           <div className="col-span-2 lg:col-span-1">
             <WordInput id={`${uid}-a`} label="Answer" value={answer} onChange={setAnswer} />
           </div>
-          <Select id={`${uid}-p`} label="Guesses from" value={pool} onChange={setPool} className={select} options={[["guesses", "all words"], ["answers", "Answers only"]]} />
-          <Select id={`${uid}-s`} label="Search" value={scope} onChange={setScope} className={select} options={[["global", "all Guesses"], ["candidates", "Candidates only"]]} />
-          <Select id={`${uid}-b`} label="Rank by" value={by} onChange={setBy} className={select} options={[["bits", "Expected Information"], ["expected", "Expected Candidates"]]} />
+          <SelectField id={`${uid}-p`} label="Guesses from" value={pool} onChange={setPool} options={[["guesses", "all words"], ["answers", "Answers only"]]} />
+          <SelectField id={`${uid}-s`} label="Search" value={scope} onChange={setScope} options={[["global", "all Guesses"], ["candidates", "Candidates only"]]} />
+          <SelectField id={`${uid}-b`} label="Rank by" value={by} onChange={setBy} options={[["bits", "Expected Information"], ["expected", "Expected Candidates"]]} />
         </div>
 
         <div aria-live="polite" className="mt-3 min-h-6 text-sm">
@@ -137,12 +139,12 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
             </ol>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className={button} disabled={step <= 1} onClick={() => go(step - 1)} aria-label="Previous Guess">
+              <Button disabled={step <= 1} onClick={() => go(step - 1)} aria-label="Previous Guess">
                 ← Prev
-              </button>
-              <button type="button" className={button} disabled={step >= total} onClick={() => go(step + 1)} aria-label="Next Guess">
+              </Button>
+              <Button disabled={step >= total} onClick={() => go(step + 1)} aria-label="Next Guess">
                 Next →
-              </button>
+              </Button>
               <span className="text-sm text-meta" aria-live="polite">
                 Guess {step} of {total}
                 {step === total && (data.solved ? ": solved" : ": not solved")}
@@ -157,30 +159,30 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
             </p>
 
             <div className="mt-3 overflow-x-auto">
-              <table className="data-table min-w-[22rem] text-left">
-                <caption className="eyebrow pb-2 text-left">The Solver&apos;s top Suggestions for Guess {step}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Guess</th>
-                    <th scope="col" className="text-right">Bits</th>
-                    <th scope="col" className="text-right">Expected Candidates</th>
-                    <th scope="col">Candidate?</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table className="min-w-[22rem]">
+                <TableCaption>The Solver&apos;s top Suggestions for Guess {step}</TableCaption>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead scope="col">Guess</TableHead>
+                    <TableHead scope="col" className="text-right">Bits</TableHead>
+                    <TableHead scope="col" className="text-right">Expected Candidates</TableHead>
+                    <TableHead scope="col">Candidate?</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {shown.alternatives.map((w, i) => (
-                    <tr key={w.word} className={i === 0 ? "bg-highlight-low font-semibold" : ""}>
-                      <td className="font-mono uppercase">
+                    <TableRow key={w.word} className={i === 0 ? "bg-highlight-low font-semibold" : ""}>
+                      <TableCell className="font-mono uppercase">
                         {w.word}
                         {i === 0 && <span className="ml-2 text-xs font-normal normal-case text-meta">played</span>}
-                      </td>
-                      <td className="text-right font-mono">{w.bits.toFixed(2)}</td>
-                      <td className="text-right font-mono">{w.expected_candidates.toFixed(1)}</td>
-                      <td>{w.is_candidate ? "yes" : "no"}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{w.bits.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono">{w.expected_candidates.toFixed(1)}</TableCell>
+                      <TableCell>{w.is_candidate ? "yes" : "no"}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </>
         )}
@@ -189,33 +191,36 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
   );
 }
 
-function Select({
+function SelectField({
   id,
   label,
   value,
   onChange,
   options,
-  className,
 }: {
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: [string, string][];
-  className: string;
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm text-meta">
+      <Label htmlFor={id} className="mb-1 block text-sm font-normal text-meta">
         {label}
-      </label>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={className}>
-        {options.map(([v, name]) => (
-          <option key={v} value={v}>
-            {name}
-          </option>
-        ))}
-      </select>
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          {options.map(([v, name]) => (
+            <SelectItem key={v} value={v}>
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

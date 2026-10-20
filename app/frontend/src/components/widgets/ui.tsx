@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 /** Lowercase letters only, at most five. */
 export function cleanWord(text: string): string {
@@ -30,10 +32,10 @@ export function WordInput({
 }) {
   return (
     <div>
-      <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm text-meta"}>
+      <Label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm font-normal text-meta"}>
         {label}
-      </label>
-      <input
+      </Label>
+      <Input
         id={id}
         value={value}
         onChange={(e) => onChange(cleanWord(e.target.value))}
@@ -42,7 +44,7 @@ export function WordInput({
         autoCapitalize="none"
         spellCheck={false}
         placeholder="five letters"
-        className="field font-mono text-base uppercase placeholder:font-sans placeholder:text-sm placeholder:normal-case"
+        className="font-mono uppercase placeholder:font-sans placeholder:text-sm placeholder:normal-case"
       />
     </div>
   );

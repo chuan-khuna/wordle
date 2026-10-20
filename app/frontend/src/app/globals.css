@@ -1,9 +1,19 @@
 @import "tailwindcss";
 @import "./themes.css";
 @import "./tokens.css";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* Article prose: typography plugin, with every colour, font and size taken from the tokens. */
 @plugin "@tailwindcss/typography";
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+}
 
 body {
   background: var(--background);
