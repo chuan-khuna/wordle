@@ -33,9 +33,9 @@ The Benchmark runs three Strategies, each from its own best Opener:
 
 ## Frontend
 
-- **Articles**: `app/frontend/content/articles/<slug>.mdx`, with frontmatter `title`, `summary`, `prerequisites: [slug]`, `series`, `order`, and an optional `video` timestamp. Each Article page lists its Prerequisites and shows backlinks (the Articles that list it as a Prerequisite).
-- **Series**: `content/series/<slug>.mdx` (title, intro, video embed). The Series page lists its Articles in `order`, and each Article in a Series shows prev/next links.
-- **Index page**: lists the Series and the Articles.
+- **Articles**: `app/frontend/content/articles/<slug>.mdx`, with frontmatter `title`, `summary`, `prerequisites: [slug]`, `order`, and an optional `video` timestamp. Each Article page lists its Prerequisites and shows backlinks (the Articles that list it as a Prerequisite).
+- **Series**: the site has exactly one Series, "Solving Wordle", in `content/series.mdx` (title, intro, video embed). Every Article belongs to it; there is no Series index and no `/series/` route. Each Article shows prev/next links.
+- **Home page**: the Series itself: its title, intro, video and its Articles in `order`.
 - **Math**: `@next/mdx` with `remark-math` and `rehype-katex`.
 - **`<Term>Candidate Set</Term>`**: shows that term's definition from the root `GLOSSARY.md`, parsed at build time. An unknown term fails the build.
 - **Themes**: the gpui app's ten palettes, with the same role names (`background`, `surface`, `overlay`, `text`, `correct`, `present`, `absent`, `heading`, `accent`, …) as CSS variables. The default follows the system setting (Rosé Pine Dawn for light, Rosé Pine for dark). The picker's choice is saved in `localStorage`.
