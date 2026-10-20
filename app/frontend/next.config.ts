@@ -1,3 +1,4 @@
+import path from "node:path";
 import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
@@ -42,6 +43,8 @@ const withMDX = createMDX({
       ["rehype-katex", { strict: "error", throwOnError: true }],
       // Build-time syntax highlighting (Shiki): ```python title="file.py" {3-5} (line numbers come from CSS)
       ["rehype-pretty-code", { theme: codeTheme, keepBackground: false, defaultLang: "text" }],
+      // A <MarginNote> on its own line after a block is wrapped with that block, so it sits beside it (an absolute path: the loader resolves it with require).
+      path.join(process.cwd(), "src/lib/rehype-margin-notes.mjs"),
     ],
   },
 });

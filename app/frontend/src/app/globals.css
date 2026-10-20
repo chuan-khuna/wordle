@@ -238,3 +238,82 @@ body {
   overflow-y: hidden;
   padding-block: 0.25rem;
 }
+
+/* Article layout. The Article is a size container (named "article"), so the margin appears when the column
+   itself has room, whatever the sidebar and the page gutters take: the Article body is as wide as the measure,
+   a gap and the margin (--container-article), text blocks keep the measure, and code blocks and Widgets span
+   the whole body. */
+.article {
+  container: article / inline-size;
+}
+.prose.prose-theme.article-body {
+  display: flow-root; /* contains the floated Margin notes */
+  max-width: var(--container-article);
+}
+/* Full-width blocks start below any Margin note above them. */
+.article-body > :is(figure, section) {
+  clear: right;
+}
+
+/* Margin notes. Narrow (the default): a small note in the text flow with a left rule, at the measure. */
+.margin-note {
+  display: block;
+  max-width: var(--container-measure);
+  margin: 0.25rem 0 var(--spacing-flow);
+  padding-inline-start: 0.75rem;
+  border-inline-start: var(--rule-width) solid var(--color-rule-strong);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  font-weight: 400;
+  color: var(--color-meta);
+}
+.margin-row {
+  max-width: var(--container-measure);
+}
+/* A note straight after its block sits closer to it than the block's own bottom margin. */
+.prose-theme .margin-row > :is(p, ul, ol, blockquote):has(+ .margin-note) {
+  margin-bottom: 0.5rem;
+}
+.margin-note :where(p) {
+  margin: 0;
+}
+
+/* Wide: room for the measure (68ch), the gap (2.5rem) and the margin (16rem) side by side, which are the
+   --container-measure, --spacing-margin-gap and --container-margin tokens; custom properties cannot be used in
+   a container query condition, so the sum is written out here. A note floats to the right and a negative
+   right margin pulls it out of the text column into the margin (Tufte CSS); the float has no width as far as
+   the text is concerned, so lines never wrap around it. `clear: right` pushes a note below an earlier one. */
+@container article (min-width: calc(68ch + 2.5rem + 16rem)) {
+  .margin-note {
+    float: right;
+    clear: right;
+    width: var(--container-margin);
+    max-width: none;
+    margin: 0.3rem calc(-1 * (var(--container-margin) + var(--spacing-margin-gap))) 0 0;
+    padding: 0;
+    border: 0;
+  }
+  /* A note on its own line after a block: a two-column grid, the block and the note on one row, so a note
+     taller than its block pushes what follows down instead of overlapping it. */
+  .margin-row {
+    display: grid;
+    grid-template-columns: minmax(0, var(--container-measure)) var(--container-margin);
+    column-gap: var(--spacing-margin-gap);
+    max-width: none;
+    clear: right;
+  }
+  .margin-row > .margin-note {
+    float: none;
+    grid-column: 2;
+    width: auto;
+    margin: 0.3rem 0 0;
+  }
+  .margin-row > :not(.margin-note) {
+    grid-column: 1;
+  }
+  .margin-row > .katex-display ~ .margin-note {
+    align-self: center;
+    margin-top: 0;
+  }
+}

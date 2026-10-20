@@ -79,6 +79,10 @@
 
   /* Measure: prose line length, and the page column. */
   --container-measure: 68ch;
+  /* Article column: the measure, a gap, and the margin for Margin notes. Code blocks and Widgets span it all. */
+  --container-margin: 16rem;
+  --spacing-margin-gap: 2.5rem;
+  --container-article: calc(var(--container-measure) + var(--spacing-margin-gap) + var(--container-margin));
   --container-page: 68rem;
   --container-nav: 14rem;
 

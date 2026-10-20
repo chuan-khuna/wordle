@@ -32,7 +32,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const builtOnBy = backlinks(slug);
 
   return (
-    <article className="relative min-w-0 space-y-12">
+    <article className="article relative min-w-0 space-y-12">
         <header className="max-w-measure space-y-4">
           <p className="eyebrow">
             Part {part?.number} &middot; {part?.title} &middot;{" "}
@@ -55,12 +55,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           )}
         </header>
 
-        <div className="prose prose-theme [&>:is(p,ul,ol,h2,h3,h4,blockquote)]:max-w-measure">
+        <div className="prose prose-theme article-body [&>:is(p,ul,ol,h2,h3,h4,blockquote)]:max-w-measure">
           <Body />
         </div>
 
         {builtOnBy.length > 0 && (
-          <section className="space-y-3">
+          <section className="max-w-measure space-y-3">
             <h2 className="eyebrow">Builds on this Article</h2>
             <ul className="space-y-1">
               {builtOnBy.map((a) => (
@@ -76,7 +76,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         <nav
           aria-label="Previous and next Article"
-          className="flex justify-between gap-6 font-sans text-sm"
+          className="flex max-w-measure justify-between gap-6 font-sans text-sm"
         >
           {prev ? (
             <Link href={`/articles/${prev.slug}`} rel="prev" className={linkClass}>

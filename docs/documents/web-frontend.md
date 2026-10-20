@@ -15,7 +15,7 @@ app/frontend/
     series.mdx              the site's one Series and its Parts (frontmatter + MDX)
     articles/NN-<slug>.mdx  Articles (frontmatter + MDX); NN is the number in the Series
   src/
-    mdx-components.tsx      components every MDX file can use without importing (<Term>, <Mark>, the Widgets)
+    mdx-components.tsx      components every MDX file can use without importing (<Term>, <Mark>, <Word>, <Letter>, <MarginNote>, the Widgets)
     app/
       layout.tsx            <html>, the no-flash theme script, the sidebar, KaTeX CSS
       page.tsx              the home page, which is the Series page: title, intro, video, then each Part with its Articles
@@ -25,6 +25,7 @@ app/frontend/
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ui/          shadcn/ui components (button, input, label, select, table, tooltip, dropdown-menu, collapsible), restyled with the tokens
     components/Sidebar.tsx, ThemePicker.tsx
+    components/MarginNote.tsx, lib/rehype-margin-notes.mjs (a Margin note and the rehype plugin that seats it)
     components/Term.tsx (server: glossary lookup), Mark.tsx (server: Mark label), TermTip.tsx (client: the tooltip shared by both), VideoEmbed.tsx
     components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with SplitChart), StepThroughGame, OpenerTable, BenchmarkChart, and their parts: WordRow, StateBoard, useGuessCheck, Tile, ui, useWidgetParam, useLoad
     lib/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
@@ -91,6 +92,22 @@ Then fix up what the generator writes, because it targets the default palette: (
 
 **Where each is used.** `Button`: Widget controls, Prev/Next in the Step-through Game, "Start over" in the State input, the sort headings of the Opener table, the phone menu button, the theme button. `Label`: the labels of `WordRow`. `Input`: the Opener table's "Rows to show" field (the word and State fields are `WordRow` and `StateBoard`, below). `Select`: the Step-through Game's Strategy options (the arrow-key shortcut ignores keys inside a Select). `Table`: the Opener table, the Benchmark table, the Step-through Suggestions. `Tooltip`: `<Term>`. `DropdownMenu`: the theme menu. `Collapsible`: the phone Article menu. `TooltipProvider` wraps the page in `layout.tsx`.
 
+## Article layout and `<MarginNote>`
+
+An Article is two columns, in the style of Tufte's books: the text column at the measure and, to its right, a margin for **Margin notes** (see the glossary).
+
+```
+| paragraphs, lists, headings, quotes, display maths (68ch) | Margin notes (16rem) |
+| code block / Widget: the text column, the gap and the margin together          |
+```
+
+- **Tokens** (`tokens.css`): `--container-measure` (68ch), `--spacing-margin-gap` (2.5rem), `--container-margin` (16rem), and `--container-article`, their sum, which is the width of the Article body (`.article-body`, the prose `div`). Text blocks keep `max-w-measure`; display maths (`.katex-display`) keeps the measure, so a formula stays centred over the text; code figures and Widgets are as wide as the body. They are `clear: right`, so they start below any Margin note above them. `<main>` stays `max-w-page` (68rem): the body (989px at the 18px serif) fits in its 64rem of content, so the page container was not widened and the home page did not change.
+- **Breakpoint: a container query, not a media query.** `<article>` is a size container named `article` (`container: article / inline-size`), and the margin appears at `@container article (min-width: calc(68ch + 2.5rem + 16rem))`, which is 989px: 68ch is 693px in Newsreader at 18px, plus 40px, plus 256px. What decides whether the margin fits is the width of the Article column, which depends on the sidebar (a column from `lg`, a top bar below it), the page gutters (1.25rem, 2rem from `sm`) and the `max-w-page` cap, not on the window. A media query would have to repeat all of that and would be wrong in the 996 to 1023px range, where the sidebar is a top bar and there is room. In practice: the margin shows from a window width of about 1277px (989 + the 224px sidebar + 64px gutters), and also at 996 to 1023px, where the sidebar is a top bar; at 1024 to 1276px, and on phones, the page is one column. Custom properties cannot be used in a container condition, so the sum is written out in `globals.css`; if a token changes, change it there too.
+- **`<MarginNote>`** (`components/MarginNote.tsx`; no import in MDX). Children: short prose, which may hold `<Term>`, `<Word>`, `<Letter>`, `<Mark>`, inline maths and links. No props. It renders `<span class="margin-note">` (a span so it is valid inside a paragraph), in the UI sans at `text-sm` in the `meta` colour, no box, no `aria-hidden`; it stays in the reading order where it is written. Write it on one line (a multi-line note's single `<p>` child is unwrapped, but keep it short), at the end of the sentence or paragraph it belongs to, or on its own line right after a block.
+  - **Wide** (the container is at least 989px): a note inside a paragraph is `float: right; clear: right` with a negative right margin of the margin width plus the gap (Tufte CSS), so it sits in the margin level with the line it is written on, takes no room from the text, and a later note is pushed below an earlier one. A note on its own line right after a paragraph, list, quote or display formula is wrapped with that block by `lib/rehype-margin-notes.mjs` (a rehype plugin, last in `next.config.ts`; `.margin-row`, a two-column grid) so the two share a row: the note is level with the block (centred on a display formula), and a note taller than its block pushes what follows down. The plugin is given by absolute path (`@next/mdx` resolves plugin paths with `require`). Turbopack's build cache does not track the plugin file, so after editing it delete `.next/cache/turbopack` before `bun run build`.
+  - **Narrow**: the note is a block in the text flow, at the measure, indented with a left rule (`rule-strong`), right after the text it was written in (a note in the middle of a paragraph splits that paragraph, so put it at the end). Code blocks and Widgets use the column width; there is no sideways scroll at 390px.
+- Header, Prerequisites, "Builds on this Article" and the Prev/Next links are `max-w-measure`, aligned with the text column.
+
 ## Design tokens
 
 The look is a minimal editorial one: the text leads and chrome recedes. All non-colour tokens live in `app/tokens.css` (with the role-to-colour mapping, formerly in `globals.css`); the palettes stay in `themes.css`. Components use the Tailwind utilities the tokens generate and no raw sizes, fonts or colours.
@@ -131,7 +148,7 @@ Body in MDX. Inline maths $x^2$, display maths in `$$ ... $$`, and <Term>Feedbac
 
 The Article page header shows its Part and number (`Part 2 · Solving Wordle · 05`), then its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links across all Articles in number order.
 
-**Sidebar** (`components/Sidebar.tsx`, rendered by `layout.tsx` on every page; there is no top header). Top to bottom: the site title (the Series title, a link home) with the theme menu button beside it, then the Articles grouped under their Part titles (`Part 1 · Wordle`, then number and title each). The current Article has `aria-current="page"` (found with `usePathname`, so it is a Client Component) and is styled `border-text font-medium text-text`. From the `lg` breakpoint (1024px) it is a column (the layout grid is `--container-nav` + the rest): `position: sticky`, full viewport height, and the Article list scrolls inside it if long. Below `lg` it is a compact top bar with the title, the theme button and an "Articles" button (a shadcn `CollapsibleTrigger`, which sets `aria-expanded` and `aria-controls`) that opens the list below the bar; it closes by itself after navigating. The `CollapsibleContent` is force-mounted and always shown from `lg`. It is one markup, so CSS only decides what is shown, and the page never scrolls sideways. `<main>` is `max-w-page` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) and display maths are capped at the measure (68ch), so a formula centres over the text, while Widgets and code blocks use the full column. The home page text stays at the measure.
+**Sidebar** (`components/Sidebar.tsx`, rendered by `layout.tsx` on every page; there is no top header). Top to bottom: the site title (the Series title, a link home) with the theme menu button beside it, then the Articles grouped under their Part titles (`Part 1 · Wordle`, then number and title each). The current Article has `aria-current="page"` (found with `usePathname`, so it is a Client Component) and is styled `border-text font-medium text-text`. From the `lg` breakpoint (1024px) it is a column (the layout grid is `--container-nav` + the rest): `position: sticky`, full viewport height, and the Article list scrolls inside it if long. Below `lg` it is a compact top bar with the title, the theme button and an "Articles" button (a shadcn `CollapsibleTrigger`, which sets `aria-expanded` and `aria-controls`) that opens the list below the bar; it closes by itself after navigating. The `CollapsibleContent` is force-mounted and always shown from `lg`. It is one markup, so CSS only decides what is shown, and the page never scrolls sideways. `<main>` is `max-w-page`. On an Article page the column holds text at the measure (68ch) plus a margin for Margin notes, and Widgets and code blocks span both (see Article layout below). The home page text stays at the measure.
 
 **The Series** (`content/series.mdx`): frontmatter `title`, `intro`, `parts` and optional `video` (a YouTube id or URL), then optional MDX body text. The home page `/` is the Series page: the title, intro and video (if any), then each Part (number, title, intro) with its Articles in number order, each with its number, title and summary, plus a "Watch from m:ss" link when both the Series and the Article have a video time. There is no `/series/...` route.
 
@@ -198,7 +215,7 @@ Fenced code in any MDX file is highlighted at build time by `rehype-pretty-code`
 
 ## Maths
 
-Write `$inline$` and `$$display$$` (remark-math, rendered by rehype-katex). Prose is styled by `@tailwindcss/typography` as `prose prose-theme`, where `prose-theme` (in `globals.css`) sets the typography from the design tokens.
+Write `$inline$` and `$$display$$` (remark-math, rendered by rehype-katex). Prose is styled by `@tailwindcss/typography` as `prose prose-theme`, where `prose-theme` (in `globals.css`) sets the typography from the design tokens. Display maths is capped at the measure (see Article layout), so a formula centres over the text.
 
 ## Widgets
 

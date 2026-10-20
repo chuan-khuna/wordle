@@ -146,3 +146,7 @@ _Avoid_: chapter, section, module, unit
 **Widget**:
 An interactive figure inside an Article that lets the reader try the idea, such as scoring a Guess or exploring a Feedback Split.
 _Avoid_: demo, playground, component
+
+**Margin note**:
+A short aside printed in the margin of an Article, beside the text it comments on.
+_Avoid_: sidenote, footnote, aside, marginalia, callout
