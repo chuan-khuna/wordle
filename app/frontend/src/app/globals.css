@@ -226,11 +226,13 @@ body {
   margin-block: var(--spacing-section);
 }
 
-/* KaTeX: a touch smaller than its default so it sits at the serif's size; long display maths scrolls inside itself. */
+/* KaTeX: a touch smaller than its default so it sits at the serif's size; long display maths scrolls inside itself.
+   Display maths keeps to the prose measure, so a formula centres over the text around it. */
 .katex {
   font-size: 1.08em;
 }
 .katex-display {
+  max-width: var(--container-measure);
   margin: 1.5rem 0;
   overflow-x: auto;
   overflow-y: hidden;
