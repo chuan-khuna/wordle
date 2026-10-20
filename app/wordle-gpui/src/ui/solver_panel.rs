@@ -14,7 +14,7 @@ use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude:
 use wordle_gpui::engine::feedback::Mark;
 use wordle_gpui::solver::assist::Assist;
 use wordle_gpui::solver::matrix::default_dir;
-use wordle_gpui::solver::strategy::{self, Distribution, Matrix, MatrixSet, SearchMode, Suggestion};
+use wordle_gpui::solver::strategy::{self, Distribution, Matrix, MatrixSet, Rank, SearchMode, Strategy, Suggestion};
 use wordle_gpui::engine::words::{WORD_LENGTH, word_lists};
 
 use super::WordleApp;
@@ -56,6 +56,7 @@ pub struct SolverState {
     pub open: bool,
     pub set: MatrixSet,
     pub mode: SearchMode,
+    pub by: Rank,
     matrices: HashMap<MatrixSet, MatrixLoad>,
     suggestions: Suggestions,
     /// The Candidates for the current State, as Answer List indices.
@@ -78,6 +79,7 @@ impl Default for SolverState {
             open: false,
             set: MatrixSet::Answers,
             mode: SearchMode::Candidates,
+            by: Rank::Bits,
             matrices: HashMap::new(),
             suggestions: Suggestions::Idle,
             candidates: Vec::new(),
@@ -148,7 +150,8 @@ impl WordleApp {
         let serial = self.solver.serial;
         let candidates = self.solver.candidates.clone();
         let mode = self.solver.mode;
-        let ranking = cx.background_spawn(async move { strategy::suggest(&matrix, &candidates, mode, SUGGESTIONS) });
+        let by = self.solver.by;
+        let ranking = cx.background_spawn(async move { strategy::suggest(&matrix, &candidates, mode, by, SUGGESTIONS) });
         cx.spawn(async move |this, cx| {
             let suggestions = ranking.await;
             this.update(cx, |app, cx| {
@@ -196,6 +199,11 @@ impl WordleApp {
 
     fn set_search_mode(&mut self, mode: SearchMode, cx: &mut Context<Self>) {
         self.solver.mode = mode;
+        self.refresh_solver(cx);
+    }
+
+    fn set_rank(&mut self, by: Rank, cx: &mut Context<Self>) {
+        self.solver.by = by;
         self.refresh_solver(cx);
     }
 
@@ -263,6 +271,7 @@ impl WordleApp {
     pub(super) fn render_solver(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let opener = self.shown_guesses().is_empty();
+        let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by);
 
         let settings = div()
             .flex()
@@ -291,11 +300,26 @@ impl WordleApp {
                     cx,
                 ),
             ))
+            .child(setting_row(
+                t,
+                "Rank by",
+                segmented(
+                    t,
+                    [(Rank::Bits, "Information"), (Rank::ExpectedCandidates, "Candidates")],
+                    self.solver.by,
+                    |this: &mut WordleApp, by, cx: &mut Context<WordleApp>| this.set_rank(by, cx),
+                    cx,
+                ),
+            ))
             .child(div().text_xs().text_color(rgb(t.muted)).child(match (self.solver.set, self.solver.mode) {
                 (MatrixSet::Answers, SearchMode::Candidates) => "Tries Answer List words that could still be the Answer.",
                 (MatrixSet::Answers, SearchMode::Everything) => "Tries every Answer List word, even ruled-out ones.",
                 (MatrixSet::ValidGuesses, SearchMode::Candidates) => "Tries words that could still be the Answer.",
                 (MatrixSet::ValidGuesses, SearchMode::Everything) => "Tries every allowed word, even ones that can't win.",
+            }))
+            .child(div().text_xs().text_color(rgb(t.muted)).child(match strategy {
+                Some(strategy) => format!("Strategy: {}", strategy.name),
+                None => "No named Strategy, but it still ranks.".to_string(),
             }));
 
         let status = div()

@@ -4,14 +4,16 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The library ranks by either measure with the Python tie-breaks and the two-Candidates rule
-- [ ] The four named Strategies exist in the library
-- [ ] Tests: for a few States and each Strategy, the top Suggestions equal values printed by the Python Solver, including a tie broken only by the second measure
-- [ ] The Solver panel has Rank by and shows the Strategy name
-- [ ] `cargo test` passes; the gpui app document describes the setting
+- [x] The library ranks by either measure with the Python tie-breaks and the two-Candidates rule
+- [x] The four named Strategies exist in the library
+- [x] Tests: for a few States and each Strategy, the top Suggestions equal values printed by the Python Solver, including a tie broken only by the second measure
+- [x] The Solver panel has Rank by and shows the Strategy name
+- [x] `cargo test` passes; the gpui app document describes the setting
 
 See [spec](../spec.md).
 
 ## Comments
+
+Done. `strategy::suggest` takes a `Rank`, rounds both measures with `round9` (numpy's algorithm), and applies the two-Candidates rule; `STRATEGIES` and `Strategy::named` name the four. Tests compare five States against values printed by the Python Solver (empty, CRANE/THUMB, SLATE/ROOST with a second-measure tie, ADIEU+PIOUS/FLUME, CRANE/ACORN with two Candidates). The panel's **Rank by** buttons are labelled "Information" and "Candidates" to fit the 340 px panel; the full Strategy name is shown below the settings. Not checked by hand in the UI.

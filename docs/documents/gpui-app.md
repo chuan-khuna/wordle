@@ -179,9 +179,9 @@ gpui normally compiles its Metal shaders at build time with Xcode's `metal` tool
 
 **Show solver**, the panel button at the right end of the status bar, or ⌘⌥B (Ctrl+Alt+B, Zed's right dock) opens the solver on the right. Like the sidebar, the window widens by its width so the board keeps its size.
 
-It ranks Suggestions by Expected Information: how many bits a Guess is expected to tell us about the Answer, averaged over its Feedback Split (`-Σ p·log2 p`, with every Candidate equally likely). Before the first Guess the top one is the best Opener. The scoring is in `solver/strategy.rs`; the panel is `ui/solver_panel.rs`.
+It ranks Suggestions by Expected Information (how many bits a Guess is expected to tell us about the Answer, averaged over its Feedback Split: `-Σ p·log2 p`, with every Candidate equally likely) or by Expected Candidates (the expected size of the next Candidate Set, `Σ n²/N`, fewer is better). Before the first Guess the top one is the best Opener. The scoring is in `solver/strategy.rs`; the panel is `ui/solver_panel.rs`.
 
-Two settings change what is searched:
+Three settings make up a Strategy:
 
 | Setting | Choice | Guesses tried |
 | --- | --- | --- |
@@ -189,13 +189,19 @@ Two settings change what is searched:
 | | Valid guesses | Every Guess List word, read from `guesses_vs_answers.npy` |
 | **Search** (the mode) | Candidates | Only words that could still be the Answer |
 | | All words | Every word in the set, even ruled-out ones, which can split the Candidates better |
+| **Rank by** | Information | Most Expected Information first |
+| | Candidates | Fewest Expected Candidates first |
+
+The panel names the Strategy the settings amount to, one of the Python package's four: Candidates with either Words is `bits-candidates` or `expected-candidates` (the same Guesses either way), and Valid guesses with All words is `bits-all` or `expected-all`. Answers with All words has no name but still ranks. `STRATEGIES` and `Strategy::named` in `solver/strategy.rs` list them.
+
+The order is the Python Solver's (`Solver.rank`), tested against values it printed: compare the ranked measure rounded to nine decimals (as `np.round` does, ties to even), then a Candidate before a non-Candidate, then the other measure (also rounded), then alphabetical order. With two Candidates or fewer left, only Candidates are tried whatever **Search** says (`Solver.suggest`).
 
 With **Candidates**, word families such as _ATCH or GRA_E can take seven or eight Guesses; [solver-strategy.md](solver-strategy.md
 
 From top to bottom the panel shows the settings, the Candidates, the best guess and then the search field with its chart.
 
 - **Candidates:** every word that could still be the Answer, with their count. Up to 20 are laid out as a grid, five to a row; more are one run of text in a box that scrolls. Clicking the heading folds the list away.
-- **Suggestions:** the top eight, each with its bits and the Candidates expected to be left (`Σ n²/N`). A dot in the Correct colour marks a word that could be the Answer, so guessing it might win now. Ties go to such a word.
+- **Suggestions:** the top eight, each with its bits and the Candidates expected to be left (`Σ n²/N`). A dot in the Correct colour marks a word that could be the Answer, so guessing it might win now. Ties go to such a word, as described above.
 - **Chart:** click a Suggestion, or type any Guess List word into **Search a word to chart…**, to see its Feedback Split as horizontal bars. Each bar is one Feedback, drawn as its five Marks in the theme's colours, as long as the number of Candidates that would give it (the Win bar is in the Correct colour). The title gives the expected number of words left and the bits. Every group is drawn, biggest first, in a box that scrolls once it is taller than 320 px. **Type it** puts the word on the board.
 - **Search field:** a click sends the keys there instead of the board. Enter, Escape or a click on the board sends them back. ⌘V (Ctrl+V) pastes letters into it.
 
