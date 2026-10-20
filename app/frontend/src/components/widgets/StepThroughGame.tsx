@@ -96,9 +96,8 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
     }
   };
 
-  const select = "w-full rounded-md border border-highlight-high bg-background px-2 py-2 text-text focus-visible:outline-2 focus-visible:outline-accent";
-  const button =
-    "rounded-md border border-highlight-high px-3 py-1.5 text-sm hover:bg-highlight-low focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50";
+  const select = "field text-base";
+  const button = "btn";
 
   return (
     <WidgetFrame title="Step-through Game">
@@ -113,8 +112,8 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
         </div>
 
         <div aria-live="polite" className="mt-3 min-h-6 text-sm">
-          {!ready && <p className="text-subtle">Type a five-letter Answer.</p>}
-          {ready && !current && <p className="text-subtle">The Solver is playing…</p>}
+          {!ready && <p className="text-meta">Type a five-letter Answer.</p>}
+          {ready && !current && <p className="text-meta">The Solver is playing…</p>}
           {current?.error && (
             <p role="alert" className="text-error">
               {current.error}
@@ -127,7 +126,7 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
             <ol className="my-3 space-y-1.5" aria-label={`Guesses so far for ${data.answer}`}>
               {data.steps.slice(0, step).map((s) => (
                 <li key={s.number} className="flex items-center gap-3">
-                  <span className="w-6 text-right font-mono text-sm text-subtle">{s.number}</span>
+                  <span className="w-6 text-right font-mono text-sm text-meta">{s.number}</span>
                   <span className="flex gap-1.5" role="group" aria-label={`Guess ${s.number}: ${s.guess}`}>
                     {[...s.guess].map((l, i) => (
                       <Tile key={i} letter={l} mark={parseMarks(s.marks)?.[i] ?? 0} />
@@ -144,40 +143,40 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
               <button type="button" className={button} disabled={step >= total} onClick={() => go(step + 1)} aria-label="Next Guess">
                 Next →
               </button>
-              <span className="text-sm text-subtle" aria-live="polite">
+              <span className="text-sm text-meta" aria-live="polite">
                 Guess {step} of {total}
                 {step === total && (data.solved ? ": solved" : ": not solved")}
               </span>
             </div>
-            <p className="mt-1 text-xs text-subtle">Left and Right arrow keys also step through the Game.</p>
+            <p className="mt-1 text-xs text-meta">Left and Right arrow keys also step through the Game.</p>
 
             <p className="mt-3" aria-live="polite">
-              Candidate Set: <strong className="font-mono text-heading">{shown.candidates_before}</strong> →{" "}
-              <strong className="font-mono text-heading">{shown.candidates_after}</strong>{" "}
-              <span className="text-subtle">after {shown.guess.toUpperCase()}</span>
+              Candidate Set: <strong className="font-mono text-text">{shown.candidates_before}</strong> →{" "}
+              <strong className="font-mono text-text">{shown.candidates_after}</strong>{" "}
+              <span className="text-meta">after {shown.guess.toUpperCase()}</span>
             </p>
 
             <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[22rem] text-left text-sm">
-                <caption className="pb-1 text-left text-xs text-subtle">The Solver&apos;s top Suggestions for Guess {step}</caption>
-                <thead className="text-subtle">
+              <table className="data-table min-w-[22rem] text-left">
+                <caption className="eyebrow pb-2 text-left">The Solver&apos;s top Suggestions for Guess {step}</caption>
+                <thead>
                   <tr>
-                    <th scope="col" className="py-1 pr-3 font-normal">Guess</th>
-                    <th scope="col" className="py-1 pr-3 text-right font-normal">Bits</th>
-                    <th scope="col" className="py-1 pr-3 text-right font-normal">Expected Candidates</th>
-                    <th scope="col" className="py-1 font-normal">Candidate?</th>
+                    <th scope="col">Guess</th>
+                    <th scope="col" className="text-right">Bits</th>
+                    <th scope="col" className="text-right">Expected Candidates</th>
+                    <th scope="col">Candidate?</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shown.alternatives.map((w, i) => (
                     <tr key={w.word} className={i === 0 ? "bg-highlight-low font-semibold" : ""}>
-                      <td className="py-1 pr-3 pl-1 font-mono uppercase">
+                      <td className="font-mono uppercase">
                         {w.word}
-                        {i === 0 && <span className="ml-2 text-xs font-normal normal-case text-subtle">played</span>}
+                        {i === 0 && <span className="ml-2 text-xs font-normal normal-case text-meta">played</span>}
                       </td>
-                      <td className="py-1 pr-3 text-right font-mono">{w.bits.toFixed(2)}</td>
-                      <td className="py-1 pr-3 text-right font-mono">{w.expected_candidates.toFixed(1)}</td>
-                      <td className="py-1">{w.is_candidate ? "yes" : "no"}</td>
+                      <td className="text-right font-mono">{w.bits.toFixed(2)}</td>
+                      <td className="text-right font-mono">{w.expected_candidates.toFixed(1)}</td>
+                      <td>{w.is_candidate ? "yes" : "no"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -207,7 +206,7 @@ function Select({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-sm text-subtle">
+      <label htmlFor={id} className="mb-1 block text-sm text-meta">
         {label}
       </label>
       <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={className}>

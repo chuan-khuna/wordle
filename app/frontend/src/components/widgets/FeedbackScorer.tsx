@@ -62,8 +62,8 @@ function Scorer({ guess: guessProp = "", answer: answerProp = "", id }: { guess?
       </div>
 
       <div aria-live="polite" className="mt-3 min-h-6 text-sm">
-        {!ready && <p className="text-subtle">Type a five-letter Guess and Answer.</p>}
-        {ready && !current && <p className="text-subtle">Checking the words…</p>}
+        {!ready && <p className="text-meta">Type a five-letter Guess and Answer.</p>}
+        {ready && !current && <p className="text-meta">Checking the words…</p>}
         {current?.error && (
           <p role="alert" className="text-error">
             {current.error}
@@ -84,11 +84,11 @@ function Scorer({ guess: guessProp = "", answer: answerProp = "", id }: { guess?
             ))}
           </div>
           <div className="space-y-3 text-sm leading-relaxed">
-            <p className="text-subtle">
+            <p className="text-meta">
               Each letter of the Answer can pay for only one Mark, and Correct Marks are given out first.
             </p>
             <div>
-              <p className="font-semibold text-heading">Pass 1: Correct</p>
+              <p className="font-medium text-text">Pass 1: Correct</p>
               <p>
                 Compare position by position.{" "}
                 {trace.correct.some(Boolean)
@@ -105,7 +105,7 @@ function Scorer({ guess: guessProp = "", answer: answerProp = "", id }: { guess?
               </p>
             </div>
             <div>
-              <p className="font-semibold text-heading">Pass 2: Present, left to right</p>
+              <p className="font-medium text-text">Pass 2: Present, left to right</p>
               {trace.steps.length === 0 ? (
                 <p>Nothing left to do: every letter is Correct.</p>
               ) : (

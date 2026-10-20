@@ -83,7 +83,7 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
       <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
         <WordInput id={`${uid}-g`} label="Guess" value={guess} onChange={setGuess} />
         <div>
-          <label htmlFor={`${uid}-s`} className="mb-1 block text-sm text-subtle">
+          <label htmlFor={`${uid}-s`} className="mb-1 block text-sm text-meta">
             State (optional): <span className="font-mono">guess:feedback</span>, comma separated
           </label>
           <input
@@ -93,14 +93,14 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
             autoComplete="off"
             spellCheck={false}
             placeholder="crane:00102,slate:01200"
-            className="w-full rounded-md border border-highlight-high bg-background px-3 py-2 font-mono text-lg text-text placeholder:text-muted focus-visible:outline-2 focus-visible:outline-accent"
+            className="field font-mono text-base"
           />
         </div>
       </div>
 
       <div aria-live="polite" className="mt-3 min-h-6 text-sm">
-        {!ready && <p className="text-subtle">Type a five-letter Guess.</p>}
-        {ready && !current && <p className="text-subtle">Splitting the Candidate Set…</p>}
+        {!ready && <p className="text-meta">Type a five-letter Guess.</p>}
+        {ready && !current && <p className="text-meta">Splitting the Candidate Set…</p>}
         {current?.error && (
           <p role="alert" className="text-error">
             {current.error}
@@ -126,14 +126,14 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
             }}
             label={`Feedback Split of ${data.word}: words per Feedback group`}
           />
-          <p className="mt-1 text-xs text-subtle">
+          <p className="mt-1 text-xs text-meta">
             {data.groups > CHART_BARS
               ? `The ${CHART_BARS} largest of ${data.groups} groups are drawn; the list below has all of them. `
               : ""}
             Bars are labelled with their Feedback (0 Absent, 1 Present, 2 Correct). Click a bar or a row to see its words.
           </p>
 
-          <ul className="mt-3 max-h-64 divide-y divide-highlight-low overflow-y-auto rounded-md border border-highlight-med" aria-label="Feedback groups">
+          <ul className="mt-5 max-h-64 divide-y divide-rule overflow-y-auto border-y border-rule" aria-label="Feedback groups">
             {data.split.map((s) => {
               const marks = parseMarks(s.marks) ?? [];
               const on = s.marks === picked;
@@ -146,16 +146,16 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
                       setPicked(on ? null : s.marks);
                       setShowAllWords(false);
                     }}
-                    className={`flex w-full items-center gap-3 px-2 py-1.5 text-left hover:bg-highlight-low focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${on ? "bg-highlight-med" : ""}`}
+                    className={`flex w-full items-center gap-3 px-2 py-1.5 text-left cursor-pointer hover:bg-highlight-low focus-visible:-outline-offset-2 ${on ? "bg-highlight-low" : ""}`}
                   >
                     <span className="flex gap-1" aria-hidden>
                       {marks.map((m, i) => (
                         <Tile key={i} small letter={letters[i] ?? ""} mark={m} />
                       ))}
                     </span>
-                    <span className="font-mono text-sm text-subtle">{s.marks}</span>
+                    <span className="font-mono text-sm text-meta">{s.marks}</span>
                     <span className="ml-auto text-sm">
-                      <strong className="font-mono text-heading">{s.count}</strong> word{s.count === 1 ? "" : "s"}
+                      <strong className="font-mono text-text">{s.count}</strong> word{s.count === 1 ? "" : "s"}
                     </span>
                   </button>
                 </li>
@@ -178,7 +178,7 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
                   type="button"
                   onClick={() => setShowAllWords((s) => !s)}
                   aria-expanded={showAllWords}
-                  className="mt-2 rounded-md border border-highlight-high px-3 py-1.5 text-sm hover:bg-highlight-low focus-visible:outline-2 focus-visible:outline-accent"
+                  className="btn mt-2"
                 >
                   {showAllWords ? "Show fewer" : `Show all ${group.count}`}
                 </button>
@@ -194,8 +194,8 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
 function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
   return (
     <div>
-      <dt className="text-xs text-subtle">{label}</dt>
-      <dd className={`font-mono ${big ? "text-2xl font-bold text-heading" : "text-base"}`}>{value}</dd>
+      <dt className="eyebrow">{label}</dt>
+      <dd className={`mt-1 font-mono ${big ? "text-xl font-medium text-text" : "text-sm"}`}>{value}</dd>
     </div>
   );
 }

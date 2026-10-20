@@ -77,7 +77,7 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
   return (
     <WidgetFrame title="Opener table">
       <div className="max-w-40">
-        <label htmlFor={`${uid}-top`} className="mb-1 block text-sm text-subtle">
+        <label htmlFor={`${uid}-top`} className="mb-1 block text-sm text-meta">
           Rows to show
         </label>
         <input
@@ -88,12 +88,12 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
           inputMode="numeric"
           value={topText}
           onChange={(e) => setTopText(e.target.value)}
-          className="w-full rounded-md border border-highlight-high bg-background px-3 py-2 font-mono text-lg text-text focus-visible:outline-2 focus-visible:outline-accent"
+          className="field font-mono text-base"
         />
       </div>
 
       <div aria-live="polite" className="mt-3 min-h-6 text-sm">
-        {loading && <p className="text-subtle">Loading the Opener leaderboard…</p>}
+        {loading && <p className="text-meta">Loading the Opener leaderboard…</p>}
         {error && (
           <p role="alert" className="text-error">
             {error}
@@ -103,12 +103,12 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
 
       {data && (
         <>
-          <div className="overflow-x-auto rounded-md border border-highlight-med" tabIndex={0} role="region" aria-label="Opener table, scrollable">
-            <table className="w-full min-w-[34rem] border-collapse text-sm">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Opener table, scrollable">
+            <table className="data-table min-w-[34rem]">
               <caption className="sr-only">
                 The {rows.length} best Openers by Expected Information, out of {data.total} scored.
               </caption>
-              <thead className="bg-highlight-low">
+              <thead>
                 <tr>
                   {COLUMNS.map((c) => {
                     const active = sort.key === c.key;
@@ -117,15 +117,15 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
                         key={c.key}
                         scope="col"
                         aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                        className={`px-2 py-1 font-semibold ${c.numeric ? "text-right" : "text-left"}`}
+                        className={c.numeric ? "text-right" : "text-left"}
                       >
                         <button
                           type="button"
                           onClick={() => setSort(active ? { key: c.key, dir: sort.dir === "asc" ? "desc" : "asc" } : { key: c.key, dir: c.first })}
-                          className="rounded px-1 py-0.5 hover:bg-highlight-med focus-visible:outline-2 focus-visible:outline-accent"
+                          className="cursor-pointer hover:text-text"
                         >
                           {c.label}
-                          <span aria-hidden className="ml-1 inline-block w-3 text-accent">
+                          <span aria-hidden className="ml-1 inline-block w-3 text-text">
                             {active ? (sort.dir === "asc" ? "▲" : "▼") : ""}
                           </span>
                         </button>
@@ -134,14 +134,14 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
                   })}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-highlight-low">
+              <tbody>
                 {rows.map((o) => (
                   <Row key={o.word} o={o} on={marked.has(o.word)} />
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="mt-2 text-xs text-subtle">
+          <p className="mt-2 text-xs text-meta">
             {data.total} Openers are scored; Expected Candidates is the number of Candidates an Opener is expected to leave.
             Click a heading to sort by it.
           </p>
@@ -153,14 +153,14 @@ function Table({ top: topProp = 20, highlight: highlightProp = "", id }: { top?:
 
 function Row({ o, on }: { o: Opener; on: boolean }) {
   return (
-    <tr className={on ? "bg-highlight-med" : undefined}>
-      <td className="px-2 py-1 text-right font-mono text-subtle">{o.rank}</td>
-      <td className={`px-2 py-1 font-mono uppercase ${on ? "font-bold text-heading" : ""}`}>{o.word}</td>
-      <td className="px-2 py-1 text-right font-mono">{o.bits.toFixed(3)}</td>
-      <td className="px-2 py-1 text-right font-mono">{o.expected_candidates.toFixed(1)}</td>
-      <td className="px-2 py-1 text-right font-mono">{o.groups}</td>
-      <td className="px-2 py-1 text-right font-mono">{o.largest_group}</td>
-      <td className="px-2 py-1">{o.is_candidate ? "Yes" : "No"}</td>
+    <tr className={on ? "bg-highlight-low" : undefined}>
+      <td className="text-right font-mono text-meta">{o.rank}</td>
+      <td className={`font-mono uppercase ${on ? "font-semibold text-text" : ""}`}>{o.word}</td>
+      <td className="text-right font-mono">{o.bits.toFixed(3)}</td>
+      <td className="text-right font-mono">{o.expected_candidates.toFixed(1)}</td>
+      <td className="text-right font-mono">{o.groups}</td>
+      <td className="text-right font-mono">{o.largest_group}</td>
+      <td>{o.is_candidate ? "Yes" : "No"}</td>
     </tr>
   );
 }

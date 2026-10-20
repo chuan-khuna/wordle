@@ -6,7 +6,7 @@ import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
-import { CHART_CLASS } from "./ui";
+import { CHART_CLASS, CHART_THEME } from "./ui";
 
 export interface Bar {
   marks: string;
@@ -16,7 +16,7 @@ export interface Bar {
 /**
  * A bar chart of Feedback groups, drawn with TanStack Charts (`@tanstack/react-charts`).
  * Colours are theme roles written as CSS variables (`var(--accent)`), so the bars follow the theme
- * picker live without rebuilding the chart; text and grid use `currentColor`, set by `text-subtle`.
+ * picker live without rebuilding the chart; text and grid use `currentColor`, set by `text-meta`.
  * It only ever renders after the data has arrived on the client, so there is nothing to hydrate.
  * Clicking (or Enter on) a bar calls `onSelect` with its Feedback.
  */
@@ -39,7 +39,7 @@ export function GroupChart({
             x: "marks",
             y: "count",
             fill: (d) => (d.marks === selected ? "var(--heading)" : "var(--accent)"),
-            radius: { end: 3 },
+            radius: { end: 1 },
           }),
         ],
         scales: {
@@ -58,6 +58,7 @@ export function GroupChart({
           },
         },
         tooltip,
+        theme: CHART_THEME,
       }),
     [bars, selected],
   );

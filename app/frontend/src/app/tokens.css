@@ -1,0 +1,188 @@
+/* Design tokens: the one place for type, space, measure, rules, shape and focus. Components use the
+   Tailwind utilities these generate (font-serif, text-sm, py-section, max-w-measure, border-rule, ...),
+   never raw values. The ten palettes live in themes.css; this file only maps their role names. */
+
+/* Colour roles (set per theme by themes.css) as Tailwind colours: bg-surface, text-text, ... */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-overlay: var(--overlay);
+  --color-highlight-low: var(--highlight-low);
+  --color-highlight-med: var(--highlight-med);
+  --color-highlight-high: var(--highlight-high);
+  --color-text: var(--text);
+  --color-subtle: var(--subtle);
+  --color-muted: var(--muted);
+  --color-heading: var(--heading);
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-accent: var(--accent);
+  --color-correct: var(--correct);
+  --color-on-correct: var(--on-correct);
+  --color-present: var(--present);
+  --color-on-present: var(--on-present);
+  --color-absent: var(--absent);
+  --color-on-absent: var(--on-absent);
+  --color-absent-key: var(--absent-key);
+  --color-on-absent-key: var(--on-absent-key);
+
+  /* Derived roles. `meta` is small metadata text: `subtle` pulled toward `text` so it stays at
+     least ~4.5:1 on `background` in the light palettes too (plain `subtle` is ~4.0:1 in Rosé Pine Dawn).
+     `rule` is the hairline colour for frames, row dividers and the chart grid; `rule-strong` for
+     input borders and table header lines. */
+  --color-meta: color-mix(in oklab, var(--subtle) 55%, var(--text));
+  --color-rule: var(--highlight-med);
+  --color-rule-strong: var(--highlight-high);
+}
+
+/* Type: families (loaded in layout.tsx with next/font, which sets --font-newsreader etc. on <html>),
+   scale (size and line-height), tracking. */
+@theme inline {
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+@theme {
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.125rem; /* prose: 18px serif at 1.7 leading */
+  --text-base--line-height: 1.7;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.55;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 2.375rem;
+  --text-3xl--line-height: 1.12;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.08;
+
+  --tracking-tight: -0.015em; /* display sizes */
+  --tracking-caps: 0.08em; /* small uppercase UI labels */
+
+  /* Space: Tailwind's 0.25rem scale for everything small, plus named steps for vertical rhythm. */
+  --spacing-gutter: 1.25rem; /* page side padding (see also sm:) */
+  --spacing-gutter-wide: 2rem;
+  --spacing-flow: 1.25rem; /* between blocks inside a section */
+  --spacing-figure: 2.5rem; /* above and below a Widget */
+  --spacing-section: 3.5rem; /* between page sections */
+
+  /* Measure: prose line length, and the page column. */
+  --container-measure: 68ch;
+  --container-page: 68rem;
+  --container-nav: 14rem;
+
+  /* Shape: small radius, no shadow. Tiles keep a 3px corner; everything else is square or 2px. */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+}
+
+:root {
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --rule-width: 1px;
+}
+
+/* One visible focus ring for everything focusable; components do not restyle it. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Shared building blocks, written once with tokens. */
+
+/* Link in running UI text: text colour, underlined in the accent. */
+@utility link {
+  color: var(--text);
+  text-decoration-line: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: var(--rule-width);
+  text-underline-offset: 0.22em;
+  &:hover {
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* Small uppercase label in the UI sans: Widget titles, table heads, eyebrows. */
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-meta);
+}
+
+/* Text input and select. */
+@utility field {
+  width: 100%;
+  border: var(--rule-width) solid var(--highlight-high);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  &::placeholder {
+    color: var(--subtle);
+  }
+}
+
+/* Button: hairline outline, quiet fill on hover. */
+@utility btn {
+  border: var(--rule-width) solid var(--highlight-high);
+  border-radius: var(--radius-sm);
+  padding: 0.375rem 0.875rem;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+  color: var(--text);
+  cursor: pointer;
+  &:hover:not(:disabled) {
+    background: var(--highlight-low);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+/* A table that reads as typeset data: no box, a rule under the head and between rows. */
+@utility data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  & thead th {
+    border-bottom: var(--rule-width) solid var(--highlight-high);
+    padding: 0.375rem 0.75rem;
+    font-weight: 500;
+    color: var(--color-meta);
+  }
+  & tbody tr {
+    border-bottom: var(--rule-width) solid var(--highlight-med);
+  }
+  & tbody td,
+  & tbody th {
+    padding: 0.375rem 0.75rem;
+  }
+  & :is(th, td):first-child {
+    padding-left: 0;
+  }
+  & :is(th, td):last-child {
+    padding-right: 0;
+  }
+  & tbody th {
+    font-weight: 400;
+    text-align: left;
+  }
+}

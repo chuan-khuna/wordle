@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return article ? { title: article.title, description: article.summary } : {};
 }
 
-const linkClass = "text-accent hover:underline";
+const linkClass = "link";
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -33,20 +33,20 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const builtOnBy = backlinks(slug);
 
   return (
-    <div className="space-y-6 lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-x-10 lg:space-y-0">
+    <div className="space-y-8 lg:grid lg:grid-cols-[var(--container-nav)_minmax(0,1fr)] lg:gap-x-16 lg:space-y-0">
       <SeriesNav series={series} articles={siblings} current={slug} />
-      <article className="min-w-0 space-y-8">
-        <header className="space-y-2">
-          <p className="text-sm text-subtle">
+      <article className="relative min-w-0 space-y-12">
+        <header className="max-w-measure space-y-4">
+          <p className="eyebrow">
             <Link href={`/series/${series.slug}`} className={linkClass}>
               {series.title}
             </Link>{" "}
             &middot; Article {at + 1} of {siblings.length}
           </p>
-          <h1 className="text-3xl font-bold text-heading">{article.title}</h1>
-          <p className="text-subtle">{article.summary}</p>
+          <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-balance text-text">{article.title}</h1>
+          <p className="text-lg text-meta">{article.summary}</p>
           {prerequisites.length > 0 && (
-            <p className="text-sm text-subtle">
+            <p className="font-sans text-sm text-meta">
               Prerequisites:{" "}
               {prerequisites.map((p, i) => (
                 <span key={p.slug}>
@@ -60,14 +60,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           )}
         </header>
 
-        <div className="prose prose-theme [&>:is(p,ul,ol,h2,h3,h4,blockquote)]:max-w-[70ch]">
+        <div className="prose prose-theme [&>:is(p,ul,ol,h2,h3,h4,blockquote)]:max-w-measure">
           <Body />
         </div>
 
         {builtOnBy.length > 0 && (
-          <section className="space-y-2">
-            <h2 className="text-xl font-semibold text-heading">Builds on this Article</h2>
-            <ul className="list-disc space-y-1 pl-6">
+          <section className="space-y-3">
+            <h2 className="eyebrow">Builds on this Article</h2>
+            <ul className="space-y-1">
               {builtOnBy.map((a) => (
                 <li key={a.slug}>
                   <Link href={`/articles/${a.slug}`} className={linkClass}>
@@ -81,7 +81,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
         <nav
           aria-label="Previous and next Article"
-          className="flex justify-between gap-4 border-t border-highlight-med pt-4 text-sm"
+          className="flex justify-between gap-6 font-sans text-sm"
         >
           {prev ? (
             <Link href={`/articles/${prev.slug}`} rel="prev" className={linkClass}>

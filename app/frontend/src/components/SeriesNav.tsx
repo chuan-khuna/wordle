@@ -4,10 +4,10 @@ import type { Article, Series } from "@/lib/content";
 function Contents({ series, articles, current }: { series: Series; articles: Article[]; current: string }) {
   return (
     <>
-      <Link href={`/series/${series.slug}`} className="block font-semibold text-heading hover:text-accent">
+      <Link href={`/series/${series.slug}`} className="block font-medium text-text hover:underline hover:decoration-accent hover:underline-offset-4">
         {series.title}
       </Link>
-      <ol className="mt-2 space-y-1">
+      <ol className="mt-3 space-y-0.5">
         {articles.map((a, i) => {
           const here = a.slug === current;
           return (
@@ -15,13 +15,13 @@ function Contents({ series, articles, current }: { series: Series; articles: Art
               <Link
                 href={`/articles/${a.slug}`}
                 aria-current={here ? "page" : undefined}
-                className={`flex gap-2 rounded-md border-l-2 px-2 py-1 text-sm ${
+                className={`flex gap-2 border-l py-1 pl-3 text-sm ${
                   here
-                    ? "border-accent bg-highlight-low font-semibold text-heading"
-                    : "border-transparent text-subtle hover:bg-highlight-low hover:text-text"
+                    ? "border-text font-medium text-text"
+                    : "border-rule text-meta hover:border-rule-strong hover:text-text"
                 }`}
               >
-                <span className="w-5 shrink-0 text-right tabular-nums">{i + 1}.</span>
+                <span className="w-5 shrink-0 tabular-nums">{i + 1}.</span>
                 <span>{a.title}</span>
               </Link>
             </li>
@@ -42,12 +42,12 @@ export function SeriesNav({ series, articles, current }: { series: Series; artic
     <>
       <nav
         aria-label={label}
-        className="hidden lg:sticky lg:top-6 lg:block lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto"
+        className="hidden font-sans lg:sticky lg:top-8 lg:block lg:max-h-[calc(100vh-4rem)] lg:self-start lg:overflow-y-auto"
       >
         <Contents series={series} articles={articles} current={current} />
       </nav>
-      <details className="rounded-md border border-highlight-med bg-surface p-3 lg:hidden">
-        <summary className="cursor-pointer text-sm font-semibold text-heading">{label}</summary>
+      <details className="border-y border-rule py-3 font-sans lg:hidden">
+        <summary className="eyebrow cursor-pointer">{label}</summary>
         <nav aria-label={label} className="mt-3">
           <Contents series={series} articles={articles} current={current} />
         </nav>

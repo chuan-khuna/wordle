@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
 import Link from "next/link";
 import "katex/dist/katex.min.css";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeScript } from "@/lib/theme-script";
 import "./globals.css";
+
+// Self-hosted at build; each sets a CSS variable that tokens.css maps to font-serif, font-sans, font-mono.
+const serif = Newsreader({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-newsreader", display: "swap" });
+const sans = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" });
 
 export const metadata: Metadata = {
   title: { default: "Solving Wordle", template: "%s | Solving Wordle" },
@@ -12,20 +18,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen bg-background font-sans text-text">
-        <header className="border-b border-highlight-med bg-surface">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-            <Link href="/" className="text-lg font-bold text-heading hover:text-accent">
+      <body className="min-h-screen bg-background font-serif text-text">
+        <header className="border-b border-rule font-sans">
+          <div className="mx-auto flex max-w-page items-center justify-between gap-4 px-gutter py-4 sm:px-gutter-wide">
+            <Link href="/" className="whitespace-nowrap text-base font-medium tracking-tight text-text hover:underline hover:decoration-accent hover:underline-offset-4">
               Solving Wordle
             </Link>
             <ThemePicker />
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-6 py-10">{children}</main>
+        <main className="mx-auto overflow-x-clip max-w-page px-gutter py-12 sm:px-gutter-wide sm:py-16">{children}</main>
       </body>
     </html>
   );

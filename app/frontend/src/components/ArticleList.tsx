@@ -3,13 +3,13 @@ import type { Article } from "@/lib/content";
 
 export function ArticleList({ articles }: { articles: Article[] }) {
   return (
-    <ol className="space-y-3">
+    <ol className="divide-y divide-rule border-y border-rule">
       {articles.map((a) => (
-        <li key={a.slug} className="rounded-md border border-highlight-med bg-surface p-4">
-          <Link href={`/articles/${a.slug}`} className="font-semibold text-heading hover:text-accent">
+        <li key={a.slug} className="py-5">
+          <Link href={`/articles/${a.slug}`} className="link text-lg font-medium tracking-tight">
             {a.title}
           </Link>
-          <p className="mt-1 text-sm text-subtle">{a.summary}</p>
+          <p className="mt-1 text-meta">{a.summary}</p>
         </li>
       ))}
     </ol>

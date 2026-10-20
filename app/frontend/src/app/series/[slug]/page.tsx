@@ -23,26 +23,27 @@ export default async function SeriesPage({ params }: { params: Promise<{ slug: s
   const { default: Body } = await import(`@content/series/${slug}.mdx`);
   const articles = inSeries(slug);
   return (
-    <div className="max-w-3xl space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-bold text-heading">{series.title}</h1>
-        <p className="text-subtle">{series.intro}</p>
+    <div className="relative max-w-measure space-y-12">
+      <header className="space-y-4">
+        <p className="eyebrow">Series</p>
+        <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-balance text-text">{series.title}</h1>
+        <p className="text-lg text-meta">{series.intro}</p>
       </header>
       {series.video && <VideoEmbed video={series.video} title={`${series.title}: video`} />}
       <div className="prose prose-theme">
         <Body />
       </div>
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold text-heading">Articles</h2>
-        <ol className="space-y-3">
+      <section className="space-y-6">
+        <h2 className="eyebrow">Articles</h2>
+        <ol className="divide-y divide-rule border-y border-rule">
           {articles.map((a, i) => (
-            <li key={a.slug} className="rounded-md border border-highlight-med bg-surface p-4">
-              <Link href={`/articles/${a.slug}`} className="font-semibold text-heading hover:text-accent">
+            <li key={a.slug} className="py-5">
+              <Link href={`/articles/${a.slug}`} className="link text-lg font-medium tracking-tight">
                 {i + 1}. {a.title}
               </Link>
-              <p className="mt-1 text-sm text-subtle">{a.summary}</p>
+              <p className="mt-1 text-meta">{a.summary}</p>
               {series.video && a.videoStart !== undefined && (
-                <a href={youtubeUrl(series.video, a.videoStart)} className="mt-1 inline-block text-sm text-accent hover:underline">
+                <a href={youtubeUrl(series.video, a.videoStart)} className="link mt-2 inline-block font-sans text-sm">
                   Watch from {formatTimestamp(a.videoStart)}
                 </a>
               )}

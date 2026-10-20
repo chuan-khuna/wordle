@@ -7,7 +7,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
 import { type BenchmarkStrategy, getBenchmark } from "@/lib/api";
-import { CHART_CLASS, WidgetFrame } from "./ui";
+import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
 
@@ -62,7 +62,7 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
   return (
     <WidgetFrame title="Benchmark chart">
       <div aria-live="polite" className="min-h-6 text-sm">
-        {loading && <p className="text-subtle">Loading the Benchmark…</p>}
+        {loading && <p className="text-meta">Loading the Benchmark…</p>}
         {error && (
           <p role="alert" className="text-error">
             {error}
@@ -75,45 +75,45 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
           <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Strategies">
             {shown.map((s) => (
               <li key={s.id} className="flex items-center gap-1.5">
-                <span aria-hidden className="inline-block h-3 w-3 rounded-sm" style={{ background: colors.get(s.id) }} />
+                <span aria-hidden className="inline-block h-3 w-3 rounded-xs" style={{ background: colors.get(s.id) }} />
                 {s.name}
               </li>
             ))}
           </ul>
 
           <DistributionChart strategies={shown} colors={colors} limit={limit} />
-          <p className="mt-1 text-xs text-subtle">
+          <p className="mt-1 text-xs text-meta">
             Games won at each Guess Count; the last group counts the Losses (not solved within {limit} Guesses).
           </p>
 
-          <div className="mt-3 overflow-x-auto rounded-md border border-highlight-med" tabIndex={0} role="region" aria-label="Benchmark results, scrollable">
-            <table className="w-full min-w-[34rem] border-collapse text-sm">
+          <div className="mt-5 overflow-x-auto" tabIndex={0} role="region" aria-label="Benchmark results, scrollable">
+            <table className="data-table min-w-[34rem]">
               <caption className="sr-only">Benchmark results for each Strategy, with its Guess Distribution.</caption>
-              <thead className="bg-highlight-low">
+              <thead>
                 <tr>
-                  <th scope="col" className="px-2 py-1 text-left">Strategy</th>
-                  <th scope="col" className="px-2 py-1 text-left">Opener</th>
-                  <th scope="col" className="px-2 py-1 text-right">Average Guess Count</th>
-                  <th scope="col" className="px-2 py-1 text-right">Losses</th>
+                  <th scope="col" className="text-left">Strategy</th>
+                  <th scope="col" className="text-left">Opener</th>
+                  <th scope="col" className="text-right">Average Guess Count</th>
+                  <th scope="col" className="text-right">Losses</th>
                   {Array.from({ length: limit }, (_, i) => (
-                    <th key={i} scope="col" className="px-2 py-1 text-right">
+                    <th key={i} scope="col" className="text-right">
                       {i + 1}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-highlight-low">
+              <tbody>
                 {shown.map((s) => (
                   <tr key={s.id}>
-                    <th scope="row" className="px-2 py-1 text-left font-normal">
-                      <span aria-hidden className="mr-1.5 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: colors.get(s.id) }} />
+                    <th scope="row" className="text-left font-normal whitespace-nowrap">
+                      <span aria-hidden className="mr-1.5 inline-block h-3 w-3 rounded-xs align-middle" style={{ background: colors.get(s.id) }} />
                       {s.name}
                     </th>
-                    <td className="px-2 py-1 font-mono uppercase">{s.opener}</td>
-                    <td className="px-2 py-1 text-right font-mono font-bold text-heading">{s.average_guess_count.toFixed(3)}</td>
-                    <td className={`px-2 py-1 text-right font-mono ${s.losses > 0 ? "font-bold text-error" : ""}`}>{s.losses}</td>
+                    <td className="font-mono uppercase">{s.opener}</td>
+                    <td className="text-right font-mono font-semibold text-text">{s.average_guess_count.toFixed(3)}</td>
+                    <td className={`text-right font-mono ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</td>
                     {s.distribution.map((n, i) => (
-                      <td key={i} className="px-2 py-1 text-right font-mono">
+                      <td key={i} className="text-right font-mono">
                         {n}
                       </td>
                     ))}
@@ -128,13 +128,13 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
                 .filter((s) => s.losses > 0)
                 .map((s) => (
                   <div key={s.id}>
-                    <dt className="inline text-subtle">{s.name} lost: </dt>
+                    <dt className="inline text-meta">{s.name} lost: </dt>
                     <dd className="inline font-mono">{s.lost_answers.join(", ")}</dd>
                   </div>
                 ))}
             </dl>
           )}
-          <p className="mt-2 text-xs text-subtle">
+          <p className="mt-2 text-xs text-meta">
             Average Guess Count is over the won Games; each Strategy played {shown[0]?.games ?? 0} Games.
           </p>
         </>
@@ -157,7 +157,7 @@ function DistributionChart({ strategies, colors, limit }: { strategies: Benchmar
           z: "strategy",
           fill: (d) => d.fill,
           layout: group({ padding: 0.05 }),
-          radius: { end: 2 },
+          radius: { end: 1 },
         }),
       ],
       scales: {
@@ -173,6 +173,7 @@ function DistributionChart({ strategies, colors, limit }: { strategies: Benchmar
         },
       },
       tooltip,
+      theme: CHART_THEME,
     });
   }, [strategies, colors, limit]);
 

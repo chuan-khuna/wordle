@@ -14,16 +14,16 @@ export function Term({ children, of }: { children: React.ReactNode; of?: string 
   }
   const entry = lookupTerm(name);
   return (
-    <span className="group relative">
-      <span tabIndex={0} aria-describedby={id} className="cursor-help underline decoration-accent decoration-dotted underline-offset-4">
+    <span className="group sm:relative">
+      <span tabIndex={0} aria-describedby={id} className="cursor-help underline decoration-accent decoration-dotted decoration-1 underline-offset-4">
         {children}
       </span>
       <span
         role="tooltip"
         id={id}
-        className="invisible absolute bottom-full left-0 z-10 mb-1 block w-72 max-w-[80vw] rounded-md border border-highlight-med bg-overlay p-3 text-sm leading-snug font-normal text-text shadow-lg group-focus-within:visible group-hover:visible"
+        className="absolute z-10 mt-8 hidden w-auto rounded-sm border border-rule-strong bg-overlay p-3 font-sans text-sm leading-snug font-normal tracking-normal text-text normal-case not-italic group-focus-within:block group-hover:block max-sm:inset-x-0 sm:bottom-full sm:left-0 sm:mt-0 sm:mb-2 sm:w-72 sm:max-w-[80vw]"
       >
-        <strong className="text-heading">{entry.term}</strong>: {entry.definition}
+        <strong className="font-medium">{entry.term}</strong>: {entry.definition}
       </span>
     </span>
   );

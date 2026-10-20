@@ -2,9 +2,9 @@ import { MARK_NAMES, type Mark } from "@/lib/feedback";
 
 const PAINT = ["bg-absent text-on-absent", "bg-present text-on-present", "bg-correct text-on-correct"] as const;
 const BASE =
-  "inline-flex h-12 w-12 items-center justify-center rounded-md text-2xl font-bold uppercase select-none sm:h-14 sm:w-14";
+  "inline-flex h-12 w-12 items-center justify-center rounded-md font-mono text-2xl font-semibold uppercase select-none sm:h-14 sm:w-14";
 
-const SMALL = "inline-flex h-8 w-8 items-center justify-center rounded text-base font-bold uppercase select-none";
+const SMALL = "inline-flex h-8 w-8 items-center justify-center rounded-sm font-mono text-sm font-semibold uppercase select-none";
 
 /** A letter tile painted with its Mark's theme role. Pass `onCycle` to make it a button that steps through the Marks. */
 export function Tile({
@@ -33,7 +33,7 @@ export function Tile({
       onClick={onCycle}
       aria-label={`${label}. Press to change the Mark.`}
       title={MARK_NAMES[mark]}
-      className={`${base} ${PAINT[mark]} cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent`}
+      className={`${base} ${PAINT[mark]} cursor-pointer`}
     >
       {letter || "·"}
     </button>

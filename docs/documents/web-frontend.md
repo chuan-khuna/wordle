@@ -20,7 +20,8 @@ app/frontend/
       page.tsx              the index page: the Series and all Articles
       articles/[slug]/      an Article page
       series/[slug]/        a Series page
-      globals.css           Tailwind, and the CSS variables mapped to Tailwind colours
+      globals.css           Tailwind, the base body style, the prose-theme rules and KaTeX tweaks
+      tokens.css            the design tokens: colour roles, fonts, type scale, space, measure, shape, focus, shared utilities
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ThemePicker.tsx
     components/Term.tsx, VideoEmbed.tsx, ArticleList.tsx
@@ -60,11 +61,26 @@ The gpui app's ten palettes (see [gpui-app.md](gpui-app.md)) with the same role 
 - plain roles: `--background`, `--surface`, `--overlay`, `--highlight-low`, `--highlight-med`, `--highlight-high`, `--text`, `--subtle`, `--muted`, `--heading`, `--error`, `--success`, `--accent`,
 - Paint roles, a fill and the colour of the letter on it: `--correct`, `--present`, `--absent`, `--absent-key`, each with `--on-correct`, `--on-present`, `--on-absent`, `--on-absent-key`.
 
-`globals.css` maps each to a Tailwind colour of the same name (`@theme inline`), so components write `bg-surface`, `text-subtle`, `border-highlight-med`, or a tile as `bg-correct text-on-correct`. Components never use fixed colours, so every theme works everywhere. When a gpui palette changes, update `themes.css` and `themes.ts` to match.
+`tokens.css` maps each to a Tailwind colour of the same name (`@theme inline`), so components write `bg-surface`, `text-subtle`, `border-highlight-med`, or a tile as `bg-correct text-on-correct`. Components never use fixed colours, so every theme works everywhere. When a gpui palette changes, update `themes.css` and `themes.ts` to match.
 
 **Default and choice.** With no saved choice ("System" in the picker) the theme follows `prefers-color-scheme`: Rosé Pine Dawn for light, Rosé Pine for dark, and it changes live with the system setting. Picking a theme saves its id in `localStorage` (`wordle-theme`); picking System removes it.
 
 **No flash.** `layout.tsx` puts an inline script (`lib/theme-script.ts`) in `<head>`. It runs before the first paint: it reads `localStorage` (inside `try/catch`, since storage can be blocked), falls back to the system setting, and sets `data-theme` and `data-theme-choice` on `<html>`. `<html>` has `suppressHydrationWarning` because of that. `ThemePicker` reads `data-theme-choice` with `useSyncExternalStore` (the server renders "System"), and changes the theme by saving the choice and dispatching a `wordle-theme` event that the script listens for.
+
+## Design tokens
+
+The look is a minimal editorial one: the text leads and chrome recedes. All non-colour tokens live in `app/tokens.css` (with the role-to-colour mapping, formerly in `globals.css`); the palettes stay in `themes.css`. Components use the Tailwind utilities the tokens generate and no raw sizes, fonts or colours.
+
+- **Fonts** (`next/font/google` in `layout.tsx`, self-hosted at build, exposed as `--font-newsreader`, `--font-inter`, `--font-jetbrains-mono` and mapped to `font-serif`, `font-sans`, `font-mono`): Newsreader for prose, headings and the body default; Inter for UI (header, nav, Widgets, tables, eyebrow labels); JetBrains Mono for tiles, Feedback digits, words and numbers (tabular figures).
+- **Type scale**: `text-xs` to `text-4xl`, each with a line-height (`--text-*--line-height`). `text-base` is the 18px prose size at 1.7 leading. `tracking-tight` for display sizes, `tracking-caps` for small uppercase labels.
+- **Space**: Tailwind's scale for small gaps, plus `gutter` / `gutter-wide` (page padding), `flow` (between blocks), `figure` (around a Widget) and `section` (between sections), as `px-gutter`, `my-figure`, `space-y-section`.
+- **Measure and page**: `max-w-measure` (68ch) for prose and text blocks, `max-w-page` (68rem) for the page, `--container-nav` for the Series side nav column.
+- **Rules**: `border-rule` (`highlight-med`) is the hairline for frames, dividers and the chart grid; `border-rule-strong` (`highlight-high`) for input borders and table heads. 1px (`--rule-width`).
+- **Shape**: radius 1-3px (tiles keep 3px), `--shadow-*` are `none`.
+- **Focus**: one global `:focus-visible` ring (2px `accent`, 2px offset); components do not restyle it.
+- **Colour use**: `text` and `background` carry the page (headings are `text`, not `heading`: `heading` and `accent` fall under 3:1 on `background` in Rosé Pine Dawn and Catppuccin Latte); `accent` is only link underlines, the Term underline and focus. Small metadata uses the derived `text-meta` (`subtle` mixed 45% toward `text`, so it stays above about 4.5:1 in every palette); plain `subtle` is for placeholders and `muted` only for decoration. `surface` is used only behind the video embed and `overlay` for tooltips.
+- **Shared utilities** (in `tokens.css`): `link`, `eyebrow` (small uppercase UI label), `field` (input and select), `btn`, `data-table`. A Widget is `WidgetFrame` in `widgets/ui.tsx`: hairline rules above and below and an `eyebrow` title, no fill. Charts use `CHART_CLASS` (UI sans, `text-meta`, tooltip variables) and `CHART_THEME` (grid in `highlight-med`).
+- **Prose** (`prose-theme` in `globals.css`) takes fonts, sizes and colours from the tokens; its rules skip `not-prose` blocks (Widgets). KaTeX is sized at 1.08em and long display maths scrolls inside itself.
 
 ## Articles and Series
 
@@ -91,7 +107,7 @@ Body in MDX. Inline maths $x^2$, display maths in `$$ ... $$`, and <Term>Feedbac
 
 The Article page shows its Series and position, its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links within its Series.
 
-**Series side nav** (`components/SeriesNav.tsx`). It lists the Series title (a link to the Series page) and every Article of the Series in `order`, as number and title; the current Article has `aria-current="page"` and is styled with theme roles (`border-accent bg-highlight-low text-heading`). From the `lg` breakpoint (1024px) it is a column beside the Article (grid `14rem` + the rest), `position: sticky` so it stays in view while scrolling, and it scrolls inside itself if the Series is long. Below that it is a collapsed `<details>` above the Article, so the page never scrolls sideways. The list is rendered twice and CSS shows one of the two, so there is no client JavaScript. The site `<main>` is `max-w-6xl` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at 70ch while Widgets and display maths use the full column. The index and Series pages stay `max-w-3xl`.
+**Series side nav** (`components/SeriesNav.tsx`). It lists the Series title (a link to the Series page) and every Article of the Series in `order`, as number and title; the current Article has `aria-current="page"` and is styled with theme roles (`border-text font-medium text-text`). From the `lg` breakpoint (1024px) it is a column beside the Article (grid `14rem` + the rest), `position: sticky` so it stays in view while scrolling, and it scrolls inside itself if the Series is long. Below that it is a collapsed `<details>` above the Article, so the page never scrolls sideways. The list is rendered twice and CSS shows one of the two, so there is no client JavaScript. The site `<main>` is `max-w-6xl` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at 70ch while Widgets and display maths use the full column. The index and Series pages stay `max-w-3xl`.
 
 **Add a Series.** Create `content/series/<slug>.mdx` with frontmatter `title`, `intro` and optional `video` (a YouTube id or URL), then optional MDX body text. The Series page embeds the video and lists its Articles in `order`, each with a "Watch from m:ss" link.
 
@@ -109,7 +125,7 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 
 ## Maths
 
-Write `$inline$` and `$$display$$` (remark-math, rendered by rehype-katex). Prose is styled by `@tailwindcss/typography` as `prose prose-theme`, where `prose-theme` (in `globals.css`) sets the typography colours from the theme roles.
+Write `$inline$` and `$$display$$` (remark-math, rendered by rehype-katex). Prose is styled by `@tailwindcss/typography` as `prose prose-theme`, where `prose-theme` (in `globals.css`) sets the typography from the design tokens.
 
 ## Widgets
 

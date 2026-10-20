@@ -5,11 +5,11 @@ export function cleanWord(text: string): string {
   return text.toLowerCase().replace(/[^a-z]/g, "").slice(0, 5);
 }
 
-/** The card every Widget sits in. */
+/** Every Widget is a figure in the text: hairline rules above and below, a small caption-style title, UI sans. */
 export function WidgetFrame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section aria-label={title} className="not-prose my-8 rounded-lg border border-highlight-med bg-surface p-4 sm:p-5">
-      <h3 className="mb-3 text-sm font-semibold tracking-wide text-subtle uppercase">{title}</h3>
+    <section aria-label={title} className="not-prose my-figure border-y border-rule py-6 font-sans text-sm">
+      <h3 className="eyebrow mb-4">{title}</h3>
       {children}
     </section>
   );
@@ -30,7 +30,7 @@ export function WordInput({
 }) {
   return (
     <div>
-      <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm text-subtle"}>
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm text-meta"}>
         {label}
       </label>
       <input
@@ -42,12 +42,20 @@ export function WordInput({
         autoCapitalize="none"
         spellCheck={false}
         placeholder="five letters"
-        className="w-full rounded-md border border-highlight-high bg-background px-3 py-2 font-mono text-lg uppercase text-text placeholder:text-muted placeholder:normal-case focus-visible:outline-2 focus-visible:outline-accent"
+        className="field font-mono text-base uppercase placeholder:font-sans placeholder:text-sm placeholder:normal-case"
       />
     </div>
   );
 }
 
-/** The wrapper every chart sits in: `currentColor` text and grid from `text-subtle`, tooltip colours from theme roles. */
-export const CHART_CLASS =
-  "text-subtle [--ts-chart-tooltip-background:var(--overlay)] [--ts-chart-tooltip-color:var(--text)]";
+/** Chart axis and grid text: the UI sans at caption size, in `meta`, with tabular figures. */
+export const CHART_CLASS = [
+  "font-sans text-xs text-meta tabular-nums",
+  // Tooltip: overlay panel, hairline border, small radius, no shadow, same type as the axes.
+  "[--ts-chart-tooltip-background:var(--overlay)] [--ts-chart-tooltip-color:var(--text)]",
+  "[--ts-chart-tooltip-border:1px_solid_var(--highlight-high)] [--ts-chart-tooltip-border-radius:2px]",
+  "[--ts-chart-tooltip-shadow:none] [--ts-chart-tooltip-font:400_12px/1.4_var(--font-sans)]",
+].join(" ");
+
+/** Chart guide colours: a hairline grid in the rule colour. Pass as `theme` to `defineChart`. */
+export const CHART_THEME = { grid: "var(--highlight-med)" } as const;

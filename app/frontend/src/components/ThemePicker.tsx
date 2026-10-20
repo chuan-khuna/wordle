@@ -30,13 +30,13 @@ export function ThemePicker() {
   const light = THEMES.filter((theme) => !theme.dark);
 
   return (
-    <label className="flex items-center gap-2 text-sm text-subtle">
-      Theme
+    <label className="flex items-center gap-2 text-sm text-meta">
+      <span className="max-sm:sr-only">Theme</span>
       <select
         value={choice}
         onChange={(event) => choose(event.target.value)}
         suppressHydrationWarning
-        className="rounded-md border border-highlight-med bg-overlay px-2 py-1 text-text focus:border-accent focus:outline-none"
+        className="max-w-[11rem] rounded-sm border border-rule-strong bg-background px-2 py-1 text-text"
       >
         <option value={SYSTEM}>System</option>
         <optgroup label="Dark">

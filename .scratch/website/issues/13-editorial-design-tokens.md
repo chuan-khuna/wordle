@@ -1,6 +1,6 @@
 # Editorial, minimal design tokens
 
-Status: ready-for-agent
+Status: done
 Blocked by: 12
 
 Redesign the site's design tokens and apply them so the site reads like a minimal editorial publication: the text leads, and chrome recedes.
@@ -14,3 +14,7 @@ Redesign the site's design tokens and apply them so the site reads like a minima
 - Check light and dark in at least three palettes, at about 1280px and 390px wide. Update `docs/documents/web-frontend.md` with a short Design tokens section.
 
 See [spec](../spec.md).
+
+## Comments
+
+Done. Tokens are in `app/frontend/src/app/tokens.css`; fonts are Newsreader (prose), Inter (UI) and JetBrains Mono (tiles and numbers) via `next/font/google`. Headings use `text` and metadata uses a derived `meta` role, because `heading`/`accent`/`subtle` are below 4.5:1 (some below 3:1) in the light palettes. See "Design tokens" in `docs/documents/web-frontend.md`. Checked in four palettes (Rosé Pine Dawn, Catppuccin Latte, Tokyo Night, Nord) at 1280px and 390px with no horizontal page scroll.

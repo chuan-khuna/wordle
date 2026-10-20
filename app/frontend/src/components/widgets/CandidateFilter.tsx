@@ -102,27 +102,27 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
               </div>
               <div className="min-w-32 text-sm" aria-live="polite">
                 {!isComplete ? (
-                  <span className="text-subtle">type five letters</span>
+                  <span className="text-meta">type five letters</span>
                 ) : !fresh ? (
-                  <span className="text-subtle">…</span>
+                  <span className="text-meta">…</span>
                 ) : after && "error" in after && before && !("error" in before) ? (
                   <span role="alert" className="text-error">
                     {after.error}
                   </span>
                 ) : before && after && !("error" in before) && !("error" in after) ? (
                   <span>
-                    <span className="font-mono">{before.count}</span> → <strong className="font-mono text-heading">{after.count}</strong>{" "}
-                    <span className="text-subtle">Candidates</span>
+                    <span className="font-mono">{before.count}</span> → <strong className="font-mono text-text">{after.count}</strong>{" "}
+                    <span className="text-meta">Candidates</span>
                   </span>
                 ) : (
-                  <span className="text-subtle">—</span>
+                  <span className="text-meta">—</span>
                 )}
               </div>
               <button
                 type="button"
                 onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
                 aria-label={`Remove Guess ${i + 1}`}
-                className="rounded-md px-2 py-1 text-sm text-subtle hover:bg-highlight-low hover:text-text focus-visible:outline-2 focus-visible:outline-accent"
+                className="btn border-transparent text-meta"
               >
                 Remove
               </button>
@@ -136,7 +136,7 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
           type="button"
           disabled={rows.length >= MAX_ROWS}
           onClick={() => setRows((rs) => [...rs, { guess: "", marks: Array(WORD_LENGTH).fill(0) as Mark[] }])}
-          className="rounded-md border border-highlight-high px-3 py-1.5 text-sm hover:bg-highlight-low focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50"
+          className="btn"
         >
           Add a Guess
         </button>
@@ -144,17 +144,17 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
           <button
             type="button"
             onClick={() => setRows([])}
-            className="rounded-md px-3 py-1.5 text-sm text-subtle hover:bg-highlight-low focus-visible:outline-2 focus-visible:outline-accent"
+            className="btn border-transparent text-meta"
           >
             Clear
           </button>
         )}
       </div>
-      <p className="mt-2 text-xs text-subtle">Click a tile to change its Mark: Absent, Present, Correct.</p>
+      <p className="mt-2 text-xs text-meta">Click a tile to change its Mark: Absent, Present, Correct.</p>
 
-      <div className="mt-4 border-t border-highlight-med pt-3" aria-live="polite">
+      <div className="mt-4 border-t border-rule pt-4" aria-live="polite">
         {!fresh ? (
-          <p className="text-subtle">Loading the Candidate Set…</p>
+          <p className="text-meta">Loading the Candidate Set…</p>
         ) : firstError !== -1 ? (
           <p role="alert" className="text-error">
             {(fresh[firstError] as { error: string }).error}
@@ -162,7 +162,7 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
         ) : finalOutcome && !("error" in finalOutcome) ? (
           <>
             <p>
-              <strong className="text-heading">{finalOutcome.count}</strong> Candidate{finalOutcome.count === 1 ? "" : "s"}
+              <strong className="text-text">{finalOutcome.count}</strong> Candidate{finalOutcome.count === 1 ? "" : "s"}
               {complete.length === 0 && " (the whole Answer List)"}
               {finalOutcome.count === 0 && ": no Answer fits this State."}
             </p>
@@ -178,7 +178,7 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
                     type="button"
                     onClick={() => setShowAll((s) => !s)}
                     aria-expanded={showAll}
-                    className="mt-2 rounded-md border border-highlight-high px-3 py-1.5 text-sm hover:bg-highlight-low focus-visible:outline-2 focus-visible:outline-accent"
+                    className="btn mt-2"
                   >
                     {showAll ? "Show fewer" : `Show all ${finalOutcome.count}`}
                   </button>
