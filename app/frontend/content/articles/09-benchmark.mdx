@@ -5,6 +5,38 @@ prerequisites: [greedy-strategy]
 part: solving-wordle
 ---
 
-A <Term>Benchmark</Term> plays a <Term>Game</Term> for every word on the Answer List with one <Term>Strategy</Term>. Compare the <Term>Guess Distribution</Term>, the <Term>Average Guess Count</Term> and the <Term of="Loss">Losses</Term> of three:
+One Game shows you a story. To compare Strategies you need all of them. A <Term>Benchmark</Term> plays a <Term>Game</Term> for every word on the <Term>Answer List</Term> with one <Term>Strategy</Term>: 2,315 Games.
+
+For each Game we write down the <Term>Guess Count</Term>, the number of Guesses needed to Win. Add them up and you get the <Term>Guess Distribution</Term>, how many Games ended at each Guess Count, plus the number of Losses. The mean over the won Games is the <Term>Average Guess Count</Term>.
+
+```python
+from collections import Counter
+
+def benchmark(solver, opener, **strategy):
+    counts = Counter()
+    for answer in solver.answers:
+        game = Game(answer)            # the Guess Limit is six
+        candidates = solver.all_candidates()
+        word = opener
+        while not game.is_over:
+            guess = game.guess(word)
+            candidates = solver.narrow(candidates, guess.word, pack(guess.feedback))
+            if not game.is_over:
+                word = solver.suggest(candidates, **strategy).word
+        counts[len(game.state) if game.is_won else "lost"] += 1
+    return counts
+```
+
+Each Strategy plays from its own best Opener. Here are the three:
 
 <BenchmarkChart id="bm" />
+
+## What it shows
+
+**Expected Information over all words** starts with <Word>tarse</Word>. It never loses. Its Average Guess Count is **3.43**: 61 Games in 2 Guesses, 1,256 in 3, 943 in 4, 53 in 5 and 2 in 6. Three Guesses is the most common result, and almost every Game is over by the fourth.
+
+**Expected Candidates over all words** starts with <Word>roate</Word>. It never loses either, and averages **3.48**. It is slightly slower, but it is steadier: no Game takes six Guesses.
+
+**Expected Information over Candidates only** starts with <Word>raise</Word>. It is the Strategy from the last Article. Its average is **3.58**, and it **loses 11 Games**, listed under the chart, among them <Word>match</Word> and <Word>watch</Word>. These are the words with look-alike families, the _ATCH trap and others like it. The average counts the won Games only, so the real cost is a little higher than 3.58.
+
+The big gain comes from one change: letting the Solver play a word that cannot win. It takes the Losses from 11 to 0 and the average down by 0.15 Guesses. (The Opener differs too, but the trap is what costs the Games.) Which measure the Solver uses matters less: Expected Information and Expected Candidates are within 0.05 Guesses of each other.

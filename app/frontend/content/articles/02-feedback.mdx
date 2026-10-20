@@ -1,25 +1,37 @@
 ---
 title: "Feedback"
-summary: "Every Guess is scored letter by letter, and repeated letters follow a two-pass rule."
+summary: "Every Guess is judged letter by letter, and repeated letters follow a two-pass rule."
 prerequisites: [rules]
 part: wordle
 ---
 
-Every Guess gets <Term>Feedback</Term>: five <Term of="Mark">Marks</Term>, one per letter.
+After every Guess, the game gives you <Term>Feedback</Term>: five <Term of="Mark">Marks</Term>, one for each letter.
 
-A Guess has $n = 5$ letters, and each one is <Mark kind="correct" />, <Mark kind="present" /> or <Mark kind="absent" />, so there are $3^5 = 243$ possible Feedbacks. As a display equation:
+A letter can be <Mark kind="correct" />, which means it is in the Answer at this position. It can be <Mark kind="present" />, which means it is in the Answer, but somewhere else. Or it can be <Mark kind="absent" />, which means the Answer has no use for it.
 
-$$
-3^5 = \sum_{k=0}^{4} 2 \cdot 3^k + 1 = 243
-$$
+Three verdicts for five letters gives $3^5 = 243$ possible Feedbacks. Remember that number. It is the most different replies one Guess can ever get.
 
-Try it. The second E of SPEED gets nothing, because ABIDE has only one E:
+## The repeated-letter rule
+
+Most letters are easy. The trouble starts when a Guess repeats a letter. Try this one. The Guess is <Word answer="abide">speed</Word> and the Answer is <Word>abide</Word>:
 
 <FeedbackScorer id="fb" guess="speed" answer="abide" />
 
-The rule has two passes over the Guess. The first marks every exact match <Mark kind="correct" />. The second hands out <Mark kind="present" /> only while the Answer still has an unused copy of that letter, which is why the second E of SPEED stays <Mark kind="absent" />. Here is the whole function:
+<Word>speed</Word> has two Es, and <Word>abide</Word> has only one. The first E is <Mark kind="present" />. The second E is <Mark kind="absent" />, even though E really is in the word. The Answer's one E has already been used up.
 
-```python title="packages/wordle/src/wordle/engine/feedback.py" {64-69}
+The rule is that a letter is marked only as many times as it appears in the Answer. To make that fair, the Feedback is worked out in two passes.
+
+**Pass one** goes through the Guess and marks every exact match <Mark kind="correct" />. Correct letters claim their copy of the letter first.
+
+**Pass two** goes left to right through the rest. A letter is <Mark kind="present" /> if the Answer still has an unused copy of it. Otherwise it is <Mark kind="absent" />.
+
+The order matters. Change the Guess to <Word answer="crane">eerie</Word> and the Answer to <Word>crane</Word>. The only E in <Word>crane</Word> is the last letter, and <Word>eerie</Word> ends with an E in that same place. Pass one gives that E to the last letter, so it is <Mark kind="correct" />, and nothing is left for the two Es at the front. They are both <Mark kind="absent" />. If the first E had been served first, it would have been <Mark kind="present" />, and the Feedback would have been wrong.
+
+## The function
+
+Here is the whole thing in Python. The two passes are highlighted:
+
+```python title="packages/wordle/src/wordle/engine/feedback.py" {48-53,64-69}
 """Work out the Feedback for a Guess: which letters are Correct, Present or Absent."""
 
 from collections import Counter
@@ -92,3 +104,7 @@ def feedback(guess: str, answer: str) -> Feedback:
 
     return tuple(marks)
 ```
+
+Pass one is the list of Correct marks. The counter after it holds only the letters that pass one did not use. Pass two spends that counter one letter at a time, and that is why a second E finds it empty.
+
+Every other idea in this Series is built on this one function.

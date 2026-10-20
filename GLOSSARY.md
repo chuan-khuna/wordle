@@ -92,6 +92,10 @@ _Avoid_: score, pattern, hash
 How much a Guess is expected to shrink the Candidate Set, averaged over its Feedback Split and counted in bits.
 _Avoid_: entropy, entropy score, info gain (an Article may name "entropy" once, to link the formula to its standard name)
 
+**Expected Candidates**:
+How many Candidates a Guess is expected to leave, averaged over its Feedback Split: the fewer, the better.
+_Avoid_: expected vocabulary size, expected words left, average group size
+
 **Strategy**:
 The rule the Solver uses to pick a Suggestion, such as highest Expected Information.
 _Avoid_: algorithm, heuristic, policy

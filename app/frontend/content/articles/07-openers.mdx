@@ -5,6 +5,36 @@ prerequisites: [feedback-split]
 part: solving-wordle
 ---
 
-The first Guess of a <Term>Game</Term> is its <Term>Opener</Term>, and every Opener starts from the same full <Term>Candidate Set</Term>. Rank them by <Term>Expected Information</Term>:
+The first Guess of a <Term>Game</Term> is its <Term>Opener</Term>. Every Opener starts from the same place: the full <Term>Candidate Set</Term> of 2,315 words. So we can measure each possible Opener once, and keep the table.
+
+That is 14,855 words on the <Term>Guess List</Term>. For each one, we work out its <Term>Feedback Split</Term> and its <Term>Expected Information</Term>. Then we sort. This table shows the top ten. <Word>crane</Word> and <Word>slate</Word> are highlighted, because they are the ones people reach for:
 
 <OpenerTable id="op" top={10} highlight="crane,slate" />
+
+## What the table says
+
+The best Opener is <Word>tarse</Word>, with 5.947 bits. It is a real word, but it is not on the <Term>Answer List</Term>. It can never win on the first try, and it is still the best way to start.
+
+The best Opener that could also be the Answer is <Word>raise</Word>. It is fifth, with 5.878 bits. <Word>slate</Word> is eighth, with 5.856. Three of the top ten are Answers. The rest are words that can only ask a question.
+
+<Word>crane</Word>, the one that felt obvious, is only thirty-fifth, with 5.743 bits. It is not a bad Opener, but its biggest group has 263 words, where <Word>raise</Word>'s has 168.
+
+The ranking changes with the measure. Sort by the <Term>Expected Candidates</Term> and <Word>roate</Word> is the lowest, with 60.4 words left, while <Word>tarse</Word> has 66.0. This is the disagreement from the introduction.
+
+## Ranking all of them
+
+Ranking every Opener sounds like a lot of work: 14,855 Guesses against 2,315 Answers, which is over 34 million Feedbacks. It is quick because those Feedbacks are looked up in the <Term>Feedback Matrix</Term> and not worked out again. Then a ranking is one call:
+
+```python
+solver = Solver.load()
+candidates = solver.all_candidates()      # the whole Answer List
+for stats in solver.rank(candidates, top=5):
+    print(stats.word, round(stats.bits, 3), round(stats.expected_candidates, 1))
+# tarse 5.947 66.0
+# tiare 5.931 60.9
+# soare 5.886 62.3
+# roate 5.883 60.4
+# raise 5.878 61.0
+```
+
+`rank` takes the Candidate Set and returns the best Guesses with their numbers. It will do the same work for any State, not only the first one. That is the next Article.

@@ -5,6 +5,57 @@ prerequisites: [openers, candidate-set]
 part: solving-wordle
 ---
 
-The Solver plays the best <Term>Suggestion</Term> at every step. Watch it play one <Term>Game</Term>:
+We can now build the <Term>Solver</Term>. Its <Term>Strategy</Term> is the simplest one there is: at every step, look at the current <Term>Candidate Set</Term>, rate every Guess by its <Term>Expected Information</Term>, and play the best. This is called greedy, because it takes the best Guess for now and never plans further ahead.
 
-<StepThroughGame id="g" answer="catch" />
+Each step is the three ideas of this Part in a row. Find the Candidates. Split them with every Guess. Play the top one. That Guess is the <Term>Suggestion</Term>.
+
+```python title="packages/wordle/src/wordle/solver/strategy.py" {11-14}
+def suggest(
+    self,
+    candidates: np.ndarray,
+    *,
+    pool: Pool = "guesses",
+    scope: Scope = "global",
+    by: Rank = "bits",
+) -> WordStats | None:
+    """The Suggestion: the top-ranked Guess, or None if no Candidate is left."""
+    # With one or two Candidates, guessing one of them is never worse.
+    if 0 < len(candidates) <= 2:
+        scope = "candidates"
+    best = self.rank(candidates, pool=pool, scope=scope, by=by, top=1)
+    return best[0] if best else None
+```
+
+The loop around it is short. Guess the Suggestion, narrow the Candidates with the Feedback, and repeat:
+
+```python
+game = Game("watch")
+candidates = solver.all_candidates()
+while not game.is_over:
+    guess = game.guess(solver.suggest(candidates).word)
+    candidates = solver.narrow(candidates, guess.word, pack(guess.feedback))
+```
+
+## A Guess that can't win
+
+One setting in `suggest` decides a lot: `scope`. The Solver may search only the Candidates, or it may search **every word on the Guess List**, including words that cannot be the Answer.
+
+Playing a word that cannot win sounds wasteful. But it can be the best question. Here is why, in a Game where the Answer is <Word>watch</Word>.
+
+First, the Solver uses the narrow setting, Candidates only. Step through it:
+
+<StepThroughGame id="trap" answer="watch" pool="answers" scope="candidates" step={4} />
+
+<Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word> bring the Candidate Set down to 5 words: <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word>, <Word>match</Word> and <Word>watch</Word>. Every word ends in ATCH. Now the Solver has to pick one of them, and each is a poor question. Guess <Word>batch</Word> and, unless it is right, you only learn the first letter was wrong. The best a Candidate can do is 0.72 bits, with a largest group of 4. The Solver works through <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word> and <Word>match</Word> one at a time. <Word>watch</Word> takes **eight** Guesses, and under the Guess Limit of six that is a <Term>Loss</Term>. <Word>match</Word>, with seven, is a Loss too.
+
+This is the _ATCH trap. A family of words that differ in a single letter is a trap for any Strategy that only guesses Candidates, because every Candidate rules out only itself.
+
+Now the same Answer, with the Solver allowed to search all words:
+
+<StepThroughGame id="free" answer="watch" step={3} />
+
+This time the Solver opens with <Word>tarse</Word> and, from 5 Candidates, plays <Word>abamp</Word>. It is a strange word, and it cannot be the Answer. But it holds B, M and A together, and it asks four questions at once. Its Feedback separates the family, so the Solver wins in 5 Guesses.
+
+You can see the same thing with the same 5 Candidates. A Candidate such as <Word>batch</Word> is worth 0.72 bits, with 3.4 words left on average. The best word on the whole list, <Word>ablow</Word>, is worth 1.92 bits and leaves 1.4 words on average, with no group larger than 2. It cannot win now, and it nearly guarantees a win next.
+
+The rule of thumb: **a Guess that cannot win can still be the best Guess.** Searching every word is what turns eight Guesses into five. The last line of `suggest` has one more detail. With two Candidates left it goes back to Candidates only, because then guessing one is never worse.

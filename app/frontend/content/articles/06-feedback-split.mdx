@@ -5,8 +5,60 @@ prerequisites: [candidate-set]
 part: solving-wordle
 ---
 
-A Guess sorts the <Term>Candidate Set</Term> into groups, one per possible <Term>Feedback</Term>. That sorting is the <Term>Feedback Split</Term>.
+Here is what a Guess really does. Every possible Answer would give some <Term>Feedback</Term>. So a Guess sorts the <Term>Candidate Set</Term> into groups, one group per Feedback. That sorting is the <Term>Feedback Split</Term>.
 
-A good Guess makes many small groups; a bad one leaves a few big ones. Select a bar to see which words share that Feedback, and score the whole split with two numbers, both in the chart's title: the number of Candidates the Guess is expected to leave, and its <Term>Expected Information</Term> in bits.
+Here is <Word>crane</Word> as the first Guess, so the Candidate Set is all 2,315 words. Each bar is one Feedback, drawn as five Mark tiles. The bar is as long as its group:
 
 <SplitExplorer id="fs" guess="crane" />
+
+Select a bar to see the words in that group. The biggest is the Feedback with five <Mark kind="absent" /> tiles: 263 words with none of C, R, A, N or E, like <Word>biddy</Word> and <Word>blood</Word>. At the other end, 29 Feedbacks leave a single word. Only one word gets five <Mark kind="correct" /> tiles, and that is <Word>crane</Word> itself.
+
+In total, <Word>crane</Word> makes 142 groups. A bad Guess makes few. Type <Word>fuzzy</Word> into the Guess row and it only makes 34, with 1,352 words in a single group. You learn almost nothing from that reply.
+
+The chart's title already has two numbers. They rate the split in the two ways from the introduction.
+
+## Expected Candidates
+
+The first is the <Term>Expected Candidates</Term>. If the Answer is equally likely to be any word, a group is reached in proportion to its size, and when it is reached, that is how many words are left. Averaging gives 78.7 words left for <Word>crane</Word>. For <Word>fuzzy</Word> it is 855.7.
+
+## Expected Information
+
+The second is the <Term>Expected Information</Term>, in bits. A bit is one halving. A group with half the words in it is worth one bit, because it cuts the Candidate Set in half. A group with a quarter of the words is worth two. In general, a group reached with probability $p$ is worth $\log_2(1/p)$ bits, and the average over the whole split is
+
+$$
+-\sum_i p_i \log_2 p_i
+$$
+
+This formula is known in information theory as entropy. That is the only time we will use the word. We will call it Expected Information.
+
+For <Word>crane</Word> it is 5.74 bits. To put that in perspective, picking one word out of 2,315 takes $\log_2 2315 = 11.18$ bits in all. So one Guess gets you about half way. If all the groups were the same size, 5.74 bits would leave $2315 / 2^{5.74} \approx 43$ words. The real expected number is 79, because the big groups count more than their share. That gap is the reason the two numbers can disagree.
+
+## Both in Python
+
+Counting the groups is a dictionary. Sort every Candidate by the Feedback the Guess would give:
+
+```python
+def split(guess, candidates):
+    groups = {}
+    for answer in candidates:
+        groups.setdefault(feedback(guess, answer), []).append(answer)
+    return groups
+
+sizes = [len(words) for words in split("crane", answers).values()]
+len(sizes), max(sizes)   # (142, 263)
+```
+
+The package counts the same groups from a row of the Feedback Matrix, for thousands of Guesses at once. This is how it scores them. Both measures come from the same counts:
+
+```python title="packages/wordle/src/wordle/solver/strategy.py" {6-7}
+def _score(counts: np.ndarray, total: int) -> tuple[np.ndarray, np.ndarray]:
+    """(bits, expected Candidates) for each row of Feedback counts."""
+    c = counts.astype(np.float64)
+    # Σ p log2(1/p) = log2 N − Σ c log2 c / N, with 0 · log2 0 taken as 0.
+    c_log_c = np.where(c > 0, c * np.log2(np.where(c > 0, c, 1)), 0.0)
+    bits = np.log2(total) - c_log_c.sum(axis=1) / total
+    expected = (c * c).sum(axis=1) / total
+    return bits, expected
+```
+
+The last two lines are the two formulas. `bits` uses an equivalent form of the sum, $\log_2 N - \frac{1}{N}\sum c \log_2 c$, which only needs the group sizes. `expected` is $\sum c^2 / N$.

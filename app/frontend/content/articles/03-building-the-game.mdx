@@ -5,6 +5,84 @@ prerequisites: [feedback]
 part: wordle
 ---
 
-{/* TODO(ticket 10): draft */}
+You now have the rules and the Feedback function. That is enough to build the whole <Term>Game</Term>. It needs three small pieces: a <Term>Guess</Term>, a <Term>State</Term> and the Game itself.
 
-This Article will build the <Term>Game</Term> in Python: the <Term>State</Term>, one <Term>Guess</Term> at a time, and the loop that ends in a <Term>Win</Term> or a <Term>Loss</Term>.
+## A Guess and the State
+
+A Guess in the code is a word with its Feedback and its number. The <Term>State</Term> is all the Guesses so far, each with its Feedback. That is everything a player, or a Solver, can see.
+
+```python title="packages/wordle/src/wordle/engine/game.py" {8-9,16-17}
+@dataclass(frozen=True)
+class Guess:
+    number: int
+    word: str
+    feedback: Feedback
+
+    @property
+    def is_win(self) -> bool:
+        return all(mark is Mark.CORRECT for mark in self.feedback)
+
+
+@dataclass(frozen=True)
+class State:
+    guesses: tuple[Guess, ...] = ()
+
+    def add(self, word: str, feedback: Feedback) -> "State":
+        return State(self.guesses + (Guess(len(self.guesses) + 1, word, feedback),))
+```
+
+A Guess is a <Term>Win</Term> when every Mark is <Mark kind="correct" />.
+
+Notice that both classes are frozen, and `add` does not change the State. It builds a new one. So a State that you keep hold of stays exactly as it was, however the Game goes on. A Solver will rely on that later.
+
+## The Game
+
+The Game holds the Answer, the <Term>Guess Limit</Term> and the current State. It decides when it is over.
+
+```python title="packages/wordle/src/wordle/engine/game.py" {4,9,13,16-19}
+@dataclass
+class Game:
+    answer: str
+    max_guesses: int | None = MAX_GUESSES
+    ...
+
+    @property
+    def is_won(self) -> bool:
+        return self._state.last is not None and self._state.last.is_win
+
+    @property
+    def is_lost(self) -> bool:
+        return not self.is_won and self.guesses_left == 0
+
+    def guess(self, word: str) -> Guess:
+        if self.is_over:
+            raise GameOver("the Game is already over")
+        word = self.check_guess(word)
+        self._state = self._state.add(word, feedback(word, self.answer))
+        return self._state.last
+```
+
+Making a Guess takes three steps. First, refuse if the Game is already over. Second, check that the word is five letters and on the <Term>Guess List</Term>. A refused word raises an error and does not use up a Guess. Third, work out the Feedback with the function from the last Article, and add the Guess to a new State.
+
+A <Term>Loss</Term> is a Game that has reached its Guess Limit without a Win. Set `max_guesses=None` and a Game has no limit, so it can only end with a Win.
+
+## The loop
+
+Now a Game is a loop. Ask for a word, guess it, show the State, and stop when the Game is over:
+
+```python
+game = Game("crane")
+while not game.is_over:
+    word = input("Guess: ")
+    try:
+        game.guess(word)
+    except InvalidGuess as error:
+        print(error)
+        continue
+    print(game.state)
+print("Win" if game.is_won else f"Loss: the Answer was {game.answer}")
+```
+
+Type `zzzzz` and you get `'zzzzz' is not on the Guess List`, and you still have all your Guesses. Type `crane` and the loop prints five <Mark kind="correct" /> tiles and a Win.
+
+That is the whole game. Everything from here is about the player.
