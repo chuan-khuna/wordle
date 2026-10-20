@@ -133,14 +133,14 @@ pub fn end_note(result: &Result<Built, BuildError>, elapsed: Duration, threads: 
     let time = duration_label(elapsed);
     match result {
         Ok(built) if built.stopped => {
-            format!("Stopped guess counts after {time}: {} rows kept in precompute-cache/guess-counts/. Run it again to resume", with_commas(built.filled))
+            format!("Stopped guess counts after {time}: {} rows kept in precompute-cache/guess-counts-rust/. Run it again to resume", with_commas(built.filled))
         }
-        Ok(built) => format!("Saved guess counts to precompute-cache/guess-counts/ in {time} ({} rows, {})", with_commas(built.filled), threads_label(threads)),
+        Ok(built) => format!("Saved guess counts to precompute-cache/guess-counts-rust/ in {time} ({} rows, {})", with_commas(built.filled), threads_label(threads)),
         Err(error @ BuildError::Mismatch { .. }) => {
             let error = error.to_string();
             let mut letters = error.chars();
             let error = letters.next().map(|first| first.to_uppercase().chain(letters).collect::<String>()).unwrap_or_default();
-            format!("{error}. Start it over with just precompute-guess-counts --fresh")
+            format!("{error}. Delete precompute-cache/guess-counts-rust/ to start it over")
         }
         Err(error) => format!("Couldn't precompute guess counts: {error}"),
     }

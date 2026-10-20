@@ -34,7 +34,7 @@ Feedback and Feedback Codes (`wordle.engine.feedback`, `wordle.solver.strategy.p
 
 ## Feedback matrices and precompute
 
-The backend reads the matrices from `precompute-cache/feedback/` at the repo root (gitignored, shared with the package and the gpui app), built with the package's `wordle.solver.matrix.build`: `answers_vs_answers.npy` and `guesses_vs_answers.npy`, rows Guesses and columns Answers in sorted order, each cell a Feedback Code as a `uint8` (see [feedback-matrices.md](feedback-matrices.md)).
+The backend reads the matrices from `precompute-cache/feedback/` at the repo root (gitignored, shared with the package; the gpui app keeps its own byte-identical copy in `precompute-cache/feedback-rust/`), built with the package's `wordle.solver.matrix.build`: `answers_vs_answers.npy` and `guesses_vs_answers.npy`, rows Guesses and columns Answers in sorted order, each cell a Feedback Code as a `uint8` (see [feedback-matrices.md](feedback-matrices.md)).
 
 `just backend-precompute` runs `wordle_backend.precompute`, which takes `--threads N` (default 1), `--out DIR` (the cache directory, default `precompute-cache/`, with `feedback/` and `benchmark/` inside) and `--yes` (otherwise it asks before overwriting), and writes the matrices first and then the [Benchmark](#benchmark-and-openers). `--skip-benchmark` writes only the matrices; `--benchmark-only` reuses the existing matrices and writes only the Benchmark files. The matrices take about 4 s with one thread and about 1 s with four; the Benchmark about 11 s with three or four threads. Unlike `just precompute` it never asks for the thread count.
 

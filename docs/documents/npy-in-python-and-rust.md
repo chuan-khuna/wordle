@@ -2,16 +2,21 @@
 
 How the Python package and the gpui app store the precomputed matrices, what one file looks like byte by byte, where the two tools differ, and what keeps them writing the same file. The matrices themselves are described in [Feedback matrices](feedback-matrices.md) and [Guess Count Matrix](guess-count-matrix.md); why `.npy` was chosen is [ADR 0001](../adr/0001-guess-count-matrix-file-format.md).
 
+## What `.npy` is
+
+`.npy` is numpy's own file format for one array (`np.save` writes it, `np.load` reads it). A file is a short text header that says the cell type, the order and the shape, then the cells as raw bytes, with no separators, names or compression. Since a cell's position follows from its row and column, a reader can map the file into memory and read or write one row without loading the rest. That is why the Guess Count Matrix can be filled in place and resumed, and why the gpui app reads and writes it with a few lines of its own code. A CSV of the same 14,855 × 2,315 cells would be text several times the size, and would have to be read whole.
+
 ## Who writes what today
 
 | File (under `precompute-cache/`) | Python package | gpui app (Rust) |
 | --- | --- | --- |
-| `feedback/answers_vs_answers.npy` | writes (`wordle.solver.matrix.build`, `np.save`) | writes (`solver/matrix.rs` `build`, `npy_bytes`) and reads |
-| `feedback/guesses_vs_answers.npy` | writes (same) and reads | writes (same) and reads |
-| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | writes in place (`solver/guess_count_matrix.rs` `build`) and reads |
-| `guess-counts/manifest.json`, `summary.json`, `<id>.ranking.csv` | writes | writes (with `serde_json`); the Solver panel will read `summary.json` |
+| `feedback/answers_vs_answers.npy`, `feedback/guesses_vs_answers.npy` | writes (`wordle.solver.matrix.build`, `np.save`) and reads; the backend reads them too | — |
+| `feedback-rust/answers_vs_answers.npy`, `feedback-rust/guesses_vs_answers.npy` | — | writes (`solver/matrix.rs` `build`, `npy_bytes`) and reads |
+| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | only its tests read it, to compare |
+| `guess-counts-rust/<strategy id>.npy` | — | writes in place (`solver/guess_count_matrix.rs` `build`) and reads |
+| `manifest.json`, `summary.json`, `<id>.ranking.csv` in each of those folders | writes them in `guess-counts/` | writes them in `guess-counts-rust/` (with `serde_json`); the Solver panel reads its `summary.json` |
 
-For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. For the Guess Count Matrix the gpui app follows the contract below: its rows equal the Python command's rows, and from the same matrices it writes `summary.json` and the ranking CSVs byte for byte as Python does (`rows_equal_the_python_commands_rows` and `the_summary_equals_the_python_commands_summary` in `solver/guess_count_matrix_tests.rs`). `manifest.json` differs only in `tool`.
+Each tool keeps its own folders (`feedback/` and `guess-counts/` for Python, `feedback-rust/` and `guess-counts-rust/` for the gpui app), so neither ever writes a file the other is reading. For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. For the Guess Count Matrix the gpui app follows the contract below: its rows equal the Python command's rows, and from the same matrices it writes `summary.json` and the ranking CSVs byte for byte as Python does (`rows_equal_the_python_commands_rows` and `the_summary_equals_the_python_commands_summary` in `solver/guess_count_matrix_tests.rs`). `manifest.json` differs only in `tool`. Each tool has its own folder, so they never write the same file, but the files are interchangeable: copy one folder's files into the other to resume there.
 
 ## One file, byte by byte
 
@@ -75,6 +80,8 @@ The same rows and columns with words, from the finished matrices (first four Ans
 
 The first 16 cell bytes on disk (offset 128 on, row `aahed`) are `4 3 2 3 3 2 2 2 3 3 4 4 3 4 4 2`. Across the `salet` row the counts are 148 × 2, 1,030 × 3, 946 × 4, 157 × 5, 26 × 6, 7 × 7 and 1 × 8 Guesses, which gives `distribution` `[0, 148, 1030, 946, 157, 26]` and 8 `losses` in `summary.json`. To read `salet` against `abase` by hand: `128 + 11095 × 2315 + 1` = byte 25,685,054.
 
+A Loss keeps its real Guess Count: every Game is played on to a Win, so a cell above 6 says by how much the Game was lost. The `acorn` row (row 108) holds 1 × 1, 121 × 2, 934 × 3, 1,012 × 4, 202 × 5, 33 × 6, 10 × 7 and 2 × 8 Guesses. Its 12 Losses are `crazy`, `foyer`, `jolly`, `maple`, `payer`, `shave`, `sound`, `taunt`, `waste` and `watch` at 7, and `vaunt` and `wound` at 8. `summary.json` turns this row into `distribution` `[1, 121, 934, 1012, 202, 33]`, 12 `losses` and an `average_guess_count` of 3.623, which counts the Losses at 7 and 8. The cell `[acorn, about]` is 3 (ACORN, then ALOUD, then ABOUT), at byte `128 + 108 × 2315 + 8` = 250,158.
+
 Over the whole matrix the values are 1 (2,315 cells: the diagonal of Openers that are Answers) up to 10, mostly 3 and 4.
 
 **`feedback/guesses_vs_answers.npy`:** packed Feedback, 0 to 242 (see [Feedback matrices](feedback-matrices.md))
@@ -117,7 +124,7 @@ m[manifest["rows"].index("salet"), manifest["columns"].index("abase")]   # 4
 
 ## Contract for a second writer of the Guess Count Matrix
 
-What the gpui app's writer (gpui ticket 02) matches so that either tool can resume the other's file:
+What the gpui app's writer (gpui ticket 02) matches so that either tool can resume a copy of the other's files:
 
 - **`.npy`:** the header from `npy_bytes(14855, 2315, …)`, cells `u8`, rows and columns as above. Create the file full of zeros at full size, and write a finished row at offset `128 + row × 2315`, zeroing it first if it held values. A row is finished when none of its cells is 0.
 - **Cell values:** the Guess Count of the Game played with no Guess Limit, 13 when the safety limit of 12 Guesses is hit. Never 0.

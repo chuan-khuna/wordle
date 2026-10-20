@@ -343,7 +343,7 @@ impl WordleApp {
                 app.precomputing = false;
                 app.reload_matrices(cx);
                 let note = match saved {
-                    Ok(_) => format!("Saved the matrices to precompute-cache/feedback/ in {:.1}s ({})", elapsed.as_secs_f32(), precompute::threads_label(threads)),
+                    Ok(_) => format!("Saved the matrices to precompute-cache/feedback-rust/ in {:.1}s ({})", elapsed.as_secs_f32(), precompute::threads_label(threads)),
                     Err(error) => format!("Couldn't save the matrices: {error}"),
                 };
                 app.show_status_for(note, Duration::from_secs(5), cx);

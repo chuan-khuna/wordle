@@ -238,15 +238,15 @@ fn the_summary_files_are_written_as_python_writes_them() {
 
 /// The Python command's folder to compare with: `WORDLE_PYTHON_GUESS_COUNTS` if set, or else
 /// `precompute-cache/guess-counts/`, if its manifest says Python wrote it.
-fn python_dir() -> Option<PathBuf> {
-    let dir = std::env::var_os("WORDLE_PYTHON_GUESS_COUNTS").map_or_else(default_dir, PathBuf::from);
+fn python_reference() -> Option<PathBuf> {
+    let dir = std::env::var_os("WORDLE_PYTHON_GUESS_COUNTS").map_or_else(python_dir, PathBuf::from);
     let manifest = read_manifest(&dir)?;
     manifest["tool"].as_str()?.ends_with("(python)").then_some(dir)
 }
 
 #[test]
 fn rows_equal_the_python_commands_rows() {
-    let Some(dir) = python_dir() else {
+    let Some(dir) = python_reference() else {
         eprintln!("skipped: no guess counts written by the Python command");
         return;
     };
@@ -274,7 +274,7 @@ fn rows_equal_the_python_commands_rows() {
 #[test]
 fn the_summary_equals_the_python_commands_summary() {
     // Only with a folder given on purpose: the shared one may be mid-run.
-    let Some(dir) = std::env::var_os("WORDLE_PYTHON_GUESS_COUNTS").map(PathBuf::from).filter(|_| python_dir().is_some()) else {
+    let Some(dir) = std::env::var_os("WORDLE_PYTHON_GUESS_COUNTS").map(PathBuf::from).filter(|_| python_reference().is_some()) else {
         eprintln!("skipped: set WORDLE_PYTHON_GUESS_COUNTS to a folder the Python command wrote");
         return;
     };

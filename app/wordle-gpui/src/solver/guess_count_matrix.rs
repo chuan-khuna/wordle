@@ -1,8 +1,9 @@
 //! The Guess Count Matrix: how many Guesses every Opener takes to Win every Answer, the same files
 //! as the Python package's `wordle/solver/guess_count_matrix.py` writes (see
-//! `docs/documents/guess-count-matrix.md` and ADR 0001), so either tool resumes the other's work.
+//! `docs/documents/guess-count-matrix.md` and ADR 0001), but in a folder of its own, so the two
+//! tools never write the same file. A copy of the Python folder resumes here, and the other way round.
 //!
-//! In `precompute-cache/guess-counts/`:
+//! In `precompute-cache/guess-counts-rust/` (Python's is `precompute-cache/guess-counts/`):
 //!
 //! - `<strategy id>.npy`: 14,855 × 2,315 `u8`, rows are Openers (the sorted Guess List), columns are
 //!   Answers; a cell is the Guess Count (13 when the safety limit was hit), and a row of zeros is not
@@ -29,7 +30,9 @@ use super::matrix::npy_header;
 use super::strategy::{CODES, Matrix, MatrixSet, Rank, STRATEGIES, SearchMode, Strategy, numpy_sum};
 use crate::engine::game::MAX_GUESSES as GUESS_LIMIT;
 
-pub const SUBDIR: &str = "guess-counts";
+pub const SUBDIR: &str = "guess-counts-rust";
+/// The Python command's folder, beside this one: only read, by the tests that compare the two.
+pub const PYTHON_SUBDIR: &str = "guess-counts";
 pub const MANIFEST_FILE: &str = "manifest.json";
 pub const SUMMARY_FILE: &str = "summary.json";
 pub const FORMAT_VERSION: u64 = 1;
@@ -40,10 +43,19 @@ const FLUSH_TIME: Duration = Duration::from_secs(10);
 /// How many consecutive rows a thread takes at a time.
 const CHUNK: usize = 8;
 
-/// Where the matrices go: `precompute-cache/guess-counts/` at the repo root, shared with the Python package.
+/// Where the matrices go: `precompute-cache/guess-counts-rust/` at the repo root.
 pub fn default_dir() -> PathBuf {
+    cache_root().join(SUBDIR)
+}
+
+/// Where the Python command writes its matrices: `precompute-cache/guess-counts/`.
+pub fn python_dir() -> PathBuf {
+    cache_root().join(PYTHON_SUBDIR)
+}
+
+fn cache_root() -> PathBuf {
     let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2).expect("the app is two folders below the repo root");
-    repo_root.join("precompute-cache").join(SUBDIR)
+    repo_root.join("precompute-cache")
 }
 
 pub fn matrix_path(dir: &Path, strategy: &Strategy) -> PathBuf {
