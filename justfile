@@ -31,7 +31,7 @@ precompute *args:
 test-backend:
     uv run pytest
 
-# Precompute the website backend's Feedback matrices. Takes --threads N, --out DIR, --yes
+# Precompute the website backend's Feedback matrices, Benchmark and Openers. Takes --threads N, --out DIR, --yes, --skip-benchmark, --benchmark-only
 [working-directory: 'app/backend']
 backend-precompute *args:
     uv run -m wordle_backend.precompute {{args}}

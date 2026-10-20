@@ -56,7 +56,7 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `uv run wordle` | Same, via the package's console script |
 | `uv run python -m wordle` | Same, via `__main__.py` |
 | `uv run pytest` | Run the tests of every package |
-| `just backend-precompute` | Precompute the website backend's Feedback matrices. See [web-backend.md](web-backend.md) |
+| `just backend-precompute` | Precompute the website backend's Feedback matrices, Benchmark and Opener leaderboard. See [web-backend.md](web-backend.md) |
 | `just backend` | Serve the website backend with uvicorn. See [web-backend.md](web-backend.md) |
 | `just test-backend` | Run the website backend's tests. See [web-backend.md](web-backend.md) |
 | `uv build --package wordle` | Build a wheel; it includes the word lists |

@@ -1,4 +1,4 @@
-"""The FastAPI app: Feedback, Candidates, Feedback Splits, Suggestions and step-through Games.
+"""The FastAPI app: Feedback, Candidates, Feedback Splits, Suggestions, step-through Games, the Benchmark and Openers.
 
 Words are lowercase five-letter strings. A Feedback is written as a string of
 five digits, one per letter: 0 Absent, 1 Present, 2 Correct ("20102"). The same
@@ -15,7 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from wordle_backend import matrices
+from wordle_backend import benchmark, matrices
 from wordle_backend.feedback import WIN, feedback, pack
 from wordle_backend.strategy import By, Pool, Scope, Strategy, WordStats
 from wordle_backend.words import WORD_LENGTH
@@ -26,6 +26,10 @@ SOLVE_ALTERNATIVES = 5  # Suggestions listed at each step of /api/solve
 
 class BadRequest(Exception):
     """Invalid input, answered with HTTP 400 and this message."""
+
+
+class NotPrecomputed(Exception):
+    """A precomputed result is missing, answered with HTTP 503 and this message."""
 
 
 @asynccontextmanager
@@ -41,6 +45,8 @@ async def lifespan(app: FastAPI):
             "Run `just backend-precompute` first."
         )
     app.state.strategy = Strategy(*matrices.load())
+    # The Benchmark files are optional: without them only those two endpoints answer 503.
+    app.state.benchmark, app.state.openers = benchmark.load()
     yield
 
 
@@ -50,6 +56,11 @@ app = FastAPI(title="Wordle backend", lifespan=lifespan)
 @app.exception_handler(BadRequest)
 async def bad_request(request: Request, error: BadRequest) -> JSONResponse:
     return JSONResponse({"detail": str(error)}, status_code=400)
+
+
+@app.exception_handler(NotPrecomputed)
+async def not_precomputed(request: Request, error: NotPrecomputed) -> JSONResponse:
+    return JSONResponse({"detail": str(error)}, status_code=503)
 
 
 @app.exception_handler(RequestValidationError)
@@ -212,3 +223,20 @@ def get_solve(
         if code == WIN:
             break
     return {"answer": answer, "solved": steps[-1]["code"] == WIN, "guesses": len(steps), "steps": steps}
+
+
+@app.get("/api/openers")
+def get_openers(request: Request, top: int = 20) -> dict:
+    """The Opener leaderboard (precomputed): the best first Guesses by Expected Information."""
+    if request.app.state.openers is None:
+        raise NotPrecomputed(f"{benchmark.OPENERS_FILE} is missing. Run `just backend-precompute` first.")
+    openers = request.app.state.openers["openers"]
+    return {"total": len(openers), "openers": openers[: check_top(top)]}
+
+
+@app.get("/api/benchmark")
+def get_benchmark(request: Request) -> dict:
+    """The Guess Distribution and Average Guess Count of each Benchmark Strategy (precomputed)."""
+    if request.app.state.benchmark is None:
+        raise NotPrecomputed(f"{benchmark.BENCHMARK_FILE} is missing. Run `just backend-precompute` first.")
+    return request.app.state.benchmark
