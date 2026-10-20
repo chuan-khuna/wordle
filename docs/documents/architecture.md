@@ -15,6 +15,7 @@ pyproject.toml              workspace root
 justfile                    `just wordle`, `just precompute`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just backend-precompute`, `just frontend`, `just web`
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
+precompute-cache/           gitignored: every precomputed file, shared by all three apps (feedback/ matrices, benchmark/ JSON)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
   backend/                  the website's FastAPI app: its own uv project outside the workspace, depending on `packages/wordle` through a path dependency (see web-backend.md)

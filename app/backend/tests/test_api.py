@@ -3,7 +3,8 @@ import pytest
 from wordle.engine.feedback import feedback
 from wordle.engine.words import load_word_lists
 from wordle.solver.strategy import Solver, pack
-from wordle_backend.solver import DEFAULT_DIR, WebSolver
+from wordle.solver.matrix import DEFAULT_DIR
+from wordle_backend.solver import WebSolver
 
 
 def turn(guess: str, answer: str) -> dict:

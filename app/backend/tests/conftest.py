@@ -2,8 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from wordle.solver import matrix
+from wordle.solver.matrix import DEFAULT_DIR
 from wordle_backend.main import app
-from wordle_backend.solver import DEFAULT_DIR
 
 
 @pytest.fixture(scope="session")

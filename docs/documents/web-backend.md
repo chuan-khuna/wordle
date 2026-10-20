@@ -16,10 +16,9 @@ app/backend/
       solve.py            GET /api/solve
       benchmark.py        GET /api/benchmark, GET /api/openers
     common.py             shared by the routers: BadRequest and NotPrecomputed, request models, word and Feedback checks, JSON shapes
-    solver.py             WebSolver (the package's Solver plus the Candidates-only switch) and the matrices directory
+    solver.py             WebSolver (the package's Solver plus the Candidates-only switch)
     benchmark.py          the Benchmark and the Opener leaderboard (play, save, load JSON)
     precompute.py         the command behind `just backend-precompute`
-  matrices/               generated .npy and .json files (gitignored)
   tests/
 ```
 
@@ -35,9 +34,9 @@ Feedback and Feedback Codes (`wordle.engine.feedback`, `wordle.solver.strategy.p
 
 ## Feedback matrices and precompute
 
-The backend keeps its own copy of the matrices in `app/backend/matrices/` (gitignored), built with the package's `wordle.solver.matrix.build`: `answers_vs_answers.npy` and `guesses_vs_answers.npy`, rows Guesses and columns Answers in sorted order, each cell a Feedback Code as a `uint8` (see [feedback-matrices.md](feedback-matrices.md)).
+The backend reads the matrices from `precompute-cache/feedback/` at the repo root (gitignored, shared with the package and the gpui app), built with the package's `wordle.solver.matrix.build`: `answers_vs_answers.npy` and `guesses_vs_answers.npy`, rows Guesses and columns Answers in sorted order, each cell a Feedback Code as a `uint8` (see [feedback-matrices.md](feedback-matrices.md)).
 
-`just backend-precompute` runs `wordle_backend.precompute`, which takes `--threads N` (default 1), `--out DIR` and `--yes` (otherwise it asks before overwriting), and writes the matrices first and then the [Benchmark](#benchmark-and-openers). `--skip-benchmark` writes only the matrices; `--benchmark-only` reuses the existing matrices and writes only the Benchmark files. The matrices take about 4 s with one thread and about 1 s with four; the Benchmark about 11 s with three or four threads. Unlike `just precompute` it never asks for the thread count.
+`just backend-precompute` runs `wordle_backend.precompute`, which takes `--threads N` (default 1), `--out DIR` (the cache directory, default `precompute-cache/`, with `feedback/` and `benchmark/` inside) and `--yes` (otherwise it asks before overwriting), and writes the matrices first and then the [Benchmark](#benchmark-and-openers). `--skip-benchmark` writes only the matrices; `--benchmark-only` reuses the existing matrices and writes only the Benchmark files. The matrices take about 4 s with one thread and about 1 s with four; the Benchmark about 11 s with three or four threads. Unlike `just precompute` it never asks for the thread count.
 
 ## Benchmark and openers
 
@@ -63,7 +62,7 @@ Results on all 2,315 Answers (Guess Count 1 to 6, then Losses):
 
 The Opener leaderboard ranks every Guess List word as a first Guess by Expected Information (ties: Candidate first, then Expected Candidates, then alphabetical) and keeps the top 500. It stores the first-turn stats only, not a Benchmark per Opener.
 
-`precompute` saves `benchmark.json` and `openers.json` next to the matrices. `main.py` reads them at startup if present; a missing file is not a startup error.
+`precompute` saves `benchmark.json` and `openers.json` in `precompute-cache/benchmark/`. `main.py` reads them at startup if present; a missing file is not a startup error.
 
 ## API
 
@@ -89,7 +88,7 @@ Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`,
 
 | Command | What it does |
 | --- | --- |
-| `just backend-precompute` | Write the Feedback matrices, the Benchmark and the Opener leaderboard to `app/backend/matrices/`. Takes `--threads N`, `--out DIR`, `--yes`, `--skip-benchmark`, `--benchmark-only` |
+| `just backend-precompute` | Write the Feedback matrices, the Benchmark and the Opener leaderboard to `precompute-cache/`. Takes `--threads N`, `--out DIR`, `--yes`, `--skip-benchmark`, `--benchmark-only` |
 | `just backend` | Serve the API with uvicorn from `app/backend/`. Takes uvicorn options, e.g. `--port 8001` |
 | `just test-backend` | Run the backend's tests (`uv run pytest` in `app/backend/`) |
 

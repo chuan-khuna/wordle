@@ -15,7 +15,8 @@ from wordle_backend import benchmark
 from wordle_backend.common import BadRequest, NotPrecomputed
 from wordle_backend.routers import benchmark as benchmark_router
 from wordle_backend.routers import candidates, feedback, solve, suggestions
-from wordle_backend.solver import DEFAULT_DIR, WebSolver
+from wordle.solver.matrix import DEFAULT_DIR
+from wordle_backend.solver import WebSolver
 
 
 @asynccontextmanager

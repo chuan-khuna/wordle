@@ -26,8 +26,10 @@ import numpy as np
 
 from wordle.solver.matrix import WIN
 from wordle.solver.strategy import Pool, Rank, Scope
-from wordle_backend.solver import DEFAULT_DIR, WebSolver
+from wordle.solver.matrix import CACHE_DIR
+from wordle_backend.solver import WebSolver
 
+BENCHMARK_DIR = CACHE_DIR / "benchmark"
 BENCHMARK_FILE = "benchmark.json"
 OPENERS_FILE = "openers.json"
 
@@ -133,7 +135,7 @@ def opener_leaderboard(solver: WebSolver, size: int = LEADERBOARD_SIZE) -> list[
     ]
 
 
-def save(benchmark: list[dict], openers: list[dict], directory: Path = DEFAULT_DIR) -> tuple[Path, Path]:
+def save(benchmark: list[dict], openers: list[dict], directory: Path = BENCHMARK_DIR) -> tuple[Path, Path]:
     directory.mkdir(parents=True, exist_ok=True)
     benchmark_path, openers_path = directory / BENCHMARK_FILE, directory / OPENERS_FILE
     benchmark_path.write_text(json.dumps({"guess_limit": GUESS_LIMIT, "strategies": benchmark}, indent=1) + "\n", encoding="utf-8")
@@ -141,7 +143,7 @@ def save(benchmark: list[dict], openers: list[dict], directory: Path = DEFAULT_D
     return benchmark_path, openers_path
 
 
-def load(directory: Path = DEFAULT_DIR) -> tuple[dict | None, dict | None]:
+def load(directory: Path = BENCHMARK_DIR) -> tuple[dict | None, dict | None]:
     """(benchmark, openers) as saved, with None for a file that is missing."""
     def read(name: str) -> dict | None:
         path = directory / name

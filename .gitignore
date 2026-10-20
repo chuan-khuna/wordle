@@ -11,5 +11,5 @@ dist/
 # macOS
 .DS_Store
 
-# Precomputed Feedback matrices (regenerate with `just precompute` or `just backend-precompute`)
-matrices/
+# Precomputed Feedback matrices, Benchmark and Openers (regenerate with `just precompute` or `just backend-precompute`)
+precompute-cache/

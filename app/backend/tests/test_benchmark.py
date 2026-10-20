@@ -6,7 +6,8 @@ from wordle.engine.feedback import feedback
 from wordle.engine.words import load_word_lists
 from wordle.solver.strategy import pack
 from wordle_backend import benchmark
-from wordle_backend.solver import DEFAULT_DIR, WebSolver
+from wordle.solver.matrix import DEFAULT_DIR
+from wordle_backend.solver import WebSolver
 
 SUBSET = list(load_word_lists().answers[::200])  # 12 Answers, enough to exercise the tree
 

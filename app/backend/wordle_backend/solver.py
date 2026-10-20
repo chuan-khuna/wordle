@@ -1,19 +1,15 @@
 """The package's Solver, with the one behaviour the website adds on top of it.
 
 The engine (word lists, Feedback, the Feedback matrices, Strategy scoring) is
-the `wordle` package's. This module only says where the matrices live for the
-backend and wraps `Solver.rank` so that, with two or fewer Candidates left,
-the search switches to Candidates only (`Solver.suggest` does that in the
-package, but the website calls `rank` for lists of Suggestions).
+the `wordle` package's. This module only wraps `Solver.rank` so that, with
+two or fewer Candidates left, the search switches to Candidates only
+(`Solver.suggest` does that in the package, but the website calls `rank` for
+lists of Suggestions).
 """
-
-from pathlib import Path
 
 import numpy as np
 
 from wordle.solver.strategy import Pool, Rank, Scope, Solver, WordStats
-
-DEFAULT_DIR = Path(__file__).resolve().parents[1] / "matrices"
 
 
 class WebSolver(Solver):

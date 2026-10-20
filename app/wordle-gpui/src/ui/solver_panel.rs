@@ -4,7 +4,7 @@
 //!
 //! In Solver mode it works from the State entered by hand instead of the Game's.
 //!
-//! The Feedback matrices are read from `matrices/` the first time they are needed, on a
+//! The Feedback matrices are read from `precompute-cache/feedback/` the first time they are needed, on a
 //! background thread, and kept until the app closes. Ranking runs on a background thread too.
 
 use std::collections::HashMap;
@@ -163,7 +163,7 @@ impl WordleApp {
         cx.notify();
     }
 
-    /// Read the matrix of `set` from `matrices/` on a background thread, then rank.
+    /// Read the matrix of `set` from `precompute-cache/feedback/` on a background thread, then rank.
     fn load_matrix(&mut self, set: MatrixSet, cx: &mut Context<Self>) {
         self.solver.matrices.insert(set, MatrixLoad::Loading);
         let reading = cx.background_spawn(async move { Matrix::load(&default_dir(), set) });

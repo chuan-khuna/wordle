@@ -23,9 +23,10 @@ pub const GUESSES_FILE: &str = "guesses_vs_answers.npy";
 /// The thread counts the app offers.
 pub const THREAD_CHOICES: [usize; 4] = [1, 2, 4, 8];
 
-/// Where the matrices go: `matrices/` in this app's own folder, apart from the Python package's.
+/// Where the matrices go: `precompute-cache/feedback/` at the repo root, shared with the Python package and the backend.
 pub fn default_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("matrices")
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2).expect("the app is two folders below the repo root");
+    repo_root.join("precompute-cache").join("feedback")
 }
 
 type Letters = [u8; WORD_LENGTH];
