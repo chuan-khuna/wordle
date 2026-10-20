@@ -402,6 +402,8 @@ impl WordleApp {
                 if matches!(app.overlay, Some(Overlay::StopGuessCounts)) {
                     app.overlay = None;
                 }
+                // The run rewrote summary.json, finished or stopped.
+                app.reload_summary(cx);
                 app.show_status_for(guess_counts_state::end_note(&result, elapsed, threads), Duration::from_secs(10), cx);
             })
             .ok();

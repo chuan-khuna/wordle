@@ -4,6 +4,11 @@
 //!
 //! In Solver mode it works from the State entered by hand instead of the Game's.
 //!
+//! Before the first Guess it also shows what `summary.json` of the Guess Count Matrices knows under
+//! the panel's Strategy (`solver/opener_results.rs`): each Suggestion's Average Guess Count, and the
+//! charted word's Average Guess Count, Losses and Guess Distribution, or a note saying why there
+//! is none. The summary is read when the panel opens and after Precompute guess counts ends.
+//!
 //! The Feedback matrices are read from `precompute-cache/feedback/` the first time they are needed, on a
 //! background thread, and kept until the app closes. Ranking runs on a background thread too.
 
@@ -14,6 +19,7 @@ use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude:
 use wordle_gpui::engine::feedback::Mark;
 use wordle_gpui::solver::assist::Assist;
 use wordle_gpui::solver::matrix::default_dir;
+use wordle_gpui::solver::opener_results::{self, Lookup, OpenerResult, SummaryFile};
 use wordle_gpui::solver::strategy::{self, Distribution, Matrix, MatrixSet, Rank, SearchMode, Strategy, Suggestion};
 use wordle_gpui::engine::words::{WORD_LENGTH, word_lists};
 
@@ -71,6 +77,10 @@ pub struct SolverState {
     pub searching: bool,
     /// Whether the Candidate list is shown or folded down to its heading.
     candidates_open: bool,
+    /// The Guess Count Matrices' `summary.json`, once read.
+    summary: Option<Arc<SummaryFile>>,
+    /// Counts summary reads, so a slow old one can't replace a newer one.
+    summary_serial: u32,
 }
 
 impl Default for SolverState {
@@ -88,6 +98,8 @@ impl Default for SolverState {
             query: String::new(),
             searching: false,
             candidates_open: true,
+            summary: None,
+            summary_serial: 0,
         }
     }
 }
@@ -105,6 +117,9 @@ impl WordleApp {
             let viewport = window.viewport_size();
             let width = if self.solver.open { viewport.width + WIDTH } else { viewport.width - WIDTH };
             window.resize(size(width, viewport.height));
+        }
+        if self.solver.open {
+            self.reload_summary(cx);
         }
         self.refresh_solver(cx);
         cx.notify();
@@ -190,6 +205,34 @@ impl WordleApp {
     pub(super) fn reload_matrices(&mut self, cx: &mut Context<Self>) {
         self.solver.matrices.clear();
         self.refresh_solver(cx);
+    }
+
+    /// Read the Guess Count Matrices' `summary.json` again, on a background thread. Done when the
+    /// panel opens and when Precompute guess counts ends; while closed it is read on the next open.
+    pub(super) fn reload_summary(&mut self, cx: &mut Context<Self>) {
+        if !self.solver.open {
+            return;
+        }
+        self.solver.summary_serial += 1;
+        let serial = self.solver.summary_serial;
+        let reading = cx.background_spawn(async move { opener_results::read_default_summary() });
+        cx.spawn(async move |this, cx| {
+            let summary = reading.await;
+            this.update(cx, |app, cx| {
+                if app.solver.summary_serial == serial {
+                    app.solver.summary = Some(Arc::new(summary));
+                    cx.notify();
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// What the summary says about `word` under the panel's Strategy, given the Guesses so far.
+    fn opener_lookup<'a>(&'a self, word: &'a str) -> Lookup<'a> {
+        let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by);
+        opener_results::lookup(self.solver.summary.as_deref(), strategy, word, self.shown_guesses().len())
     }
 
     fn set_matrix_set(&mut self, set: MatrixSet, cx: &mut Context<Self>) {
@@ -354,6 +397,7 @@ impl WordleApp {
                 Some(chart) => self.render_distribution(&chart, cx).into_any_element(),
                 None => note(format!("{} isn't on the Guess List.", word.to_uppercase()), t.muted).into_any_element(),
             }))
+            .children(self.solver.selected.as_ref().filter(|word| word_lists().guesses.contains(word.as_str())).and_then(|word| self.render_guess_counts(word, cx)))
     }
 
     fn render_suggestions(&self, cx: &mut Context<Self>) -> Div {
@@ -399,6 +443,10 @@ impl WordleApp {
             // A dot marks a word that could be the Answer, so guessing it might win now.
             .when(suggestion.is_candidate, |row| row.child(div().size(px(6.)).rounded_full().bg(rgb(t.correct.0))))
             .child(div().ml_auto().text_color(rgb(t.text)).child(format!("{:.2} bits", suggestion.bits)))
+            // Before the first Guess: the Average Guess Count the summary has for this Opener.
+            .children(self.opener_lookup(word).result().map(|result| {
+                div().w(px(40.)).text_right().text_xs().text_color(rgb(t.accent)).child(format!("{:.3}", result.average_guess_count))
+            }))
             .child(div().w(px(64.)).text_right().text_xs().text_color(rgb(t.muted)).child(format!("≈{} left", format_left(suggestion.expected_left))))
     }
 
@@ -527,6 +575,63 @@ impl WordleApp {
             .child(div().text_xs().text_color(rgb(t.muted)).child(format!("{} Feedbacks over {} candidates", chart.groups.len(), group_thousands(chart.candidates))))
             .child(bars)
             .child(div().text_xs().text_color(rgb(t.muted)).text_right().child("number of possible words →"))
+    }
+}
+
+impl WordleApp {
+    /// Below the Feedback Split, before the first Guess: the charted word's Average Guess Count,
+    /// Losses and Guess Distribution under the panel's Strategy, or a note saying why there are none
+    /// (with the command that fills them, when one does). Nothing after the first Guess.
+    fn render_guess_counts(&self, word: &str, cx: &mut Context<Self>) -> Option<Div> {
+        let t = self.theme;
+        let lookup = self.opener_lookup(word);
+        let section = div().flex().flex_col().gap_2().px_3().pt_3();
+        if let Some(result) = lookup.result() {
+            let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by).map_or("", |strategy| strategy.id);
+            return Some(self.render_guess_distribution(section, result, strategy));
+        }
+        let text = lookup.note()?;
+        let section = section.child(div().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child("GUESS DISTRIBUTION")).child(div().text_xs().text_color(rgb(t.muted)).child(text));
+        Some(section.when(lookup.offers_command(), |section| {
+            section.child(div().child(
+                widgets::button(t, "solver-precompute-guess-counts", opener_results::COMMAND).on_click(cx.listener(|this, _, window, cx| this.run(Command::PrecomputeGuessCounts, window, cx))),
+            ))
+        }))
+    }
+
+    /// Games per Guess Count (1 to 6), then the Losses, as horizontal bars drawn like the Feedback Split's.
+    fn render_guess_distribution(&self, section: Div, result: &OpenerResult, strategy: &str) -> Div {
+        let t = self.theme;
+        let bars = result.bars();
+        let most = bars.iter().map(|bar| bar.games).max().unwrap_or(1).max(1);
+        let mut chart = div().flex().flex_col().gap_1();
+        for bar in &bars {
+            let fill = if bar.lost { t.error } else { t.correct.0 };
+            chart = chart.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .child(div().w(px(28.)).text_xs().text_color(rgb(if bar.lost { t.error } else { t.subtle })).child(bar.label))
+                    .child(
+                        div().flex_1().h(px(12.)).when(bar.games > 0, |track| {
+                            track.child(div().h_full().w(relative(bar.games as f32 / most as f32)).min_w(px(2.)).rounded_sm().bg(rgb(fill)))
+                        }),
+                    )
+                    .child(div().w(px(36.)).text_right().text_xs().text_color(rgb(t.text)).child(group_thousands(bar.games))),
+            );
+        }
+        let losses = match result.losses {
+            0 => "no Losses".to_string(),
+            1 => "1 Loss".to_string(),
+            n => format!("{} Losses", group_thousands(n)),
+        };
+        section
+            .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child("GUESS DISTRIBUTION"))
+            .child(div().text_sm().text_color(rgb(t.text)).child(format!("{:.3} Guesses on average · {losses}", result.average_guess_count)))
+            .child(div().text_xs().text_color(rgb(t.muted)).child(format!("Rank {} under {strategy}, every Answer played to a Win", group_thousands(result.rank))))
+            .child(chart)
+            .child(div().text_xs().text_color(rgb(t.muted)).text_right().child("number of Answers →"))
     }
 }
 

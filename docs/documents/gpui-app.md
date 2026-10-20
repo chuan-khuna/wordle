@@ -28,8 +28,8 @@ app/wordle-gpui/
   src/
     lib.rs        the library: `engine` and `solver`, usable from tests with no window
     engine/       the game itself: Feedback, the word lists, Seeds, Game, live hints
-    solver/       the Feedback matrices, the Strategy that ranks Suggestions, the tree play and the
-                  Guess Count Matrix, and Solver mode's State
+    solver/       the Feedback matrices, the Strategy that ranks Suggestions, the tree play, the
+                  Guess Count Matrix and the reader of its summary, and Solver mode's State
     overlays/     state and keys with no drawing: the command palette, the pickers, the search
     theme/        one file per theme, and the Theme roles
     ui/           drawing: WordleApp (ui/mod.rs) holds the state; every other file draws one part
@@ -220,11 +220,14 @@ With **Candidates**, word families such as _ATCH or GRA_E can take seven or eigh
 From top to bottom the panel shows the settings, the Candidates, the best guess and then the search field with its chart.
 
 - **Candidates:** every word that could still be the Answer, with their count. Up to 20 are laid out as a grid, five to a row; more are one run of text in a box that scrolls. Clicking the heading folds the list away.
-- **Suggestions:** the top eight, each with its bits and the Candidates expected to be left (`Σ n²/N`). A dot in the Correct colour marks a word that could be the Answer, so guessing it might win now. Ties go to such a word, as described above.
+- **Suggestions:** the top eight, each with its bits and the Candidates expected to be left (`Σ n²/N`). A dot in the Correct colour marks a word that could be the Answer, so guessing it might win now. Ties go to such a word, as described above. Before the first Guess, a Suggestion whose row is in the [Guess Count Matrix](guess-count-matrix.md) summary also shows its Average Guess Count under the panel's Strategy (three decimals, in the accent colour).
 - **Chart:** click a Suggestion, or type any Guess List word into **Search a word to chart…**, to see its Feedback Split as horizontal bars. Each bar is one Feedback, drawn as its five Marks in the theme's colours, as long as the number of Candidates that would give it (the Win bar is in the Correct colour). The title gives the expected number of words left and the bits. Every group is drawn, biggest first, in a box that scrolls once it is taller than 320 px. **Type it** puts the word on the board.
+- **Guess Distribution** (before the first Guess only): under the Feedback Split, the charted word's Average Guess Count (over every Answer, Losses at their real count, as `summary.json` has it), its Losses and its rank under the panel's Strategy, then one bar per Guess Count 1 to 6 and a last **Lost** bar, drawn like the Feedback Split's bars (won bars in the Correct colour, Lost in the error colour). When there is nothing to show, a short note says why instead: no `summary.json` yet; settings with no named Strategy (Answers with All words), which have no Guess Count Matrix; a Strategy the summary doesn't cover yet; or an Opener whose row isn't finished. The first, third and fourth add a **Precompute guess counts…** button. After the first Guess none of this shows, not even the note, so it is never taken for a statement about the State.
 - **Search field:** a click sends the keys there instead of the board. Enter, Escape or a click on the board sends them back. ⌘V (Ctrl+V) pastes letters into it.
 
 The matrices are read from `precompute-cache/feedback/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Valid guesses × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
+
+The Guess Count results come from `precompute-cache/guess-counts/summary.json` (see [Summary format](guess-count-matrix.md#summary-format)), not the matrices. It is read on a background thread each time the panel opens and again when a [Precompute guess counts](#precompute-guess-counts) run ends (finished, stopped or failed, since each rewrites the summary). `solver/opener_results.rs` has the logic, with no window: `read_summary` reads the file into a lookup by Strategy id and word (`Missing`, `Unreadable` or `Read`), and `lookup(summary, strategy, word, guesses made)` decides what shows: `Hidden` after the first Guess, `Found`, or one of the reasons above, each with its `note()`. `opener_results_tests.rs` checks them on a small summary file, and that the real `precompute-cache/` summary (if any) reads.
 
 The chart is drawn with plain elements rather than gpui-kit's `BarChart`, so each bar's label can be the five coloured Marks and every colour comes from the app's theme.
 

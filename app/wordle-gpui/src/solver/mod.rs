@@ -5,4 +5,5 @@ pub mod assist;
 pub mod guess_count_matrix;
 pub mod guess_counts;
 pub mod matrix;
+pub mod opener_results;
 pub mod strategy;
