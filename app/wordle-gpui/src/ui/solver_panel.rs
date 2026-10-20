@@ -487,7 +487,7 @@ impl WordleApp {
                     .child(widgets::icon(if open { widgets::IconName::ChevronDown } else { widgets::IconName::ChevronRight }, t.muted))
                     .child(format!("CANDIDATES ({})", group_thousands(count))),
             )
-            .when(open, |section| section.child(div().id("solver-candidates").max_h(CANDIDATES_HEIGHT).overflow_y_scroll().text_xs().child(body)))
+            .when(open, |section| section.child(div().id("solver-candidates").max_h(CANDIDATES_HEIGHT).overflow_y_scroll().on_scroll_wheel(keep_scroll).text_xs().child(body)))
     }
 
     /// The field to chart any word on the Guess List. Clicking it sends the keys there instead of the board.
@@ -550,7 +550,7 @@ impl WordleApp {
             .text_color(rgb(t.text))
             .child(format!("Expected {} words left · {:.2} bits", format_left(chart.expected_left), chart.bits));
 
-        let mut bars = div().id("solver-chart").flex().flex_col().gap_1().max_h(CHART_HEIGHT).overflow_y_scroll();
+        let mut bars = div().id("solver-chart").flex().flex_col().gap_1().max_h(CHART_HEIGHT).overflow_y_scroll().on_scroll_wheel(keep_scroll);
         for group in &chart.groups {
             let win = group.marks() == [Mark::Correct; WORD_LENGTH];
             let fill = if win { t.correct.0 } else { t.subtle };
@@ -695,4 +695,11 @@ fn group_thousands(number: usize) -> String {
 /// An expected number of words: one decimal place while it is small, whole words after.
 fn format_left(left: f64) -> String {
     if left < 10.0 { format!("{left:.1}") } else { format!("{left:.0}") }
+}
+
+/// For a scroll area inside the panel: gpui hands a wheel event to every scroll area under the
+/// pointer, so once the inner area has scrolled (its own scroll listener runs before this one), stop
+/// the event there and the panel around it stays put.
+fn keep_scroll(_: &gpui::ScrollWheelEvent, _: &mut Window, cx: &mut gpui::App) {
+    cx.stop_propagation();
 }
