@@ -213,6 +213,10 @@ In prose, write a letter of a word as `<Letter>` (below), not a bare capital, so
 
 `<Letter>e</Letter>` works in any MDX file with no import: one letter drawn as the same small tile as a letter of `<Word>` (plain, with the `rule` frame). `<Letter mark="present">e</Letter>` paints it with that Mark; `mark` takes the names `<Mark kind>` takes (`correct`, `present`, `absent`). Screen readers get "E" or "E, Present". Anything but one letter a to z, or an unknown `mark`, throws and fails the build.
 
+## `<Boards>` and `<Board>`
+
+Static Game boards, side by side, in any MDX file with no import (`components/Boards.tsx`). `<Boards title="The 11 Losses">` is a figure in the Widget frame (`WidgetFrame`) holding a grid of as many columns as fit (`auto-fill`, at least `9rem` wide, `11rem` from `sm`), so two boards sit side by side on a phone and three or more on a wider page. Each `<Board pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />` is one Game: the last Guess is the Answer, and every row is painted with its Feedback against it (`scoreFeedback`, worked out at build time; no client code). Rows are numbered, and a dashed `rule` line before the seventh row marks the Guess Limit of six, so a Loss shows as rows under it. The caption is `pattern` as a `<Word>` (optional, blanks allowed), then the Answer and its Guess Count. Tiles are `Tile` with `board` (`h-6`, `h-7` from `sm`); each has its letter and Mark in its `aria-label`, and each row is a group labelled "Guess 7: match". A Guess not on the Guess List throws and fails the build.
+
 ## Code blocks
 
 Fenced code in any MDX file is highlighted at build time by `rehype-pretty-code` + Shiki (no highlighter JS reaches the browser; the built HTML has the coloured spans). Write the language, then optional meta:

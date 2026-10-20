@@ -39,4 +39,20 @@ Each Strategy plays from its own best Opener. Here are the three:
 
 **Expected Information over Candidates only** starts with <Word>raise</Word>. It is the Strategy from the last Article. Its average is **3.58**, and it **loses 11 Games**, listed under the chart, among them <Word>match</Word> and <Word>watch</Word>. These are the words with look-alike families, the <Word>_atch</Word> trap and others like it. The average counts the won Games only, so the real cost is a little higher than 3.58.
 
+Every one of the 11 Losses is such a trap. After two or three Guesses the Candidates are a family that shares most of its letters, and the Solver guesses its members one at a time until it runs out of Guesses.
+
+<Boards title="The 11 Losses">
+  <Board pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
+  <Board pattern="_o_er" guesses="raise deter cower hover joker boxer foyer goner" />
+  <Board pattern="gra_e" guesses="raise grace grade grape grate grave graze" />
+  <Board pattern="_aste" guesses="raise caste baste haste paste taste waste" />
+  <Board pattern="_ater" guesses="raise taper cater eater hater later water" />
+  <Board pattern="s_ore" guesses="raise scree shore snore spore store swore" />
+  <Board pattern="_ight" guesses="raise pilot fight might night tight wight" />
+  <Board pattern="_illy" guesses="raise pilot filly billy dilly hilly willy" />
+  <Board pattern="ta__y" guesses="raise tangy tabby tacky taffy tally tatty" />
+</Boards>
+
+Each board is one Game, opening with <Word>raise</Word>. The dashed rule is the Guess Limit: everything below it is a Loss. On the <Word>_atch</Word> and <Word>_o_er</Word> boards two Answers are lost, <Word>match</Word> and <Word>foyer</Word> on the seventh row and <Word>watch</Word> and <Word>goner</Word> on the eighth.
+
 The big gain comes from one change: letting the Solver play a word that cannot win. It takes the Losses from 11 to 0 and the average down by 0.15 Guesses. (The Opener differs too, but the trap is what costs the Games.) Which measure the Solver uses matters less: Expected Information and Expected Candidates are within 0.05 Guesses of each other.

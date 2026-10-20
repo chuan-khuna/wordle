@@ -6,6 +6,9 @@ const BASE =
 
 const SMALL = "inline-flex h-8 w-8 items-center justify-center rounded-sm font-mono text-sm font-semibold uppercase select-none";
 
+// Small enough that two boards fit side by side on a phone.
+const BOARD = "inline-flex h-6 w-6 items-center justify-center rounded-sm font-mono text-xs font-semibold uppercase select-none sm:h-7 sm:w-7 sm:text-sm";
+
 const TINY = "inline-flex h-4 w-4 items-center justify-center rounded-[2px] font-mono text-[10px] leading-none font-semibold uppercase select-none";
 
 /** A letter tile painted with its Mark's theme role. Pass `onCycle` to make it a button that steps through the Marks. */
@@ -14,16 +17,19 @@ export function Tile({
   mark,
   onCycle,
   small,
+  board,
   tiny,
 }: {
   letter: string;
   mark: Mark;
   onCycle?: () => void;
   small?: boolean;
+  /** The tile of a static board in <Boards>. */
+  board?: boolean;
   /** The 16px tile used as a chart label. */
   tiny?: boolean;
 }) {
-  const base = tiny ? TINY : small ? SMALL : BASE;
+  const base = tiny ? TINY : board ? BOARD : small ? SMALL : BASE;
   const label = `${letter ? letter.toUpperCase() : "Empty"}, ${MARK_NAMES[mark]}`;
   if (!onCycle) {
     return (
