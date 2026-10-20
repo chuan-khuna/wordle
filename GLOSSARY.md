@@ -129,6 +129,10 @@ _Avoid_: average score, mean tries
 A table of the Guess Count of every Game, one row per Opener and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count with no Guess Limit; Openers are compared by it.
 _Avoid_: turn to win matrix, turns matrix, score matrix
 
+**Opener Distribution**:
+How many Openers have each Average Guess Count, rounded to two decimals, under one Strategy. It is read from the Guess Count Matrix.
+_Avoid_: histogram, opener histogram, avg guess chart
+
 ## Publishing
 
 **Article**:
