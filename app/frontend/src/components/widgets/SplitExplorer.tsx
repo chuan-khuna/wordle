@@ -5,23 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { type SplitResponse, postSplit } from "@/lib/api";
-import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
+import { WORD_LENGTH } from "@/lib/feedback";
 import { parseState } from "@/lib/widget-state";
-import { GroupChart } from "./GroupChart";
-import { Tile } from "./Tile";
+import { SplitChart } from "./SplitChart";
 import { WidgetFrame, WordInput, cleanWord } from "./ui";
 import { useWidgetParam } from "./useWidgetParam";
 
 type Result = { key: string; data: SplitResponse | null; error: string | null };
 
-const CHART_BARS = 30;
 const WORDS_SHOWN = 60;
-const fmt = (n: number, digits = 2) => n.toFixed(digits);
 
 /**
  * Widget 3 (and 4, with bits): the Feedback Split of a Guess over the Candidate Set a State leaves.
- * A bar chart of the groups (one bar per Feedback, height = words in the group), the Expected Candidates,
- * and, unless `bits={false}`, the Expected Information. Select a bar or a row to see the group's words.
+ * The gpui app's chart (SplitChart): one horizontal bar per Feedback, with the Expected Candidates and, unless
+ * `bits={false}`, the Expected Information in its title. Select a bar to see the group's words.
  * Props: `guess`, `state` ("crane:00102,slate:01200"), `bits` (default true), `id` (URL params `id.guess`, `id.state`).
  * URL params `guess` and `state` override the props.
  */
@@ -77,7 +74,6 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
 
   const current = ready && result?.key === key ? result : null;
   const data = current?.data ?? null;
-  const bars = useMemo(() => (data ? data.split.slice(0, CHART_BARS).map((s) => ({ marks: s.marks, count: s.count })) : []), [data]);
   const group = data?.split.find((s) => s.marks === picked) ?? null;
   const letters = data?.word ?? g;
 
@@ -113,58 +109,19 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
 
       {data && (
         <>
-          <dl className="my-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {bits && <Stat label="Expected Information" value={`${fmt(data.bits)} bits`} big />}
-            <Stat label="Expected Candidates" value={fmt(data.expected_candidates, 1)} big />
-            <Stat label="Candidates now" value={String(data.candidates)} />
-            <Stat label="Groups" value={`${data.groups} (largest ${data.largest_group})`} />
-          </dl>
-
-          <GroupChart
-            bars={bars}
+          <SplitChart
+            word={letters}
+            groups={data.split}
+            candidates={data.candidates}
+            expectedCandidates={data.expected_candidates}
+            bits={data.bits}
+            showBits={bits}
             selected={picked}
             onSelect={(m) => {
               setPicked(m);
               setShowAllWords(false);
             }}
-            label={`Feedback Split of ${data.word}: words per Feedback group`}
           />
-          <p className="mt-1 text-xs text-meta">
-            {data.groups > CHART_BARS
-              ? `The ${CHART_BARS} largest of ${data.groups} groups are drawn; the list below has all of them. `
-              : ""}
-            Bars are labelled with their Feedback (0 Absent, 1 Present, 2 Correct). Click a bar or a row to see its words.
-          </p>
-
-          <ul className="mt-5 max-h-64 divide-y divide-rule overflow-y-auto border-y border-rule" aria-label="Feedback groups">
-            {data.split.map((s) => {
-              const marks = parseMarks(s.marks) ?? [];
-              const on = s.marks === picked;
-              return (
-                <li key={s.marks}>
-                  <button
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => {
-                      setPicked(on ? null : s.marks);
-                      setShowAllWords(false);
-                    }}
-                    className={`flex w-full items-center gap-3 px-2 py-1.5 text-left cursor-pointer hover:bg-highlight-low focus-visible:-outline-offset-2 ${on ? "bg-highlight-low" : ""}`}
-                  >
-                    <span className="flex gap-1" aria-hidden>
-                      {marks.map((m, i) => (
-                        <Tile key={i} small letter={letters[i] ?? ""} mark={m} />
-                      ))}
-                    </span>
-                    <span className="font-mono text-sm text-meta">{s.marks}</span>
-                    <span className="ml-auto text-sm">
-                      <strong className="font-mono text-text">{s.count}</strong> word{s.count === 1 ? "" : "s"}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
 
           {group && (
             <div className="mt-3" aria-live="polite">
@@ -191,14 +148,5 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
         </>
       )}
     </WidgetFrame>
-  );
-}
-
-function Stat({ label, value, big }: { label: string; value: string; big?: boolean }) {
-  return (
-    <div>
-      <dt className="eyebrow">{label}</dt>
-      <dd className={`mt-1 font-mono ${big ? "text-xl font-medium text-text" : "text-sm"}`}>{value}</dd>
-    </div>
   );
 }

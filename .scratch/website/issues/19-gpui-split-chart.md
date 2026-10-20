@@ -1,6 +1,6 @@
 # Split explorer: the gpui app's Feedback Split chart
 
-Status: ready-for-agent
+Status: done
 Blocked by: 18
 
 Replace the Split explorer's vertical TanStack bar chart with the chart from the gpui app's Solver panel (see the Chart bullet under the Solver section of `docs/documents/gpui-app.md`, and `app/wordle-gpui/src/ui/solver_panel.rs`):
@@ -14,3 +14,7 @@ Replace the Split explorer's vertical TanStack bar chart with the chart from the
 - Keep the Widget's props, URL params and the Article that uses it (06, twice). Update the spec's Charts line and `docs/documents/web-frontend.md`.
 
 See [spec](../spec.md).
+
+## Comments
+
+New `SplitChart.tsx` (plain elements and tokens) replaces `GroupChart.tsx` and the separate group list. Rows are `aria-pressed` buttons with `Tile tiny` labels; figures "15 words · 30.6%" (just "15  30.6%" below `sm`). The full probability sentence is a caption driven by hover, focus or selection, not a per-bar Tooltip (150 Radix tooltips, and none on touch). Pure helpers and tests in `lib/split-chart.ts`. Docs: `web-frontend.md`, spec Charts line.

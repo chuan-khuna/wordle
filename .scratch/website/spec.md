@@ -40,11 +40,11 @@ The Benchmark runs three Strategies, each from its own best Opener:
 - **Math**: `@next/mdx` with `remark-math` and `rehype-katex`.
 - **`<Term>Candidate Set</Term>`**: shows that term's definition from the root `GLOSSARY.md`, parsed at build time. An unknown term fails the build.
 - **Themes**: the gpui app's ten palettes, with the same role names (`background`, `surface`, `overlay`, `text`, `correct`, `present`, `absent`, `heading`, `accent`, …) as CSS variables. The default follows the system setting (Rosé Pine Dawn for light, Rosé Pine for dark). The picker's choice is saved in `localStorage`.
-- **Charts**: TanStack Charts (`@tanstack/react-charts`), coloured from the theme roles.
+- **Charts**: the Benchmark chart uses TanStack Charts (`@tanstack/react-charts`), coloured from the theme roles; the Feedback Split chart is drawn with plain elements and the design tokens, like the gpui app's, so each bar's label can be five coloured Mark tiles.
 - **Widgets** take their starting state from MDX props, and URL query params override it, so video takes can be reproduced exactly:
   1. Feedback scorer (Guess and Answer → Marks, with the repeated-letter rule spelled out)
   2. Candidate filter (enter a State, watch the Candidate Set shrink)
-  3. Feedback Split explorer (bar chart of the groups, Expected Information, Expected Candidates)
+  3. Feedback Split explorer (the gpui app's horizontal-bar chart of the groups, Expected Information, Expected Candidates)
   4. Step-through Game (the Solver plays a chosen Answer one Guess at a time)
   5. Opener table
   6. Benchmark chart
