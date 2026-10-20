@@ -90,7 +90,7 @@ _Avoid_: score, pattern, hash
 
 **Expected Information**:
 How much a Guess is expected to shrink the Candidate Set, averaged over its Feedback Split and counted in bits.
-_Avoid_: entropy, entropy score, info gain
+_Avoid_: entropy, entropy score, info gain (an Article may name "entropy" once, to link the formula to its standard name)
 
 **Strategy**:
 The rule the Solver uses to pick a Suggestion, such as highest Expected Information.
@@ -120,3 +120,21 @@ _Avoid_: histogram, stats
 **Average Guess Count**:
 The mean Guess Count across the won Games of a Benchmark.
 _Avoid_: average score, mean tries
+
+## Publishing
+
+**Article**:
+A short piece on the website that explains one idea, such as Feedback Split or Expected Information. It may build on other Articles, its Prerequisites.
+_Avoid_: post, page, chapter, lesson
+
+**Prerequisite**:
+An Article that another Article builds on and links back to.
+_Avoid_: dependency, parent
+
+**Series**:
+An ordered path through several Articles that tells one story, such as "Solving Wordle". A video follows a Series.
+_Avoid_: course, collection, playlist
+
+**Widget**:
+An interactive figure inside an Article that lets the reader try the idea, such as scoring a Guess or exploring a Feedback Split.
+_Avoid_: demo, playground, component
