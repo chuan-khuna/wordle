@@ -12,12 +12,12 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just matrices`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just backend-precompute`
+justfile                    `just wordle`, `just precompute`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just backend-precompute`
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
-  backend/                  the website's FastAPI app, a standalone uv project outside the workspace (see web-backend.md)
+  backend/                  the website's FastAPI app: its own uv project outside the workspace, depending on `packages/wordle` through a path dependency (see web-backend.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml
@@ -27,7 +27,7 @@ packages/
         words.py            loads the Answer List and Guess List
         game.py             Game, Guess, State
       cli.py                the terminal game (questionary + rich)
-      solver/               matrix.py (Feedback matrices), strategy.py (the Solver), cli.py (the questions asked by `just matrices`)
+      solver/               matrix.py (Feedback matrices), strategy.py (the Solver), cli.py (the questions asked by `just precompute`)
       __main__.py           `python -m wordle`
       data/                 answers.txt, guesses.txt, SOURCES.md
     tests/

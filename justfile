@@ -39,4 +39,4 @@ backend-precompute *args:
 # Serve the website backend (FastAPI) on http://127.0.0.1:8000. Takes uvicorn options, e.g. --port 8001
 [working-directory: 'app/backend']
 backend *args:
-    uv run uvicorn wordle_backend.api:app {{args}}
+    uv run uvicorn wordle_backend.main:app {{args}}

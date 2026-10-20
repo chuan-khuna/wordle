@@ -1,4 +1,4 @@
-"""`wordle-matrices`: ask a few questions, then precompute the Feedback matrices."""
+"""`just precompute`: ask a few questions, then precompute the Feedback matrices."""
 
 import argparse
 import time

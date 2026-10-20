@@ -24,9 +24,9 @@ from pathlib import Path
 
 import numpy as np
 
-from wordle_backend.feedback import WIN
-from wordle_backend.matrices import DEFAULT_DIR
-from wordle_backend.strategy import By, Pool, Scope, Strategy
+from wordle.solver.matrix import WIN
+from wordle.solver.strategy import Pool, Rank, Scope
+from wordle_backend.solver import DEFAULT_DIR, WebSolver
 
 BENCHMARK_FILE = "benchmark.json"
 OPENERS_FILE = "openers.json"
@@ -44,7 +44,7 @@ class BenchmarkStrategy:
     name: str
     pool: Pool
     scope: Scope
-    by: By
+    by: Rank
 
 
 BENCHMARK_STRATEGIES = (
@@ -54,42 +54,41 @@ BENCHMARK_STRATEGIES = (
 )
 
 
-def best_opener(strategy: Strategy, how: BenchmarkStrategy) -> str:
-    return strategy.rank(
-        strategy.all_candidates(), pool=how.pool, scope=how.scope, by=how.by, top=1
+def best_opener(solver: WebSolver, how: BenchmarkStrategy) -> str:
+    return solver.rank(
+        solver.all_candidates(), pool=how.pool, scope=how.scope, by=how.by, top=1
     )[0].word
 
 
-def guess_counts(strategy: Strategy, how: BenchmarkStrategy, opener: str) -> dict[str, int]:
+def guess_counts(solver: WebSolver, how: BenchmarkStrategy, opener: str) -> dict[str, int]:
     """The Guess Count of every Answer: its Game played with `how`, starting from `opener`."""
     counts: dict[str, int] = {}
     # Each node is (Candidate Set, Guess to play). Every Answer in the set is still unsolved.
-    pending = [(strategy.all_candidates(), opener, 1)]
+    pending = [(solver.all_candidates(), opener, 1)]
     while pending:
         candidates, guess, number = pending.pop()
-        row = strategy.guesses_vs_answers[strategy.guess_row[guess]]
-        codes = row[candidates]
+        codes = solver.codes(guess, candidates)
         for code in np.unique(codes):
             group = candidates[codes == code]
             if code == WIN:
                 for i in group:
-                    counts[strategy.answers[i]] = number
+                    counts[solver.answers[i]] = number
             elif number >= SAFETY_LIMIT:
                 for i in group:
-                    counts[strategy.answers[i]] = number + 1  # unsolved: a Loss anyway
+                    counts[solver.answers[i]] = number + 1  # unsolved: a Loss anyway
             else:
-                next_guess = strategy.rank(group, pool=how.pool, scope=how.scope, by=how.by, top=1)[0].word
+                next_guess = solver.rank(group, pool=how.pool, scope=how.scope, by=how.by, top=1)[0].word
                 pending.append((group, next_guess, number + 1))
     return counts
 
 
-def run_benchmark(strategy: Strategy, how: BenchmarkStrategy, answers: list[str] | None = None) -> dict:
+def run_benchmark(solver: WebSolver, how: BenchmarkStrategy, answers: list[str] | None = None) -> dict:
     """The Benchmark of one Strategy: its Opener, Guess Distribution and Average Guess Count.
 
     `answers` limits the Games to a subset of the Answer List (for tests); default is all.
     """
-    opener = best_opener(strategy, how)
-    counts = guess_counts(strategy, how, opener)
+    opener = best_opener(solver, how)
+    counts = guess_counts(solver, how, opener)
     if answers is not None:
         counts = {answer: counts[answer] for answer in answers}
     distribution = [sum(1 for n in counts.values() if n == k) for k in range(1, GUESS_LIMIT + 1)]
@@ -111,15 +110,15 @@ def run_benchmark(strategy: Strategy, how: BenchmarkStrategy, answers: list[str]
     }
 
 
-def run_benchmarks(strategy: Strategy, threads: int = 1) -> list[dict]:
+def run_benchmarks(solver: WebSolver, threads: int = 1) -> list[dict]:
     """The Benchmark of every Strategy, in order. Threads help: numpy releases the GIL."""
     with ThreadPoolExecutor(max_workers=threads) as pool:
-        return list(pool.map(lambda how: run_benchmark(strategy, how), BENCHMARK_STRATEGIES))
+        return list(pool.map(lambda how: run_benchmark(solver, how), BENCHMARK_STRATEGIES))
 
 
-def opener_leaderboard(strategy: Strategy, size: int = LEADERBOARD_SIZE) -> list[dict]:
+def opener_leaderboard(solver: WebSolver, size: int = LEADERBOARD_SIZE) -> list[dict]:
     """The best first Guesses by Expected Information (ties by Expected Candidates, then alphabetical)."""
-    ranked = strategy.rank(strategy.all_candidates(), pool="guesses", scope="global", by="bits", top=size)
+    ranked = solver.rank(solver.all_candidates(), pool="guesses", scope="global", by="bits", top=size)
     return [
         {
             "rank": rank,

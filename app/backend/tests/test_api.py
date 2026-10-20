@@ -1,12 +1,13 @@
 import pytest
 
-from wordle_backend.candidates import Turn, candidates
-from wordle_backend.feedback import feedback, pack
-from wordle_backend.words import load_word_lists
+from wordle.engine.feedback import feedback
+from wordle.engine.words import load_word_lists
+from wordle.solver.strategy import Solver, pack
+from wordle_backend.solver import DEFAULT_DIR, WebSolver
 
 
 def turn(guess: str, answer: str) -> dict:
-    return {"guess": guess, "feedback": "".join(map(str, feedback(guess, answer)))}
+    return {"guess": guess, "feedback": "".join(str(mark.value) for mark in feedback(guess, answer))}
 
 
 # Leaves exactly two Candidates, "batch" and "hatch" (checked in the tests below).
@@ -49,8 +50,8 @@ def test_bad_input_is_400_with_a_message(client, request_):
 def test_candidates_match_the_filter(client):
     state = [turn("slate", "crane"), turn("pound", "crane")]
     body = client.post("/api/candidates", json={"state": state}).json()
-    expected = candidates(tuple(Turn(t["guess"], int(t["feedback"], 3)) for t in state))
-    assert body["words"] == list(expected)
+    expected = [a for a in load_word_lists().answers if all(pack(feedback(t["guess"], a)) == int(t["feedback"], 3) for t in state)]
+    assert body["words"] == expected
     assert body["count"] == len(expected) and "crane" in expected
 
 
@@ -125,3 +126,15 @@ def test_solve_candidates_only_hits_the_atch_trap(client):
     # Seed 5924 in solver-strategy.md: Candidates-only search from RAISE needs 8 Guesses.
     params = {"answer": "watch", "scope": "candidates", "pool": "answers"}
     assert client.get("/api/solve", params=params).json()["guesses"] > 6
+
+
+def test_rank_switches_to_candidates_only_at_two_candidates():
+    # The package's Solver.rank does not; the backend's WebSolver does.
+    solver = WebSolver.load(DEFAULT_DIR)
+    candidates = solver.all_candidates()
+    for t in TWO_CANDIDATES:
+        candidates = solver.narrow(candidates, t["guess"], int(t["feedback"], 3))
+    words = set(solver.words(candidates))
+    assert len(words) == 2
+    assert {s.word for s in solver.rank(candidates, scope="global")} == words
+    assert any(s.word not in words for s in Solver.rank(solver, candidates, scope="global"))

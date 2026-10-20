@@ -4,9 +4,10 @@ import argparse
 import time
 from pathlib import Path
 
-from wordle_backend import benchmark, matrices
-from wordle_backend.matrices import ANSWERS_FILE, DEFAULT_DIR, GUESSES_FILE
-from wordle_backend.strategy import Strategy
+from wordle.solver import matrix
+from wordle.solver.matrix import ANSWERS_FILE, GUESSES_FILE
+from wordle_backend import benchmark
+from wordle_backend.solver import DEFAULT_DIR, WebSolver
 
 
 def main() -> None:
@@ -33,14 +34,14 @@ def main() -> None:
     plural = "s" if args.threads > 1 else ""
     if not args.benchmark_only:
         started = time.perf_counter()
-        for path in matrices.build(args.out, args.threads):
+        for path in matrix.build(args.out, args.threads):
             print(f"{path} ({path.stat().st_size / 1_000_000:.1f} MB)")
         print(f"Matrices done in {time.perf_counter() - started:.1f}s with {args.threads} thread{plural}.")
     if args.skip_benchmark:
         return
 
     started = time.perf_counter()
-    solver = Strategy(*matrices.load(args.out))
+    solver = WebSolver.load(args.out)
     results = benchmark.run_benchmarks(solver, args.threads)
     for result in results:
         print(f"{result['name']}: Opener {result['opener']}, Average Guess Count {result['average_guess_count']:.3f}, "

@@ -168,7 +168,7 @@ gpui normally compiles its Metal shaders at build time with Xcode's `metal` tool
 
 ## Precompute matrices
 
-**Precompute matrices…** (menu or palette; search `matri`) builds the two Feedback matrices the Python package builds with `just matrices`, as the same `.npy` files, but in the app's own `app/wordle-gpui/matrices/` (gitignored), so the two apps never share or overwrite each other's files. See [feedback-matrices.md](feedback-matrices.md) for what they hold.
+**Precompute matrices…** (menu or palette; search `matri`) builds the two Feedback matrices the Python package builds with `just precompute`, as the same `.npy` files, but in the app's own `app/wordle-gpui/matrices/` (gitignored), so the two apps never share or overwrite each other's files. See [feedback-matrices.md](feedback-matrices.md) for what they hold.
 
 - A picker asks how many threads to use: 1, 2, 4 or 8. Up and Down move (typing 1, 2, 4 or 8 jumps to it), Enter or a click starts, Escape goes back. It starts on the largest choice the machine has cores for.
 - The work runs on gpui's background executor, so the window stays usable. The status bar says "Precomputing matrices on 4 threads…", then "Saved the matrices to app/wordle-gpui/matrices/ in 1.2s (4 threads)" or the error. Starting it again while it runs only says so.

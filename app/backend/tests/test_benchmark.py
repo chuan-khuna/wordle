@@ -2,17 +2,18 @@ import json
 
 import pytest
 
-from wordle_backend import benchmark, matrices
-from wordle_backend.feedback import feedback, pack
-from wordle_backend.strategy import Strategy
-from wordle_backend.words import load_word_lists
+from wordle.engine.feedback import feedback
+from wordle.engine.words import load_word_lists
+from wordle.solver.strategy import pack
+from wordle_backend import benchmark
+from wordle_backend.solver import DEFAULT_DIR, WebSolver
 
 SUBSET = list(load_word_lists().answers[::200])  # 12 Answers, enough to exercise the tree
 
 
 @pytest.fixture(scope="module")
 def strategy():
-    return Strategy(*matrices.load())
+    return WebSolver.load(DEFAULT_DIR)
 
 
 @pytest.fixture(scope="module")
