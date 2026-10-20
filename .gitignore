@@ -13,3 +13,4 @@ dist/
 
 # Precomputed Feedback matrices, Benchmark and Openers (regenerate with `just precompute` or `just backend-precompute`)
 precompute-cache/
+# (their xz backup in data/precompute/ is committed: `just backup-cache`, `just restore-cache`)

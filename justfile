@@ -30,6 +30,14 @@ precompute *args:
 precompute-guess-counts *args:
     uv run src/precompute_guess_counts.py {{args}}
 
+# Compress precompute-cache/ (all but the Feedback matrices) into data/precompute/ to commit. Takes --folder NAME, --yes, --partial
+backup-cache *args:
+    uv run src/precompute_backup.py backup {{args}}
+
+# Decompress data/precompute/ back into precompute-cache/. Takes --folder NAME, --yes
+restore-cache *args:
+    uv run src/precompute_backup.py restore {{args}}
+
 # Run the website backend's tests
 [working-directory: 'app/backend']
 test-backend:
