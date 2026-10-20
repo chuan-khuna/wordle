@@ -20,28 +20,36 @@ from wordle.solver.matrix import (
 from wordle.solver.strategy import STRATEGIES, Solver
 
 
-def precompute_matrix() -> None:
-    parser = argparse.ArgumentParser(description="Precompute the Feedback matrices.")
-    parser.add_argument("--out", type=Path, default=DEFAULT_DIR, help="output directory")
+def add_threads_flag(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--threads",
         type=int,
         choices=THREAD_CHOICES,
         help="worker threads; skips the question",
     )
+
+
+def ask_threads(given: int | None) -> int | None:
+    """`given`, or the answer to "How many threads?"; None on Ctrl+C."""
+    if given is not None:
+        return given
+    return questionary.select(
+        "How many threads?",
+        choices=[questionary.Choice(str(n), value=n) for n in THREAD_CHOICES],
+        default=THREAD_CHOICES[0],
+    ).ask()
+
+
+def precompute_matrix() -> None:
+    parser = argparse.ArgumentParser(description="Precompute the Feedback matrices.")
+    parser.add_argument("--out", type=Path, default=DEFAULT_DIR, help="output directory")
+    add_threads_flag(parser)
     parser.add_argument("--yes", action="store_true", help="overwrite existing files without asking")
     args = parser.parse_args()
 
-    threads = args.threads
-    if threads is None:
-        answer = questionary.select(
-            "How many threads?",
-            choices=[questionary.Choice(str(n), value=n) for n in THREAD_CHOICES],
-            default=THREAD_CHOICES[0],
-        ).ask()
-        if answer is None:  # Ctrl+C
-            return
-        threads = answer
+    threads = ask_threads(args.threads)
+    if threads is None:  # Ctrl+C
+        return
 
     existing = [p for p in (args.out / ANSWERS_FILE, args.out / GUESSES_FILE) if p.exists()]
     if existing and not args.yes:
@@ -66,6 +74,7 @@ TOP = 5  # Openers shown per Strategy at the end of `just precompute-guess-count
 def precompute_guess_counts() -> None:
     parser = argparse.ArgumentParser(description="Precompute the Guess Count Matrix of each Strategy.")
     parser.add_argument("--out", type=Path, default=CACHE_DIR, help="output directory")
+    add_threads_flag(parser)
     parser.add_argument(
         "--strategy",
         action="append",
@@ -78,6 +87,9 @@ def precompute_guess_counts() -> None:
     again.add_argument("--fresh", action="store_true", help="start each chosen matrix over without asking")
     args = parser.parse_args()
 
+    threads = ask_threads(args.threads)
+    if threads is None:  # Ctrl+C
+        return
     if args.strategy:
         chosen = tuple(how for how in STRATEGIES if how.id in args.strategy)
     else:
@@ -113,7 +125,7 @@ def precompute_guess_counts() -> None:
 
     started = time.perf_counter()
     try:
-        guess_count_matrix.build(args.out, chosen, args.opener, solver, fresh)
+        guess_count_matrix.build(args.out, chosen, args.opener, solver, fresh, threads=threads, progress=True)
     except KeyboardInterrupt:
         print("\nInterrupted. Finished rows are kept and the summary is written; run again to resume.")
     elapsed = time.perf_counter() - started
@@ -129,7 +141,7 @@ def precompute_guess_counts() -> None:
                 f"  {opener['rank']}. {opener['word']}  {opener['average_guess_count']:.3f} Guesses,"
                 f" {opener['losses']} Losses, {opener['bits']:.3f} bits"
             )
-    print(f"\nDone in {elapsed:.1f}s.")
+    print(f"\nDone in {elapsed:.1f}s with {threads} thread{'s' if threads > 1 else ''}.")
 
 
 if __name__ == "__main__":

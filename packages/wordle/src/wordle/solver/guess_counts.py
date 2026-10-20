@@ -12,6 +12,8 @@ Candidate Sets. A `NextGuessCache` keeps those Guesses so that playing many
 Openers (the Guess Count Matrix does) does the search for each Candidate Set once.
 """
 
+from collections.abc import Callable
+
 import numpy as np
 
 from wordle.solver.matrix import WIN
@@ -47,12 +49,18 @@ class NextGuessCache:
 
 
 def guess_counts(
-    solver: Solver, how: Strategy, opener: str, cache: NextGuessCache | None = None
+    solver: Solver,
+    how: Strategy,
+    opener: str,
+    cache: NextGuessCache | None = None,
+    settled: Callable[[int], None] | None = None,
 ) -> np.ndarray:
     """The Guess Count of every Answer, in Answer List order: its Game played with `how` from `opener`.
 
     An Answer still unsolved after `SAFETY_LIMIT` Guesses gets `UNSOLVED`.
     Pass a `cache` to share next-Guess work with other calls (any Opener, any thread).
+    `settled(n)` is called each time `n` more Answers get their Guess Count (for a progress bar);
+    an exception it raises stops the play.
     """
     if cache is None:
         cache = NextGuessCache()
@@ -64,10 +72,10 @@ def guess_counts(
         codes = solver.codes(guess, candidates)
         for code in np.unique(codes):
             group = candidates[codes == code]
-            if code == WIN:
-                counts[group] = number
-            elif number >= SAFETY_LIMIT:
-                counts[group] = UNSOLVED
+            if code == WIN or number >= SAFETY_LIMIT:
+                counts[group] = number if code == WIN else UNSOLVED
+                if settled is not None:
+                    settled(len(group))
             else:
                 pending.append((group, cache.next_guess(solver, how, group), number + 1))
     return counts

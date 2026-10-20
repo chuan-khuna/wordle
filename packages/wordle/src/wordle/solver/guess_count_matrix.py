@@ -27,11 +27,14 @@ entries for a spreadsheet.
 
 import csv
 import json
+import queue
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
+from tqdm import tqdm
 
 from wordle.engine.game import MAX_GUESSES as GUESS_LIMIT
 from wordle.solver.guess_counts import SAFETY_LIMIT, NextGuessCache, guess_counts
@@ -191,12 +194,18 @@ def write_summary(out: Path, solver: Solver) -> list[Path]:
     return [*paths, path]
 
 
+class _Stopped(Exception):
+    """Raised inside a worker's tree play to drop the Opener in flight once the run is stopping."""
+
+
 def build(
     out: Path = CACHE_DIR,
     strategies: tuple[Strategy, ...] = STRATEGIES,
     openers: list[str] | None = None,
     solver: Solver | None = None,
     fresh: bool = False,
+    threads: int = 1,
+    progress: bool = False,
     after_row: Callable[[Strategy, int], None] | None = None,
 ) -> list[Path]:
     """Fill the Guess Count Matrix of each Strategy, then write the manifest-checked summary and ranking CSVs.
@@ -204,10 +213,14 @@ def build(
     By default only the rows with a zero cell are played (a resume). With `openers`, those rows are
     played again, finished or not. `fresh` clears each Strategy's matrix first. Without `fresh`, a
     matrix that already has rows must match the manifest or `ManifestMismatch` is raised, before anything is written.
-    `after_row(strategy, row)` is called once each row is committed.
 
-    Ctrl+C keeps the finished rows, writes the summary and CSVs, then raises `KeyboardInterrupt` again.
-    Returns the files written, the summary last.
+    `threads` workers play the Openers, sharing one Solver (one memory map of the Feedback Matrices)
+    and one `NextGuessCache`; the calling thread commits each finished row, so the files are the same
+    whatever the thread count. `progress` draws tqdm bars on stderr: one overall, one per worker.
+    `after_row(strategy, row)` is called (on the calling thread) once each row is committed.
+
+    Ctrl+C keeps the finished rows, drops the ones in flight, writes the summary and CSVs, then raises
+    `KeyboardInterrupt` again. Returns the files written, the summary last.
     """
     if solver is None:
         solver = Solver.load()
@@ -216,37 +229,114 @@ def build(
             if filled_rows(out, how) and (reason := mismatch(out, how, solver)):
                 raise ManifestMismatch(f"{how.id}: {reason}")
     asked = None if openers is None else sorted(solver.guesses.index(word) for word in openers)
-    cache = NextGuessCache()  # the next Guess depends only on the Candidate Set, so every Opener shares it
     shape = (len(solver.guesses), len(solver.answers))
     if fresh:
         for how in strategies:
             matrix_path(out, how).unlink(missing_ok=True)
     _write_manifest(out, strategies, solver)
-    paths = []
-    interrupted = False
+    paths = [matrix_path(out, how) for how in strategies]
+    matrices = {how: _open(matrix_path(out, how), shape) for how in strategies}
+    jobs, complete = [], 0
+    for how, matrix in matrices.items():
+        unfinished = np.flatnonzero(~(matrix > 0).all(axis=1)).tolist()
+        jobs.extend((how, row) for row in (asked if asked is not None else unfinished))
+        if asked is None:
+            complete += shape[0] - len(unfinished)
     try:
-        for how in strategies:
-            path = matrix_path(out, how)
-            matrix = _open(path, shape)
-            paths.append(path)
-            rows = asked if asked is not None else np.flatnonzero(~(matrix > 0).all(axis=1)).tolist()
-            flushed = time.monotonic()
-            try:
-                for row in rows:
-                    counts = guess_counts(solver, how, solver.guesses[row], cache)
-                    matrix[row] = 0  # a stop mid-write leaves zeros, never a mix of old and new
-                    matrix[row] = counts  # int16 -> uint8, 1..13
-                    if after_row is not None:
-                        after_row(how, row)
-                    if time.monotonic() - flushed >= FLUSH_SECONDS:
-                        matrix.flush()
-                        flushed = time.monotonic()
-            finally:
-                matrix.flush()
-                del matrix
+        _fill(solver, matrices, jobs, complete, threads, progress, after_row)
     except KeyboardInterrupt:
         interrupted = True
+    else:
+        interrupted = False
+    finally:
+        for matrix in matrices.values():
+            matrix.flush()
+        matrices.clear()
     paths.extend(write_summary(out, solver))
     if interrupted:
         raise KeyboardInterrupt
     return paths
+
+
+def _fill(
+    solver: Solver,
+    matrices: dict[Strategy, np.ndarray],
+    jobs: list[tuple[Strategy, int]],
+    complete: int,
+    threads: int,
+    progress: bool,
+    after_row: Callable[[Strategy, int], None] | None,
+) -> None:
+    """Play every (Strategy, row) of `jobs` on `threads` workers and commit each row on this thread."""
+    cache = NextGuessCache()  # the next Guess depends only on the Candidate Set, so every Opener and thread shares it
+    todo = iter(jobs)
+    take = threading.Lock()
+    stop = threading.Event()
+    finished: queue.Queue = queue.Queue()  # (Strategy, row, counts), or an exception from a worker
+    overall = tqdm(
+        total=complete + len(jobs), initial=complete, desc="Openers", unit="row", position=0,
+        dynamic_ncols=True, disable=not progress,
+    )  # fmt: skip
+
+    def work(slot: int) -> None:
+        bar = tqdm(
+            total=len(solver.answers), position=slot + 1, unit="answer", leave=False,
+            dynamic_ncols=True, disable=not progress,
+        )  # fmt: skip
+
+        def settled(n: int) -> None:
+            if stop.is_set():
+                raise _Stopped
+            bar.update(n)
+
+        try:
+            while not stop.is_set():
+                with take:
+                    job = next(todo, None)
+                if job is None:
+                    return
+                how, row = job
+                bar.set_description(f"{how.id} {solver.guesses[row]}", refresh=False)
+                bar.reset()
+                finished.put((how, row, guess_counts(solver, how, solver.guesses[row], cache, settled)))
+        except _Stopped:
+            pass
+        except BaseException as error:  # handed to the calling thread, which re-raises it
+            finished.put(error)
+        finally:
+            bar.close()
+
+    workers = [threading.Thread(target=work, args=(slot,), daemon=True) for slot in range(min(threads, len(jobs)))]
+    for worker in workers:
+        worker.start()
+    flushed = time.monotonic()
+    try:
+        for _ in range(len(jobs)):
+            item = _next(finished)
+            if isinstance(item, BaseException):
+                raise item
+            how, row, counts = item
+            matrix = matrices[how]
+            matrix[row] = 0  # a stop mid-write leaves zeros, never a mix of old and new
+            matrix[row] = counts  # int16 -> uint8, 1..13
+            overall.update(1)
+            if after_row is not None:
+                after_row(how, row)
+            if time.monotonic() - flushed >= FLUSH_SECONDS:
+                for m in matrices.values():
+                    m.flush()
+                flushed = time.monotonic()
+    finally:
+        stop.set()
+        for worker in workers:
+            worker.join()
+        overall.close()
+
+
+def _next(finished: queue.Queue):
+    """The next item from the workers, waking up often so Ctrl+C is seen at once."""
+    while True:
+        try:
+            return finished.get(timeout=0.2)
+        except queue.Empty:
+            continue

@@ -26,7 +26,7 @@ test-gpui:
 precompute *args:
     uv run src/precompute.py {{args}}
 
-# Precompute the Guess Count Matrix of each Strategy (asks which). Takes --strategy ID (repeatable), --opener WORD (repeatable), --out DIR
+# Precompute the Guess Count Matrix of each Strategy (asks how many threads and which). Takes --threads N, --strategy ID (repeatable), --opener WORD (repeatable), --out DIR
 precompute-guess-counts *args:
     uv run src/precompute_guess_counts.py {{args}}
 

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from wordle.engine.feedback import feedback
+from wordle.solver import cli
 from wordle.solver.guess_count_matrix import ManifestMismatch, build, matrix_path, ranking_path, summarize
 from wordle.solver.guess_counts import UNSOLVED
 from wordle.solver.matrix import WIN
@@ -225,3 +226,124 @@ def test_summary_is_compact_and_the_ranking_csv_matches_it(solver, tmp_path):
         assert [int(row[f"won_in_{n}"]) for n in range(1, 7)] == entry["distribution"]
         assert float(row["bits"]) == entry["bits"]
         assert (row["is_answer"] == "True") == entry["is_answer"]
+
+
+class Answer:
+    """Stands in for a questionary question: `ask()` gives `value` and records that it was asked."""
+
+    def __init__(self, value, asked):
+        self.value, self.asked = value, asked
+
+    def ask(self):
+        self.asked.append(self.value)
+        return self.value
+
+
+def run_command(monkeypatch, solver, tmp_path, *flags, answer=None):
+    """Run `precompute-guess-counts` for bits-candidates and salet into `tmp_path`; returns the answers asked for."""
+    asked = []
+    monkeypatch.setattr(cli.Solver, "load", staticmethod(lambda: solver))
+    monkeypatch.setattr(cli.questionary, "select", lambda *args, **kwargs: Answer(answer, asked))
+    argv = ["precompute-guess-counts", "--out", str(tmp_path), "--threads", "1", "--strategy", HOW.id, "--opener", "salet", *flags]
+    monkeypatch.setattr("sys.argv", argv)
+    cli.precompute_guess_counts()
+    return asked
+
+
+def filled(tmp_path, solver):
+    return {solver.guesses[r] for r in np.flatnonzero(saved(tmp_path).any(axis=1))}
+
+
+def test_the_command_asks_only_when_rows_exist(monkeypatch, solver, tmp_path):
+    assert run_command(monkeypatch, solver, tmp_path) == []  # nothing filled yet: no question
+    assert filled(tmp_path, solver) == {"salet"}
+
+
+@pytest.mark.parametrize(("answer", "left"), [("resume", {"raise", "salet"}), ("fresh", {"salet"})])
+def test_the_command_resumes_or_starts_over_as_answered(monkeypatch, solver, tmp_path, answer, left):
+    build(tmp_path, (HOW,), ["raise"], solver)
+    assert run_command(monkeypatch, solver, tmp_path, answer=answer) == [answer]
+    assert filled(tmp_path, solver) == left
+
+
+@pytest.mark.parametrize("answer", ["cancel", None])  # None is Ctrl+C at the question
+def test_cancel_writes_nothing(monkeypatch, solver, tmp_path, answer):
+    build(tmp_path, (HOW,), ["raise"], solver)
+    folder = tmp_path / "guess-counts"
+    before = {path.name: path.read_bytes() for path in folder.iterdir()}
+    assert run_command(monkeypatch, solver, tmp_path, answer=answer) == [answer]
+    assert {path.name: path.read_bytes() for path in folder.iterdir()} == before
+
+
+@pytest.mark.parametrize(("flag", "left"), [("--yes", {"raise", "salet"}), ("--fresh", {"salet"})])
+def test_yes_resumes_and_fresh_starts_over_without_asking(monkeypatch, solver, tmp_path, flag, left):
+    build(tmp_path, (HOW,), ["raise"], solver)
+    assert run_command(monkeypatch, solver, tmp_path, flag) == []
+    assert filled(tmp_path, solver) == left
+
+
+def test_the_command_refuses_to_resume_a_mismatched_matrix(monkeypatch, solver, tmp_path):
+    build(tmp_path, (HOW,), ["raise"], solver)
+    edit_manifest(tmp_path, lambda manifest: manifest["columns"].reverse())
+    with pytest.raises(SystemExit, match="--fresh"):
+        run_command(monkeypatch, solver, tmp_path, "--yes")
+    assert filled(tmp_path, solver) == {"raise"}
+
+
+CANDIDATES_ONLY = tuple(how for how in STRATEGIES if how.scope == "candidates")
+SOME = ["salet", "raise", "crane", "tesla", "aahed", "zymic", "fuzzy", "least"]
+
+
+def folder_bytes(out):
+    return {path.name: path.read_bytes() for path in sorted((out / "guess-counts").iterdir())}
+
+
+def test_one_thread_and_several_threads_write_the_same_bytes(solver, tmp_path):
+    build(tmp_path / "one", CANDIDATES_ONLY, SOME, solver, threads=1)
+    build(tmp_path / "four", CANDIDATES_ONLY, SOME, solver, threads=4)
+    one, four = folder_bytes(tmp_path / "one"), folder_bytes(tmp_path / "four")
+    assert one.keys() == four.keys() and len(one) == 6  # two matrices, two CSVs, manifest, summary
+    for name in one:
+        assert one[name] == four[name], name
+
+
+def test_ctrl_c_with_several_threads_keeps_the_finished_rows(solver, tmp_path):
+    build(tmp_path, (HOW,), ["raise"], solver)
+    raise_row = solver.guesses.index("raise")
+
+    calls = []
+    with pytest.raises(KeyboardInterrupt):
+        build(tmp_path, (HOW,), None, solver, threads=4, after_row=stop_after(calls, 3))
+
+    assert len(calls) == 3 and raise_row not in calls
+    matrix = saved(tmp_path)
+    assert np.flatnonzero(matrix.any(axis=1)).tolist() == sorted([*calls, raise_row])  # rows in flight are not written
+    for row in calls:
+        assert (matrix[row] > 0).all()
+        assert matrix[row, 0] == play_alone(solver, HOW, solver.guesses[row], solver.answers[0])
+    summary = json.loads((tmp_path / "guess-counts" / "summary.json").read_text())
+    assert summary["bits-candidates"]["complete_rows"] == 4
+
+
+def test_the_command_asks_how_many_threads_unless_given(monkeypatch, solver, tmp_path):
+    asked = []
+    monkeypatch.setattr(cli.Solver, "load", staticmethod(lambda: solver))
+    monkeypatch.setattr(cli.questionary, "select", lambda *args, **kwargs: Answer(2, asked))
+    used = []
+    real_build = cli.guess_count_matrix.build
+    monkeypatch.setattr(
+        cli.guess_count_matrix, "build", lambda *a, **kw: used.append(kw["threads"]) or real_build(*a, **kw)
+    )
+    argv = ["precompute-guess-counts", "--out", str(tmp_path), "--strategy", HOW.id, "--opener", "salet"]
+    monkeypatch.setattr("sys.argv", argv)
+    cli.precompute_guess_counts()
+    assert asked == [2] and used == [2]
+
+
+def test_ctrl_c_at_the_thread_question_writes_nothing(monkeypatch, solver, tmp_path):
+    monkeypatch.setattr(cli.Solver, "load", staticmethod(lambda: solver))
+    monkeypatch.setattr(cli.questionary, "select", lambda *args, **kwargs: Answer(None, []))
+    argv = ["precompute-guess-counts", "--out", str(tmp_path), "--strategy", HOW.id, "--opener", "salet"]
+    monkeypatch.setattr("sys.argv", argv)
+    cli.precompute_guess_counts()
+    assert not (tmp_path / "guess-counts").exists()
