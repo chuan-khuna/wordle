@@ -15,7 +15,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude::*, px, relative, rgb, size};
+use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude::*, px, relative, rgb, size, uniform_list};
 use wordle_gpui::engine::feedback::Mark;
 use wordle_gpui::solver::assist::Assist;
 use wordle_gpui::solver::matrix::default_dir;
@@ -33,14 +33,16 @@ pub const WIDTH: Pixels = px(340.);
 /// The space between the board and the solver.
 pub const GAP: Pixels = px(8.);
 /// How many Suggestions the list shows.
-const SUGGESTIONS: usize = 8;
+const SUGGESTIONS: usize = 100;
+/// The tallest the Suggestions list grows before it scrolls: eight 28 px rows.
+const SUGGESTIONS_HEIGHT: Pixels = px(224.);
 /// The tallest the chart grows before its bars scroll; it draws every group.
 const CHART_HEIGHT: Pixels = px(320.);
-/// The tallest the Candidate list grows before it scrolls.
-const CANDIDATES_HEIGHT: Pixels = px(120.);
-/// Up to this many Candidates are laid out as a grid of words instead of one run of text.
-const GRID_WORDS: usize = 20;
-/// Words per row in that grid: 20 Candidates fill 4 rows of 5.
+/// The tallest the Candidate grid grows before it scrolls: five rows.
+const CANDIDATES_HEIGHT: f32 = 120.;
+/// The height of one row of the Candidate grid, which `uniform_list` needs to draw only the rows in view.
+const CANDIDATE_ROW_HEIGHT: f32 = 24.;
+/// Candidates per row of the grid.
 const GRID_COLUMNS: usize = 5;
 
 /// A Feedback matrix: being read, read, or missing.
@@ -414,7 +416,7 @@ impl WordleApp {
             (Suggestions::Ready(suggestions), _) if suggestions.is_empty() => list.child(note("No word fits every Feedback so far.".into(), t.muted)),
             (Suggestions::Ready(suggestions), _) => {
                 let rows: Vec<_> = suggestions.iter().enumerate().map(|(rank, suggestion)| self.suggestion_row(rank, suggestion, cx).into_any_element()).collect();
-                list.children(rows)
+                list.child(div().id("solver-suggestions").max_h(SUGGESTIONS_HEIGHT).overflow_y_scroll().on_scroll_wheel(keep_scroll).children(rows))
             }
         }
     }
@@ -438,7 +440,7 @@ impl WordleApp {
             .when(selected, |row| row.bg(rgb(t.overlay)))
             .hover(|style| style.bg(rgb(t.overlay)))
             .on_click(cx.listener(move |this, _, _, cx| this.select_solver_word(word, cx)))
-            .child(div().w(px(16.)).text_xs().text_color(rgb(t.muted)).child(format!("{}", rank + 1)))
+            .child(div().w(px(22.)).text_xs().text_color(rgb(t.muted)).child(format!("{}", rank + 1)))
             .child(div().font_family(widgets::MONO_FONT).font_weight(FontWeight::BOLD).text_color(rgb(t.text)).child(word.to_uppercase()))
             // A dot marks a word that could be the Answer, so guessing it might win now.
             .when(suggestion.is_candidate, |row| row.child(div().size(px(6.)).rounded_full().bg(rgb(t.correct.0))))
@@ -450,23 +452,38 @@ impl WordleApp {
             .child(div().w(px(64.)).text_right().text_xs().text_color(rgb(t.muted)).child(format!("≈{} left", format_left(suggestion.expected_left))))
     }
 
-    /// Every current Candidate, in Answer List order, in a box that scrolls once it is full. One
-    /// text run rather than a chip per word, so the 2,315 words before the first Guess stay cheap.
-    /// Clicking the heading folds the list away.
+    /// Every current Candidate, in Answer List order, in a grid of cells that scrolls once it is
+    /// full. A `uniform_list` draws only the rows in view, so the 2,315 words before the first
+    /// Guess stay cheap. Clicking the heading folds the list away.
     fn render_candidates(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let answers = &word_lists().answers;
-        let words: Vec<String> = self.solver.candidates.iter().map(|&index| answers[index].to_uppercase()).collect();
+        let words: Arc<Vec<String>> = Arc::new(self.solver.candidates.iter().map(|&index| answers[index].to_uppercase()).collect());
         let count = words.len();
         let open = self.solver.candidates_open;
         let body = if words.is_empty() {
-            div().text_color(rgb(t.muted)).child("No word fits every Feedback so far.")
-        } else if words.len() <= GRID_WORDS {
-            // Few enough to read at a glance: a grid, GRID_COLUMNS words to a row.
-            let cells = words.into_iter().map(|word| div().w(relative(1. / GRID_COLUMNS as f32)).py(px(2.)).child(word));
-            div().flex().flex_wrap().font_family(widgets::MONO_FONT).font_weight(FontWeight::BOLD).text_sm().text_color(rgb(t.text)).children(cells)
+            div().text_color(rgb(t.muted)).child("No word fits every Feedback so far.").into_any_element()
         } else {
-            div().font_family(widgets::MONO_FONT).text_color(rgb(t.subtle)).child(words.join(" · "))
+            // A grid, GRID_COLUMNS words to a row; only the rows in view are drawn.
+            let rows = count.div_ceil(GRID_COLUMNS);
+            let height = (CANDIDATE_ROW_HEIGHT * rows as f32).min(CANDIDATES_HEIGHT);
+            uniform_list("solver-candidates", rows, move |range, _, _| {
+                range
+                    .map(|row| {
+                        let cells = words[row * GRID_COLUMNS..((row + 1) * GRID_COLUMNS).min(words.len())]
+                            .iter()
+                            .map(|word| div().w(relative(1. / GRID_COLUMNS as f32)).child(word.clone()));
+                        div().flex().items_center().h(px(CANDIDATE_ROW_HEIGHT)).children(cells)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .h(px(height))
+            .on_scroll_wheel(keep_scroll)
+            .font_family(widgets::MONO_FONT)
+            .font_weight(FontWeight::BOLD)
+            .text_sm()
+            .text_color(rgb(t.text))
+            .into_any_element()
         };
         div()
             .flex()
@@ -487,7 +504,7 @@ impl WordleApp {
                     .child(widgets::icon(if open { widgets::IconName::ChevronDown } else { widgets::IconName::ChevronRight }, t.muted))
                     .child(format!("CANDIDATES ({})", group_thousands(count))),
             )
-            .when(open, |section| section.child(div().id("solver-candidates").max_h(CANDIDATES_HEIGHT).overflow_y_scroll().on_scroll_wheel(keep_scroll).text_xs().child(body)))
+            .when(open, |section| section.child(body))
     }
 
     /// The field to chart any word on the Guess List. Clicking it sends the keys there instead of the board.
