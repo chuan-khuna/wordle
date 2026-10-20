@@ -19,9 +19,9 @@ Most letters are easy. The trouble starts when a Guess repeats a letter. Try thi
 
 <FeedbackScorer id="fb" guess="speed" answer="abide" />
 
-<Word>speed</Word> has two Es, and <Word>abide</Word> has only one. The first E
-is <Mark kind="present" />. The second E is <Mark kind="absent" />, even though
-E really is in the word. The Answer's one E has already been used up.
+<Word>speed</Word> has <Letter>e</Letter> twice, and <Word>abide</Word> has only one. The first <Letter>e</Letter>
+is <Mark kind="present" />. The second <Letter>e</Letter> is <Mark kind="absent" />, even though
+<Letter>e</Letter> really is in the word. The Answer's one <Letter>e</Letter> has already been used up.
 
 The rule is that a letter is marked only as many times as it appears in the Answer. To make that fair, the Feedback is worked out in two passes.
 
@@ -29,7 +29,7 @@ The rule is that a letter is marked only as many times as it appears in the Answ
 
 **Pass two** goes left to right through the rest. A letter is <Mark kind="present" /> if the Answer still has an unused copy of it. Otherwise it is <Mark kind="absent" />.
 
-The order matters. Change the Guess to <Word answer="crane">eerie</Word> and the Answer to <Word>crane</Word>. The only E in <Word>crane</Word> is the last letter, and <Word>eerie</Word> ends with an E in that same place. Pass one gives that E to the last letter, so it is <Mark kind="correct" />, and nothing is left for the two Es at the front. They are both <Mark kind="absent" />. If the first E had been served first, it would have been <Mark kind="present" />, and the Feedback would have been wrong.
+The order matters. Change the Guess to <Word answer="crane">eerie</Word> and the Answer to <Word>crane</Word>. The only <Letter>e</Letter> in <Word>crane</Word> is the last letter, and <Word>eerie</Word> ends with an <Letter>e</Letter> in that same place. Pass one gives that <Letter>e</Letter> to the last letter, so it is <Mark kind="correct" />, and nothing is left for the two <Letter>e</Letter>s at the front. They are both <Mark kind="absent" />. If the first <Letter>e</Letter> had been served first, it would have been <Mark kind="present" />, and the Feedback would have been wrong.
 
 ## The function
 
@@ -109,6 +109,6 @@ def feedback(guess: str, answer: str) -> Feedback:
     return tuple(marks)
 ```
 
-Pass one is the list of Correct marks. The counter after it holds only the letters that pass one did not use. Pass two spends that counter one letter at a time, and that is why a second E finds it empty.
+Pass one is the list of Correct marks. The counter after it holds only the letters that pass one did not use. Pass two spends that counter one letter at a time, and that is why a second <Letter>e</Letter> finds it empty.
 
 Every other idea in this Series is built on this one function.
