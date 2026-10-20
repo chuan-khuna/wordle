@@ -150,3 +150,23 @@ export interface BenchmarkResponse {
 }
 
 export const getBenchmark = (signal?: AbortSignal) => api<BenchmarkResponse>("/api/benchmark", { signal });
+
+export interface GuessCountOpener {
+  rank: number;
+  word: string;
+  /** Over all 2315 Answers, with no Guess Limit. */
+  average_guess_count: number;
+  losses: number;
+  is_answer: boolean;
+}
+
+export interface GuessCountsResponse {
+  strategy: { id: string; name: string };
+  /** Openers whose row of the Guess Count Matrix is finished; `openers` holds exactly these, best first. */
+  complete_rows: number;
+  total_rows: number;
+  openers: GuessCountOpener[];
+}
+
+export const getGuessCounts = (strategy: string, signal?: AbortSignal) =>
+  api<GuessCountsResponse>(`/api/guess-counts?strategy=${encodeURIComponent(strategy)}`, { signal });

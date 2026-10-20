@@ -195,6 +195,12 @@ def write_summary(out: Path, solver: Solver) -> list[Path]:
     return [*paths, path]
 
 
+def load_summary(out: Path = CACHE_DIR) -> dict | None:
+    """`summary.json` as saved (Strategy id to its entry), or None when it is missing."""
+    path = out / SUBDIR / SUMMARY_FILE
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
 class _Stopped(Exception):
     """Raised inside a worker's tree play to drop the Opener in flight once the run is stopping."""
 

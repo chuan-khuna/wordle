@@ -15,6 +15,7 @@ app/backend/
       suggestions.py      POST /api/suggestions
       solve.py            GET /api/solve
       benchmark.py        GET /api/benchmark, GET /api/openers
+      guess_counts.py     GET /api/guess-counts
     common.py             shared by the routers: BadRequest and NotPrecomputed, request models, word and Feedback checks, JSON shapes
     solver.py             WebSolver (the package's Solver plus the Candidates-only switch)
   tests/
@@ -64,9 +65,11 @@ The Opener leaderboard ranks every Guess List word as a first Guess by Expected 
 
 `just precompute-benchmark` saves `benchmark.json` and `openers.json` in `precompute-cache/benchmark/`. `main.py` reads them at startup if present; a missing file is not a startup error.
 
+`GET /api/guess-counts` serves the [Guess Count Matrix](guess-count-matrix.md) summary instead: `main.py` reads `precompute-cache/guess-counts/summary.json` once at startup (`guess_count_matrix.load_summary`) into `app.state.guess_counts`. It is optional too; `just precompute-guess-counts` or `just restore-cache` writes it.
+
 ## API
 
-`main.py` loads the matrices once at startup with mmap (in FastAPI's lifespan) into a `WebSolver` kept on `app.state`. They are never built there: if missing, startup fails with a message pointing to `just precompute`. The Benchmark JSON files are loaded too but are optional: if one is missing, only its endpoint fails. Run it with `just backend` (uvicorn, `http://127.0.0.1:8000`; extra arguments go to uvicorn, e.g. `--port 8001 --reload`).
+`main.py` loads the matrices once at startup with mmap (in FastAPI's lifespan) into a `WebSolver` kept on `app.state`. They are never built there: if missing, startup fails with a message pointing to `just precompute`. The Benchmark JSON files and the Guess Count Matrix `summary.json` are loaded too but are optional: if one is missing, only its endpoint fails. Run it with `just backend` (uvicorn, `http://127.0.0.1:8000`; extra arguments go to uvicorn, e.g. `--port 8001 --reload`).
 
 Words are lowercase five-letter strings. A Feedback is written as **five digits, one per letter: 0 Absent, 1 Present, 2 Correct** (`"20102"`), the base-3 digits of its Feedback Code; the emoji squares are for display only. Every response with a Feedback gives both `marks` (that string) and `code` (the Feedback Code). A State is `[{guess, feedback}]` with `feedback` as the digit string. `pool`, `scope` and `by` are as in [solver-strategy.md](solver-strategy.md) (defaults `guesses`, `global`, `bits`). A "WordStats" below is `{word, bits, expected_candidates, groups, largest_group, is_candidate, win_chance}`.
 
@@ -79,10 +82,11 @@ Words are lowercase five-letter strings. A Feedback is written as **five digits,
 | `GET /api/solve` | `answer` (Answer List word), `pool`, `scope`, `by` | `{answer, solved, guesses, steps}`; each step is `{number, guess, marks, code, candidates_before, candidates_after, alternatives: [WordStats]}`, with the top 5 for that step (the first is the Guess played) |
 | `GET /api/openers` | `top` (default 20) | `{total, openers}` with `total` the number saved (500); each opener is `{rank, word, bits, expected_candidates, groups, largest_group, is_candidate}`, best first |
 | `GET /api/benchmark` | none | `{guess_limit, strategies}`; each Strategy is `{id, name, pool, scope, by, opener, games, distribution, losses, lost_answers, average_guess_count}`. `distribution` has six numbers, Games won in 1 to 6 Guesses; `lost_answers` lists the Losses; `average_guess_count` is over won Games (`null` if none) |
+| `GET /api/guess-counts` | `strategy` (a Strategy id, default `bits-all`) | `{strategy: {id, name}, complete_rows, total_rows, openers}`; `total_rows` is 14,855 (the Guess List) and `complete_rows` how many Openers have a finished row in the Guess Count Matrix, which is how many `openers` there are. Each opener is `{rank, word, average_guess_count, losses, is_answer}`, in the summary's rank order (lowest unrounded Average Guess Count first, then Expected Information, then alphabetical). `average_guess_count` is over all 2,315 Answers with no Guess Limit, so it times 2,315 is a whole number. About 15k entries, so the response is gzipped (`GZipMiddleware` in `main.py`, for any response over 1 kB) |
 
-Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`, a missing parameter, `top` below 1 or not a number, an empty Candidate Set for `/api/split`) returns HTTP 400 with `{"detail": "<message>"}`; the `RequestValidationError` handler in `main.py` replaces FastAPI's 422. `/api/solve` stops after 12 Guesses as a safety limit. If `benchmark.json` or `openers.json` is missing, `/api/benchmark` or `/api/openers` returns HTTP 503 with `{"detail": "... Run `just precompute-benchmark` first."}`; the rest of the API still works.
+Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`, a missing parameter, `top` below 1 or not a number, an empty Candidate Set for `/api/split`) returns HTTP 400 with `{"detail": "<message>"}`; the `RequestValidationError` handler in `main.py` replaces FastAPI's 422. `/api/solve` stops after 12 Guesses as a safety limit. If `benchmark.json` or `openers.json` is missing, `/api/benchmark` or `/api/openers` returns HTTP 503 with `{"detail": "... Run `just precompute-benchmark` first."}`; the rest of the API still works.  If `summary.json` is missing (or lacks the Strategy), `/api/guess-counts` returns 503 with a message naming `just precompute-guess-counts` (or `just restore-cache`); an unknown `strategy` is 400.
 
-`tests/test_api.py` uses FastAPI's `TestClient` (and checks the Candidates-only switch on `WebSolver` against the package's `Solver.rank`); `tests/conftest.py` builds the matrices once only if they are missing. `tests/test_benchmark.py` checks the two Benchmark endpoints (the JSON shape, the 400 and 503 cases) with a Benchmark of one Strategy on 12 Answers swapped into the app, so it does not need the real JSON files. The engine's own tests (Feedback, matrices, Strategy, the Benchmark) are in `packages/wordle/tests/`.
+`tests/test_api.py` uses FastAPI's `TestClient` (and checks the Candidates-only switch on `WebSolver` against the package's `Solver.rank`); `tests/conftest.py` builds the matrices once only if they are missing. `tests/test_benchmark.py` checks the two Benchmark endpoints (the JSON shape, the 400 and 503 cases) with a Benchmark of one Strategy on 12 Answers swapped into the app, so it does not need the real JSON files. `tests/test_guess_counts.py` does the same for `/api/guess-counts` with a three-Opener fixture summary (shape, rank order, default Strategy, `complete_rows`/`total_rows`, 400, both 503 cases, gzip). The engine's own tests (Feedback, matrices, Strategy, the Benchmark) are in `packages/wordle/tests/`.
 
 ## Commands
 

@@ -13,8 +13,8 @@ type Group = { id: string; number: number; title: string; articles: Item[] };
 
 /**
  * The site-wide sidebar: the site title (home) at the top with the theme menu (a palette icon) beside it, then the Articles
- * grouped under their Part titles. A sticky full-height column from `lg`; below that a compact top bar whose button opens
- * the Article list, beside the theme menu button. One markup, so CSS only decides what is shown.
+ * grouped under their Part titles, then an Explore heading linking to the Opener Distribution page. A sticky full-height column from `lg`; below that a compact top bar whose button opens
+ * the menu, beside the theme menu button. One markup, so CSS only decides what is shown.
  */
 export function Sidebar({ title, parts }: { title: string; parts: Group[] }) {
   const pathname = usePathname();
@@ -32,12 +32,12 @@ export function Sidebar({ title, parts }: { title: string; parts: Group[] }) {
           <div className="flex items-center gap-1">
             <ThemePicker align="end" />
             <CollapsibleTrigger asChild className="lg:hidden">
-              <Button>{open ? "Close" : "Articles"}</Button>
+              <Button>{open ? "Close" : "Menu"}</Button>
             </CollapsibleTrigger>
           </div>
         </div>
         <CollapsibleContent forceMount id="site-menu" className="min-h-0 flex-1 flex-col data-[state=closed]:hidden data-[state=open]:flex lg:data-[state=closed]:flex">
-        <nav aria-label="Articles" className="min-h-0 flex-1 overflow-y-auto px-gutter pb-4 max-lg:max-h-[60vh]">
+        <nav aria-label="Site" className="min-h-0 flex-1 overflow-y-auto px-gutter pb-4 max-lg:max-h-[60vh]">
           {parts.map((part) => (
             <section key={part.id} aria-labelledby={`nav-part-${part.id}`} className="mb-5 last:mb-0">
               <h2 id={`nav-part-${part.id}`} className="eyebrow mb-2">
@@ -64,6 +64,20 @@ export function Sidebar({ title, parts }: { title: string; parts: Group[] }) {
               </ol>
             </section>
           ))}
+          <section aria-labelledby="nav-explore" className="mt-5">
+            <h2 id="nav-explore" className="eyebrow mb-2">
+              Explore
+            </h2>
+            <Link
+              href="/openers"
+              aria-current={pathname === "/openers" ? "page" : undefined}
+              className={`block border-l py-1 pl-3 text-sm ${
+                pathname === "/openers" ? "border-text font-medium text-text" : "border-rule text-meta hover:border-rule-strong hover:text-text"
+              }`}
+            >
+              Opener Distribution
+            </Link>
+          </section>
         </nav>
         </CollapsibleContent>
       </Collapsible>
