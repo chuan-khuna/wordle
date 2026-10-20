@@ -24,10 +24,10 @@ app/frontend/
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ThemePicker.tsx
     components/Term.tsx, VideoEmbed.tsx, ArticleList.tsx
-    components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, Tile, ui, useWidgetParam
+    components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with GroupChart), StepThroughGame, Tile, ui, useWidgetParam
     lib/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
     lib/widget-state.ts     the `guess:feedback,...` State text format
-    lib/api.ts              fetch helpers for /api (errors carry the API's `detail`)
+    lib/api.ts              fetch helpers and response types for /api (errors carry the API's `detail`)
     lib/content.ts          reads and validates content/ (frontmatter via gray-matter)
     lib/glossary.ts         parses the root GLOSSARY.md for <Term>
     lib/themes.ts           the theme ids, names and appearance, in the gpui picker's order
@@ -145,4 +145,44 @@ Shows five tiles, then the two passes worked out for that pair (Correct first; t
 
 A row's feedback is five digits, 0 Absent, 1 Present, 2 Correct (`crane:00102`); a row without `:feedback` starts all Absent; malformed rows are dropped; at most six rows. In the Widget the reader types each Guess and clicks its tiles to cycle the Marks (Absent, Present, Correct). Every complete row shows its Candidate Set count before and after (`2309 → 49`), and below are the final count and the words (the first 48, with a button for all). It makes one `POST /api/candidates` per prefix of the State (Guess 0, 1, ..., n), so an invalid Guess or Feedback shows the API's message on its row; incomplete rows are ignored until they have five letters. Example link: `/articles/sample-candidate-set?cs.state=crane:20000`.
 
-Both Widgets show loading and error states (`role="alert"` for errors, `aria-live` for results), use real labelled inputs and buttons so they work from the keyboard, and wrap at phone width.
+### Feedback Split explorer
+
+```mdx
+<SplitExplorer id="fs" guess="crane" state="slate:01200" bits={false} />
+```
+
+| Prop | URL param | Meaning |
+| --- | --- | --- |
+| `guess` | `guess` (or `<id>.guess`) | the Guess to split on |
+| `state` | `state` (or `<id>.state`) | optional State, `guess:feedback` rows joined by commas; the Candidate Set it leaves is what is split (default: the whole Answer List) |
+| `bits` | | default `true`; `bits={false}` hides Expected Information (Article 3 shows the Split without it, Article 4 adds it) |
+| `id` | | namespace for the params |
+
+One `POST /api/split` (after a short pause) gives the groups, shown as a bar chart (one bar per Feedback, height = words in the group, x labelled with the Feedback digits) with Expected Candidates, the Candidate count, the group count and largest group, and Expected Information in bits unless hidden. A Guess can have up to about 150 groups, so the chart draws the 30 largest (`CHART_BARS`) and a scrollable list below holds every group, each with its tiles, Feedback and word count. Clicking a bar, or a list row (a button with `aria-pressed`), selects that group and lists its words (the first 60, with a button for all). An invalid Guess or State shows the API's message. Example link: `/articles/sample-expected-information?ei.guess=crane&ei.state=slate:01200`.
+
+### Step-through Game
+
+```mdx
+<StepThroughGame id="g" answer="catch" step={2} />
+```
+
+| Prop | URL param | Meaning |
+| --- | --- | --- |
+| `answer` | `answer` (or `<id>.answer`) | the Answer the Solver plays (must be on the Answer List) |
+| `pool` | `pool` | `guesses` (default, all words) or `answers` |
+| `scope` | `scope` | `global` (default, all Guesses) or `candidates` |
+| `by` | `by` | `bits` (default, Expected Information) or `expected` (Expected Candidates) |
+| `step` | `step` | the Guess shown, 1-based (default 1), clamped to the Game's length; edited by Prev/Next, so a video take can start at any step |
+| `id` | | namespace for the params |
+
+The defaults are the main Strategy: Expected Information over all Guesses. One `GET /api/solve` returns the whole Game; the Widget then shows tiles for each Guess so far, Prev and Next buttons (and the Left and Right arrow keys while focus is inside the Widget, outside its inputs), "Guess n of N", the Candidate Set size before and after the Guess, and a table of the Solver's top five Suggestions at that step with their bits, Expected Candidates and whether each is a Candidate (the first row is the Guess played). Example link: `/articles/sample-greedy-strategy?g.answer=watch&g.step=3`.
+
+### Charts
+
+Charts use TanStack Charts: `@tanstack/react-charts` 1.1.0, which re-exports the `<Chart>` of its dependency `@tanstack/charts` (read `node_modules/@tanstack/charts/docs/` and `llms.txt`; it is not the old `react-charts` v3). A chart is a memoised `defineChart({ marks, scales, tooltip })` (marks such as `barY`, compact `scaleBand`/`scaleLinear` from `@tanstack/charts/scales/*`, the `tooltip` extension) passed to `<Chart definition height ariaLabel onSelect />`. `components/widgets/GroupChart.tsx` is the one chart so far.
+
+- **Theme roles.** Mark paints are CSS variables (`fill: "var(--accent)"`, the selected bar `var(--heading)`), so a theme change repaints with no rebuild; the axes, grid and labels use `currentColor`, set by a `text-subtle` wrapper; the tooltip colours are set from `--overlay` and `--text` through the library's `--ts-chart-tooltip-*` variables. Charts never use fixed colours.
+- **SSR.** `<Chart>` server-renders SVG at `initialWidth` and then measures its container after hydration. The Widgets only mount a chart once the API data has arrived on the client, so no chart markup is rendered on the server and there is nothing to mismatch; a definition must not read `window` or other client-only values if a future chart is rendered on the server.
+- **Interaction.** The chart is keyboard focusable (arrow keys move between bars, Enter selects); the same selection is available from the list below, which also gives the exact values as text.
+
+All Widgets show loading and error states (`role="alert"` for errors, `aria-live` for results), use real labelled inputs and buttons so they work from the keyboard, and wrap at phone width.
