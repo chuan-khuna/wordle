@@ -61,7 +61,11 @@ English, written in glossary terms only. Colours appear only in the Widgets and 
 
 **Part 2: Solving Wordle** (an introduction that guides the reader's thinking towards the best Opener)
 
-4. Introduction: what makes a good first Guess? → no Widget
+4. Introduction: what makes a good first Guess? → no Widget. Adds the maths: two ways to score a Guess, both built on the same idea. A Guess splits the $N$ Candidates into groups of sizes $n_i$, one per Feedback, and that Feedback turns up with probability $p_i = n_i / N$. Each criterion scores what is left after one Feedback and takes the expected value over the split:
+   - minimise the Expected Candidates (the expected number of possible Answers left): $\mathbb{E}[\text{left}] = \sum_i p_i \, n_i = \frac{1}{N}\sum_i n_i^2$
+   - maximise the Expected Information (the information gain in bits): $\mathbb{E}[\text{bits}] = \sum_i p_i \log_2 \frac{N}{n_i} = -\sum_i p_i \log_2 p_i$
+
+   The Article states the shared idea explicitly (an expectation over the Feedback Split, differing only in the score of each group: its size, or how many halvings it saves), and notes why they can disagree (a big group counts quadratically in one and logarithmically in the other). Article 06 then builds the Feedback Split and shows both numbers in the Split explorer.
 5. Candidate Set → Candidate filter
 6. Feedback Split and Expected Information (one Article: the groups first, then scoring them in bits, $-\sum p \log_2 p$, "entropy" named once) → Split explorer, without then with bits
 7. Openers → Opener table
