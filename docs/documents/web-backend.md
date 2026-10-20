@@ -11,7 +11,10 @@ app/backend/
     words.py              loads the Answer List and Guess List from data/
     feedback.py           the two-pass Feedback rule and Feedback Codes
     candidates.py         the Candidate Set for a State
+    matrices.py           the vectorised Feedback matrices (build, load)
+    precompute.py         the command behind `just backend-precompute`
     data/                 answers.txt, guesses.txt, SOURCES.md (copies of packages/wordle/src/wordle/data/)
+  matrices/               generated .npy files (gitignored)
   tests/
 ```
 
@@ -25,10 +28,19 @@ The root `pyproject.toml` only lists `packages/*` as members, so `app/backend/` 
 
 A State is a tuple of `Turn(guess, feedback)`, where `feedback` is a Feedback Code. `candidates(state)` keeps each Answer whose Feedback for the Guess equals the Turn's code, one Turn after another; an empty State gives the whole Answer List. It scores on the fly, with no matrices, which is fast enough for a handful of Turns.
 
+## Feedback matrices
+
+`matrices.py` scores every Guess against every Answer with the same vectorised two-pass rule as the Python package, in blocks of 256 Guesses, optionally on several threads (numpy releases the GIL, and each block writes its own rows). It writes `answers_vs_answers.npy` and `guesses_vs_answers.npy` into `app/backend/matrices/` (gitignored): rows are Guesses and columns are Answers in sorted order, each cell a Feedback Code as a `uint8`. The files are byte-identical to the ones `packages/wordle` and the gpui app write; see [feedback-matrices.md](feedback-matrices.md) for the encoding and format. `load()` memory-maps them, building them first if missing.
+
+`just backend-precompute` runs `wordle_backend.precompute`, which takes `--threads N` (default 1), `--out DIR` and `--yes` (otherwise it asks before overwriting). It takes about 4 s with one thread and about 1 s with four. Unlike the Python command it never asks for the thread count.
+
+`tests/test_matrices.py` checks the shapes, sampled cells against `feedback()`, that the thread count does not change the bytes, and that the output equals what `uv run src/precompute.py` builds at the repo root. That last test is skipped if `uv` is missing or the reference build fails.
+
 ## Commands
 
 | Command | What it does |
 | --- | --- |
+| `just backend-precompute` | Write the Feedback matrices to `app/backend/matrices/`. Takes `--threads N`, `--out DIR`, `--yes` |
 | `just test-backend` | Run the backend's tests (`uv run pytest` in `app/backend/`) |
 
 The tests reuse the repeated-letter examples from [feedback-scoring.md](feedback-scoring.md).
