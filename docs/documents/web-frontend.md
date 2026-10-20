@@ -15,7 +15,7 @@ app/frontend/
     series.mdx              the site's one Series and its Parts (frontmatter + MDX)
     articles/NN-<slug>.mdx  Articles (frontmatter + MDX); NN is the number in the Series
   src/
-    mdx-components.tsx      components every MDX file can use without importing (<Term>, the Widgets)
+    mdx-components.tsx      components every MDX file can use without importing (<Term>, <Mark>, the Widgets)
     app/
       layout.tsx            <html>, the no-flash theme script, the sidebar, KaTeX CSS
       page.tsx              the home page, which is the Series page: title, intro, video, then each Part with its Articles
@@ -25,7 +25,7 @@ app/frontend/
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ui/          shadcn/ui components (button, input, label, select, table, tooltip, dropdown-menu, collapsible), restyled with the tokens
     components/Sidebar.tsx, ThemePicker.tsx
-    components/Term.tsx (server: glossary lookup), TermTip.tsx (client: the tooltip), VideoEmbed.tsx
+    components/Term.tsx (server: glossary lookup), Mark.tsx (server: Mark label), TermTip.tsx (client: the tooltip shared by both), VideoEmbed.tsx
     components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with GroupChart), StepThroughGame, OpenerTable, BenchmarkChart, Tile, ui, useWidgetParam, useLoad
     lib/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
     lib/widget-state.ts     the `guess:feedback,...` State text format
@@ -163,6 +163,12 @@ Articles with a stub body carry `{/* TODO(ticket 10): draft */}`; ticket 10 writ
 `<Term>Candidate Set</Term>` works in any MDX file with no import (`src/mdx-components.tsx`). It looks the term up, case-insensitively, in the repo's root `GLOSSARY.md`, which `lib/glossary.ts` parses at build time: a `**Term**:` line, then its definition lines up to the blank line, ignoring `_Avoid_:` lines. It renders underlined text with the definition in a shadcn `Tooltip` (`TermTip.tsx`, a Client Component; `Term` itself stays a Server Component that reads the glossary) on hover, on keyboard focus (`tabIndex=0`) and on tap (a tap toggles it; Radix alone does not open on touch); Radix adds `role="tooltip"` and `aria-describedby` while it is open, and Escape or a tap elsewhere closes it. When the shown text differs from the term, name the term: `<Term of="Candidate">candidates</Term>`.
 
 A term that is not in the glossary throws while the page is prerendered, so `bun run build` fails with `<Term>: "..." is not defined in GLOSSARY.md`. In `next dev` the error shows on that page.
+
+## `<Mark>`
+
+`<Mark kind="correct" />` (also `present`, `absent`) works in any MDX file with no import. It renders the Mark's name, or its children (`<Mark kind="present">Present letters</Mark>`), as a small inline label: JetBrains Mono, `text-xs` semibold caps with `tracking-caps`, tile radius (`rounded-md`), `px-1.5`, `leading-none` so it does not grow the prose line, on `bg-correct` / `bg-present` / `bg-absent`. It is a label, not a button (no hover fill, `cursor-help` only). On hover, keyboard focus and tap it shows that Mark's definition through the same `TermTip` as `<Term>` (`Mark.tsx` passes its own trigger classes). `lib/glossary.ts` `parseMarkKinds` splits the Mark entry of `GLOSSARY.md` into one definition per kind: the parenthetical after each bolded `**Correct** (...)`, `**Present** (...)`, `**Absent** (...)`; a missing one, or an unknown `kind`, throws and fails the build (`<Mark>: unknown kind "green"...`). Tests: `lib/glossary.test.ts`.
+
+**Contrast.** The palettes' `on-*` roles are tuned for big tile letters. Against their Mark colour, small text reaches 4.5:1 in only 15 of 30 cases (correct, present, absent; worst: Nord absent 1.96, Rosé Pine Dawn present 2.05, Tokyo Night absent 2.17). So the label text is not `on-*`: tokens.css derives `ink-correct`, `ink-present`, `ink-absent` (`text-ink-*`), black or white by the lightness of the Mark colour (relative colour, threshold OKLCH L 0.6). The better of black and white is always at least about 4.5:1; across the ten palettes the lowest is 4.51 (Flexoki Light correct), most are above 6. The palettes are untouched. Tiles still use `on-*`.
 
 ## Maths
 

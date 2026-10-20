@@ -7,7 +7,7 @@ part: wordle
 
 Every Guess gets <Term>Feedback</Term>: five <Term of="Mark">Marks</Term>, one per letter.
 
-A Guess has $n = 5$ letters, and each one is **Correct**, **Present** or **Absent**, so there are $3^5 = 243$ possible Feedbacks. As a display equation:
+A Guess has $n = 5$ letters, and each one is <Mark kind="correct" />, <Mark kind="present" /> or <Mark kind="absent" />, so there are $3^5 = 243$ possible Feedbacks. As a display equation:
 
 $$
 3^5 = \sum_{k=0}^{4} 2 \cdot 3^k + 1 = 243

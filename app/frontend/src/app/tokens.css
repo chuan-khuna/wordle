@@ -23,6 +23,12 @@
   --color-on-present: var(--on-present);
   --color-absent: var(--absent);
   --color-on-absent: var(--on-absent);
+  /* Text on a Mark label in prose (<Mark>): black or white, whichever contrasts more with the Mark's
+     colour. The palettes' on-* roles are tuned for 2rem+ tile letters and fall under 4.5:1 for small text
+     in many palettes (see web-frontend.md); the better of black and white is always at least 4.5:1. */
+  --color-ink-correct: oklch(from var(--correct) clamp(0, (0.6 - l) * 1000, 1) 0 0);
+  --color-ink-present: oklch(from var(--present) clamp(0, (0.6 - l) * 1000, 1) 0 0);
+  --color-ink-absent: oklch(from var(--absent) clamp(0, (0.6 - l) * 1000, 1) 0 0);
   --color-absent-key: var(--absent-key);
   --color-on-absent-key: var(--on-absent-key);
 
