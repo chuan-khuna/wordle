@@ -26,7 +26,7 @@ packages/
         words.py            loads the Answer List and Guess List
         game.py             Game, Guess, State
       cli.py                the terminal game (questionary + rich)
-      solver/               matrix.py (Feedback matrices), cli.py (the questions asked by `just matrices`)
+      solver/               matrix.py (Feedback matrices), strategy.py (the Solver), cli.py (the questions asked by `just matrices`)
       __main__.py           `python -m wordle`
       data/                 answers.txt, guesses.txt, SOURCES.md
     tests/
