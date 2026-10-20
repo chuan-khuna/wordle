@@ -1,4 +1,4 @@
-"""`just precompute` and `just precompute-guess-counts`: ask a few questions, then precompute."""
+"""`just precompute`, `just precompute-guess-counts` and `just precompute-benchmark`: ask a few questions, then precompute."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import questionary
 
-from wordle.solver import guess_count_matrix
+from wordle.solver import benchmark, guess_count_matrix
 from wordle.solver.matrix import (
     ANSWERS_FILE,
     CACHE_DIR,
@@ -142,6 +142,40 @@ def precompute_guess_counts() -> None:
                 f" {opener['losses']} Losses, {opener['bits']:.3f} bits"
             )
     print(f"\nDone in {elapsed:.1f}s with {threads} thread{'s' if threads > 1 else ''}.")
+
+
+def precompute_benchmark() -> None:
+    parser = argparse.ArgumentParser(description="Precompute the Benchmark and the Opener leaderboard for the website.")
+    parser.add_argument("--out", type=Path, default=benchmark.BENCHMARK_DIR, help="output directory")
+    add_threads_flag(parser)
+    parser.add_argument("--yes", action="store_true", help="overwrite existing files without asking")
+    args = parser.parse_args()
+
+    threads = ask_threads(args.threads)
+    if threads is None:  # Ctrl+C
+        return
+
+    existing = [p for p in (args.out / benchmark.BENCHMARK_FILE, args.out / benchmark.OPENERS_FILE) if p.exists()]
+    if existing and not args.yes:
+        overwrite = questionary.confirm(
+            f"{', '.join(p.name for p in existing)} already in {args.out}. Overwrite?",
+            default=False,
+        ).ask()
+        if not overwrite:
+            return
+
+    started = time.perf_counter()
+    solver = Solver.load()  # builds the Feedback matrices first if they are missing
+    results = benchmark.run_benchmarks(solver, threads)
+    for result in results:
+        print(
+            f"{result['name']}: Opener {result['opener']}, Average Guess Count {result['average_guess_count']:.3f},"
+            f" {result['losses']} Losses"
+        )
+    for path in benchmark.save(results, benchmark.opener_leaderboard(solver), args.out):
+        print(path)
+    elapsed = time.perf_counter() - started
+    print(f"Done in {elapsed:.1f}s with {threads} thread{'s' if threads > 1 else ''}.")
 
 
 if __name__ == "__main__":

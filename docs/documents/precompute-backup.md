@@ -13,7 +13,7 @@ Both take `--folder NAME` (repeatable, e.g. `--folder guess-counts`) and `--yes`
 
 ## What is backed up
 
-- **Every folder but `feedback/`.** The Feedback matrices rebuild in about a second (`just precompute`, or the gpui app's **Precompute matrices…**), so committing them would only add about 15 MB to the history. Today that leaves `guess-counts/` (and `benchmark/` once `just backend-precompute` has written it).
+- **Every folder but `feedback/`.** The Feedback matrices rebuild in about a second (`just precompute`, or the gpui app's **Precompute matrices…**), so committing them would only add about 15 MB to the history. Today that leaves `guess-counts/` (and `benchmark/` once `just precompute-benchmark` has written it).
 - **Every file in the folder**, including `summary.json`, the ranking CSVs and `manifest.json`, so a restored folder is ready to read and to resume.
 - **Only finished Guess Count Matrices.** When a folder has a `summary.json` and a `manifest.json`, `backup` compares each Strategy's `complete_rows` with the number of Openers in the manifest and stops if any is short, listing them. `--partial` backs it up anyway. Committing only finished matrices keeps the history from growing on every run.
 

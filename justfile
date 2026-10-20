@@ -30,6 +30,10 @@ precompute *args:
 precompute-guess-counts *args:
     uv run src/precompute_guess_counts.py {{args}}
 
+# Precompute the website's Benchmark and Opener leaderboard (asks for the thread count). Takes --threads N, --out DIR, --yes
+precompute-benchmark *args:
+    uv run src/precompute_benchmark.py {{args}}
+
 # Compress precompute-cache/ (all but the Feedback matrices) into data/precompute/ to commit. Takes --folder NAME, --yes, --partial
 backup-cache *args:
     uv run src/precompute_backup.py backup {{args}}
@@ -42,11 +46,6 @@ restore-cache *args:
 [working-directory: 'app/backend']
 test-backend:
     uv run pytest
-
-# Precompute the website backend's Feedback matrices, Benchmark and Openers. Takes --threads N, --out DIR, --yes, --skip-benchmark, --benchmark-only
-[working-directory: 'app/backend']
-backend-precompute *args:
-    uv run -m wordle_backend.precompute {{args}}
 
 # Serve the website backend (FastAPI) on http://127.0.0.1:8000. Takes uvicorn options, e.g. --port 8001
 [working-directory: 'app/backend']

@@ -55,7 +55,7 @@ Versions (current when the app was made, all at least 7 days old): Next 16.4, Re
 | `bun run typecheck` | `tsc --noEmit` |
 | `bun test` | Unit tests (`src/lib/*.test.ts`); the cross-check against `/api/feedback` runs when the backend is up |
 
-Run `just backend-precompute` once first, or the backend answers 503 where it needs the matrices.
+Run `just precompute` and `just precompute-benchmark` once first: the backend will not start without the matrices, and answers 503 for the Benchmark and Openers without their files.
 
 ## The API proxy
 
@@ -310,7 +310,7 @@ The defaults are the main Strategy: Expected Information over all Guesses. One `
 
 ### Opener table and Benchmark chart (Widgets 5 and 6)
 
-Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api/benchmark`); a 503 from a backend that was not precomputed shows its message (including "Run `just backend-precompute` first.") as the error.
+Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api/benchmark`); a 503 from a backend that was not precomputed shows its message (including "Run `just precompute-benchmark` first.") as the error.
 
 **Opener table** (`OpenerTable`). Props: `top` (default 20, 1 to 500), `highlight` (comma separated words, e.g. `"crane,slate"`), `id`. URL params `top`, `highlight` (`op.top` with `id="op"`) override the props. A table of rank, Opener, bits, Expected Candidates, groups, largest group and Candidate?. Every heading is a button that sorts by that column (click again to reverse; `aria-sort` is set). Highlighted words are emphasised and listed even when they rank below `top`; when `highlight` is set the Widget fetches all 500 rows. The table scrolls horizontally inside its card at phone width. A "Rows to show" input edits `top`.
 

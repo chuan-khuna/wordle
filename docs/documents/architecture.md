@@ -12,10 +12,12 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just precompute`, `just precompute-guess-counts`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just backend-precompute`, `just frontend`, `just web`
+justfile                    `just wordle`, `just precompute`, `just precompute-guess-counts`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just precompute-benchmark`, `just backup-cache`, `just restore-cache`, `just frontend`, `just web`
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 src/precompute_guess_counts.py  entry point: `uv run src/precompute_guess_counts.py` (precompute the Guess Count Matrices)
+src/precompute_benchmark.py  entry point: `uv run src/precompute_benchmark.py` (precompute the website's Benchmark and Opener leaderboard)
+src/precompute_backup.py    `just backup-cache` / `just restore-cache` (see [precompute-backup.md](precompute-backup.md))
 precompute-cache/           gitignored: every precomputed file, shared by all three apps (feedback/ matrices, guess-counts/ matrices and summary, benchmark/ JSON)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
@@ -30,7 +32,7 @@ packages/
         words.py            loads the Answer List and Guess List
         game.py             Game, Guess, State
       cli.py                the terminal game (questionary + rich)
-      solver/               matrix.py (Feedback matrices), guess_count_matrix.py (Guess Count Matrix), strategy.py (the Solver), cli.py (the questions asked by `just precompute`)
+      solver/               matrix.py (Feedback matrices), guess_count_matrix.py (Guess Count Matrix), benchmark.py (the website's Benchmark and Opener leaderboard), strategy.py (the Solver), cli.py (the questions asked by the precompute commands)
       __main__.py           `python -m wordle`
       data/                 answers.txt, guesses.txt, SOURCES.md
     tests/
@@ -60,7 +62,7 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `uv run python -m wordle` | Same, via `__main__.py` |
 | `uv run pytest` | Run the tests of every package |
 | `just precompute-guess-counts` | Precompute the Guess Count Matrix of each Strategy and its summary. See [guess-count-matrix.md](guess-count-matrix.md) |
-| `just backend-precompute` | Precompute the website backend's Feedback matrices, Benchmark and Opener leaderboard. See [web-backend.md](web-backend.md) |
+| `just precompute-benchmark` | Precompute the Benchmark and Opener leaderboard the website backend serves. See [web-backend.md](web-backend.md#benchmark-and-openers) |
 | `just backend` | Serve the website backend with uvicorn. See [web-backend.md](web-backend.md) |
 | `just frontend` | Serve the website frontend (Next.js dev server). See [web-frontend.md](web-frontend.md) |
 | `just web` | Serve the backend and the frontend together. See [web-frontend.md](web-frontend.md) |

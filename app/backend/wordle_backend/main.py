@@ -10,12 +10,11 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from wordle.solver.matrix import ANSWERS_FILE, GUESSES_FILE
-from wordle_backend import benchmark
+from wordle.solver import benchmark
+from wordle.solver.matrix import ANSWERS_FILE, DEFAULT_DIR, GUESSES_FILE
 from wordle_backend.common import BadRequest, NotPrecomputed
 from wordle_backend.routers import benchmark as benchmark_router
 from wordle_backend.routers import candidates, feedback, solve, suggestions
-from wordle.solver.matrix import DEFAULT_DIR
 from wordle_backend.solver import WebSolver
 
 
@@ -26,7 +25,7 @@ async def lifespan(app: FastAPI):
     if missing:
         raise RuntimeError(
             f"Feedback matrices missing in {DEFAULT_DIR} ({', '.join(missing)}). "
-            "Run `just backend-precompute` first."
+            "Run `just precompute` first."
         )
     app.state.solver = WebSolver.load(DEFAULT_DIR)
     # The Benchmark files are optional: without them only those two endpoints answer 503.

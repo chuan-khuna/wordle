@@ -17,8 +17,6 @@ app/backend/
       benchmark.py        GET /api/benchmark, GET /api/openers
     common.py             shared by the routers: BadRequest and NotPrecomputed, request models, word and Feedback checks, JSON shapes
     solver.py             WebSolver (the package's Solver plus the Candidates-only switch)
-    benchmark.py          the Benchmark and the Opener leaderboard (play, save, load JSON)
-    precompute.py         the command behind `just backend-precompute`
   tests/
 ```
 
@@ -30,17 +28,17 @@ Feedback and Feedback Codes (`wordle.engine.feedback`, `wordle.solver.strategy.p
 
 ## The Solver wrapper
 
-`solver.py` holds `WebSolver(Solver)`. The only behaviour it changes is `rank`: with one or two Candidates left it searches Candidates only, whatever `scope` says (guessing one is never worse). The package's `Solver.suggest` does this switch for a single Suggestion, but `rank` returns lists of Suggestions and the API and the Benchmark use it directly, so the backend wraps `rank` rather than forking the engine or changing the package. It adds two small helpers: `is_guess` and `is_answer`.
+`solver.py` holds `WebSolver(Solver)`. The only behaviour it changes is `rank`: with one or two Candidates left it searches Candidates only, whatever `scope` says (guessing one is never worse). The package's `Solver.suggest` does this switch for a single Suggestion, but `rank` returns lists of Suggestions and the API uses it directly, so the backend wraps `rank` rather than forking the engine or changing the package. It adds two small helpers: `is_guess` and `is_answer`.
 
-## Feedback matrices and precompute
+## Precomputed files
 
 The backend reads the matrices from `precompute-cache/feedback/` at the repo root (gitignored, shared with the package and the gpui app), built with the package's `wordle.solver.matrix.build`: `answers_vs_answers.npy` and `guesses_vs_answers.npy`, rows Guesses and columns Answers in sorted order, each cell a Feedback Code as a `uint8` (see [feedback-matrices.md](feedback-matrices.md)).
 
-`just backend-precompute` runs `wordle_backend.precompute`, which takes `--threads N` (default 1), `--out DIR` (the cache directory, default `precompute-cache/`, with `feedback/` and `benchmark/` inside) and `--yes` (otherwise it asks before overwriting), and writes the matrices first and then the [Benchmark](#benchmark-and-openers). `--skip-benchmark` writes only the matrices; `--benchmark-only` reuses the existing matrices and writes only the Benchmark files. The matrices take about 4 s with one thread and about 1 s with four; the Benchmark about 11 s with three or four threads. Unlike `just precompute` it never asks for the thread count.
+The backend computes nothing ahead of time itself: every precompute command is the package's. `just precompute` writes the matrices, and `just precompute-benchmark` (`wordle.solver.cli.precompute_benchmark`) writes the [Benchmark](#benchmark-and-openers). It asks for the thread count (1, 2, 4 or 8) and before overwriting; `--threads N`, `--out DIR` (default `precompute-cache/benchmark/`) and `--yes` skip the questions. It builds the matrices first if they are missing. The Benchmark takes about 21 s with four threads.
 
 ## Benchmark and openers
 
-`benchmark.py` plays a Benchmark for each of the four named Strategies (`STRATEGIES` in `packages/wordle/src/wordle/solver/strategy.py`, in this order), every one from its own best Opener (the first pick of that Strategy on the full Answer List), under the Guess Limit of six:
+The package's `wordle.solver.benchmark` (`packages/wordle/src/wordle/solver/benchmark.py`) plays a Benchmark for each of the four named Strategies (`STRATEGIES` in `packages/wordle/src/wordle/solver/strategy.py`, in this order), every one from its own best Opener (the first pick of that Strategy on the full Answer List), under the Guess Limit of six:
 
 | `id` | Strategy (`pool`, `scope`, `by`) | Opener |
 | --- | --- | --- |
@@ -49,7 +47,7 @@ The backend reads the matrices from `precompute-cache/feedback/` at the repo roo
 | `bits-all` | Expected Information over All words (`guesses`, `global`, `bits`) | tarse |
 | `expected-all` | Expected Candidates over All words (`guesses`, `global`, `expected`) | roate |
 
-Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree (`guess_counts` in `packages/wordle/src/wordle/solver/guess_counts.py`, described in [Solver Strategy](solver-strategy.md); `benchmark.py` calls it) with one search per node instead of one per Game; the Guess Counts are the same as playing each Game alone (tests in the package and here check this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over the won Games only.
+Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree (`guess_counts` in `packages/wordle/src/wordle/solver/guess_counts.py`, described in [Solver Strategy](solver-strategy.md); `benchmark.py` calls it) with one search per node instead of one per Game; the Guess Counts are the same as playing each Game alone (`packages/wordle/tests/test_benchmark.py` checks this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over the won Games only.
 
 Results on all 2,315 Answers (Guess Count 1 to 6, then Losses):
 
@@ -60,15 +58,15 @@ Results on all 2,315 Answers (Guess Count 1 to 6, then Losses):
 | `bits-all` | tarse | 0 | 61 | 1256 | 943 | 53 | 2 | 0 | 3.429 |
 | `expected-all` | roate | 0 | 55 | 1136 | 1084 | 40 | 0 | 0 | 3.479 |
 
-`bits-candidates` agrees with the table in [solver-strategy.md](solver-strategy.md) (its average there, 3.60, counts the 11 Losses at 7 or 8 Guesses). The Python package has no Benchmark of its own.
+`bits-candidates` agrees with the table in [solver-strategy.md](solver-strategy.md) (its average there, 3.60, counts the 11 Losses at 7 or 8 Guesses).
 
 The Opener leaderboard ranks every Guess List word as a first Guess by Expected Information (ties: Candidate first, then Expected Candidates, then alphabetical) and keeps the top 500. It stores the first-turn stats only, not a Benchmark per Opener.
 
-`precompute` saves `benchmark.json` and `openers.json` in `precompute-cache/benchmark/`. `main.py` reads them at startup if present; a missing file is not a startup error.
+`just precompute-benchmark` saves `benchmark.json` and `openers.json` in `precompute-cache/benchmark/`. `main.py` reads them at startup if present; a missing file is not a startup error.
 
 ## API
 
-`main.py` loads the matrices once at startup with mmap (in FastAPI's lifespan) into a `WebSolver` kept on `app.state`. They are never built there: if missing, startup fails with a message pointing to `just backend-precompute`. The Benchmark JSON files are loaded too but are optional: if one is missing, only its endpoint fails. Run it with `just backend` (uvicorn, `http://127.0.0.1:8000`; extra arguments go to uvicorn, e.g. `--port 8001 --reload`).
+`main.py` loads the matrices once at startup with mmap (in FastAPI's lifespan) into a `WebSolver` kept on `app.state`. They are never built there: if missing, startup fails with a message pointing to `just precompute`. The Benchmark JSON files are loaded too but are optional: if one is missing, only its endpoint fails. Run it with `just backend` (uvicorn, `http://127.0.0.1:8000`; extra arguments go to uvicorn, e.g. `--port 8001 --reload`).
 
 Words are lowercase five-letter strings. A Feedback is written as **five digits, one per letter: 0 Absent, 1 Present, 2 Correct** (`"20102"`), the base-3 digits of its Feedback Code; the emoji squares are for display only. Every response with a Feedback gives both `marks` (that string) and `code` (the Feedback Code). A State is `[{guess, feedback}]` with `feedback` as the digit string. `pool`, `scope` and `by` are as in [solver-strategy.md](solver-strategy.md) (defaults `guesses`, `global`, `bits`). A "WordStats" below is `{word, bits, expected_candidates, groups, largest_group, is_candidate, win_chance}`.
 
@@ -82,15 +80,16 @@ Words are lowercase five-letter strings. A Feedback is written as **five digits,
 | `GET /api/openers` | `top` (default 20) | `{total, openers}` with `total` the number saved (500); each opener is `{rank, word, bits, expected_candidates, groups, largest_group, is_candidate}`, best first |
 | `GET /api/benchmark` | none | `{guess_limit, strategies}`; each Strategy is `{id, name, pool, scope, by, opener, games, distribution, losses, lost_answers, average_guess_count}`. `distribution` has six numbers, Games won in 1 to 6 Guesses; `lost_answers` lists the Losses; `average_guess_count` is over won Games (`null` if none) |
 
-Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`, a missing parameter, `top` below 1 or not a number, an empty Candidate Set for `/api/split`) returns HTTP 400 with `{"detail": "<message>"}`; the `RequestValidationError` handler in `main.py` replaces FastAPI's 422. `/api/solve` stops after 12 Guesses as a safety limit. If `benchmark.json` or `openers.json` is missing, `/api/benchmark` or `/api/openers` returns HTTP 503 with `{"detail": "... Run `just backend-precompute` first."}`; the rest of the API still works.
+Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`, a missing parameter, `top` below 1 or not a number, an empty Candidate Set for `/api/split`) returns HTTP 400 with `{"detail": "<message>"}`; the `RequestValidationError` handler in `main.py` replaces FastAPI's 422. `/api/solve` stops after 12 Guesses as a safety limit. If `benchmark.json` or `openers.json` is missing, `/api/benchmark` or `/api/openers` returns HTTP 503 with `{"detail": "... Run `just precompute-benchmark` first."}`; the rest of the API still works.
 
-`tests/test_api.py` uses FastAPI's `TestClient` (and checks the Candidates-only switch on `WebSolver` against the package's `Solver.rank`); `tests/conftest.py` builds the matrices once only if they are missing. `tests/test_benchmark.py` runs the Benchmark on 12 Answers (tree play against one-Game-at-a-time play, the JSON shape, the 400 and 503 cases) and swaps its own results into the app, so it does not need the real JSON files. `tests/test_precompute.py` runs the command into a temporary directory. The engine's own tests (Feedback, matrices, Strategy) are in `packages/wordle/tests/`.
+`tests/test_api.py` uses FastAPI's `TestClient` (and checks the Candidates-only switch on `WebSolver` against the package's `Solver.rank`); `tests/conftest.py` builds the matrices once only if they are missing. `tests/test_benchmark.py` checks the two Benchmark endpoints (the JSON shape, the 400 and 503 cases) with a Benchmark of one Strategy on 12 Answers swapped into the app, so it does not need the real JSON files. The engine's own tests (Feedback, matrices, Strategy, the Benchmark) are in `packages/wordle/tests/`.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `just backend-precompute` | Write the Feedback matrices, the Benchmark and the Opener leaderboard to `precompute-cache/`. Takes `--threads N`, `--out DIR`, `--yes`, `--skip-benchmark`, `--benchmark-only` |
+| `just precompute` | Write the Feedback matrices (the package's command; the backend will not start without them) |
+| `just precompute-benchmark` | Write the Benchmark and the Opener leaderboard to `precompute-cache/benchmark/` (the package's command). Takes `--threads N`, `--out DIR`, `--yes` |
 | `just backend` | Serve the API with uvicorn from `app/backend/`. Takes uvicorn options, e.g. `--port 8001` |
 | `just test-backend` | Run the backend's tests (`uv run pytest` in `app/backend/`) |
 

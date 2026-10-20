@@ -119,4 +119,4 @@ The Rust app writes the same files from its command palette (**Precompute matric
 
 ## The web backend builds them too
 
-`app/backend/` reuses the package's builder: `just backend-precompute` calls `wordle.solver.matrix.build` and writes the same files into `precompute-cache/feedback/`, with the Benchmark and Opener JSON in `precompute-cache/benchmark/`. See [web-backend.md](web-backend.md).
+`app/backend/` reads the files `just precompute` writes in `precompute-cache/feedback/`; it does not build them. See [web-backend.md](web-backend.md).

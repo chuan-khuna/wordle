@@ -1,4 +1,4 @@
-"""The Benchmark and the Opener leaderboard, precomputed and saved as JSON.
+"""The Benchmark and the Opener leaderboard, precomputed and saved as JSON for the website.
 
 A Benchmark plays every Answer with one Strategy, starting from that Strategy's
 own best Opener, and counts the Guesses each Game took. The Guess Limit is six:
@@ -17,27 +17,25 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-
+from wordle.engine.game import MAX_GUESSES as GUESS_LIMIT
 from wordle.solver.guess_counts import guess_counts
 from wordle.solver.matrix import CACHE_DIR
-from wordle.solver.strategy import STRATEGIES, Strategy
-from wordle_backend.solver import WebSolver
+from wordle.solver.strategy import STRATEGIES, Solver, Strategy
 
 BENCHMARK_DIR = CACHE_DIR / "benchmark"
 BENCHMARK_FILE = "benchmark.json"
 OPENERS_FILE = "openers.json"
 
-GUESS_LIMIT = 6
 LEADERBOARD_SIZE = 500  # Openers saved
 
 
-def best_opener(solver: WebSolver, how: Strategy) -> str:
+def best_opener(solver: Solver, how: Strategy) -> str:
     return solver.rank(
         solver.all_candidates(), pool=how.pool, scope=how.scope, by=how.by, top=1
     )[0].word
 
 
-def run_benchmark(solver: WebSolver, how: Strategy, answers: list[str] | None = None) -> dict:
+def run_benchmark(solver: Solver, how: Strategy, answers: list[str] | None = None) -> dict:
     """The Benchmark of one Strategy: its Opener, Guess Distribution and Average Guess Count.
 
     `answers` limits the Games to a subset of the Answer List (for tests); default is all.
@@ -64,13 +62,13 @@ def run_benchmark(solver: WebSolver, how: Strategy, answers: list[str] | None = 
     }
 
 
-def run_benchmarks(solver: WebSolver, threads: int = 1) -> list[dict]:
+def run_benchmarks(solver: Solver, threads: int = 1) -> list[dict]:
     """The Benchmark of every Strategy, in order. Threads help: numpy releases the GIL."""
     with ThreadPoolExecutor(max_workers=threads) as pool:
         return list(pool.map(lambda how: run_benchmark(solver, how), STRATEGIES))
 
 
-def opener_leaderboard(solver: WebSolver, size: int = LEADERBOARD_SIZE) -> list[dict]:
+def opener_leaderboard(solver: Solver, size: int = LEADERBOARD_SIZE) -> list[dict]:
     """The best first Guesses by Expected Information (ties by Expected Candidates, then alphabetical)."""
     ranked = solver.rank(solver.all_candidates(), pool="guesses", scope="global", by="bits", top=size)
     return [

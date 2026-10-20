@@ -11,6 +11,6 @@ dist/
 # macOS
 .DS_Store
 
-# Precomputed Feedback matrices, Benchmark and Openers (regenerate with `just precompute` or `just backend-precompute`)
+# Precomputed Feedback matrices, Benchmark and Openers (regenerate with `just precompute`, `just precompute-guess-counts`, `just precompute-benchmark`)
 precompute-cache/
 # (their xz backup in data/precompute/ is committed: `just backup-cache`, `just restore-cache`)
