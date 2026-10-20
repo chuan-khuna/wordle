@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -16,7 +17,7 @@ from wordle.solver.matrix import (
     THREAD_CHOICES,
     build,
 )
-from wordle.solver.strategy import STRATEGIES
+from wordle.solver.strategy import STRATEGIES, Solver
 
 
 def precompute_matrix() -> None:
@@ -72,6 +73,9 @@ def precompute_guess_counts() -> None:
         help="a Strategy to compute (repeatable); skips the question",
     )
     parser.add_argument("--opener", action="append", help="fill only this Opener's row (repeatable), for quick checks")
+    again = parser.add_mutually_exclusive_group()
+    again.add_argument("--yes", action="store_true", help="resume a matrix that has rows without asking")
+    again.add_argument("--fresh", action="store_true", help="start each chosen matrix over without asking")
     args = parser.parse_args()
 
     if args.strategy:
@@ -85,12 +89,38 @@ def precompute_guess_counts() -> None:
             return
         chosen = tuple(answer)
 
+    solver = Solver.load()
+    fresh = args.fresh
+    done = {how: guess_count_matrix.filled_rows(args.out, how) for how in chosen}
+    if not fresh and any(done.values()):
+        for how in chosen:
+            if done[how] and (reason := guess_count_matrix.mismatch(args.out, how, solver)):
+                sys.exit(f"Can't resume {how.id}: {reason}. Run again with --fresh to start it over.")
+        if not args.yes:
+            lines = "\n".join(f"  {how.id}: {n} of {len(solver.guesses)} Openers have rows" for how, n in done.items())
+            answer = questionary.select(
+                f"These matrices are already filled:\n{lines}\nResume, start over or cancel?",
+                choices=[
+                    questionary.Choice("Resume (fill the rows still empty)", value="resume"),
+                    questionary.Choice("Start over (clear the chosen matrices)", value="fresh"),
+                    questionary.Choice("Cancel", value="cancel"),
+                ],
+                default="resume",
+            ).ask()
+            if answer in (None, "cancel"):  # Ctrl+C, or cancel: write nothing
+                return
+            fresh = answer == "fresh"
+
     started = time.perf_counter()
-    paths = guess_count_matrix.build(args.out, chosen, args.opener)
+    try:
+        guess_count_matrix.build(args.out, chosen, args.opener, solver, fresh)
+    except KeyboardInterrupt:
+        print("\nInterrupted. Finished rows are kept and the summary is written; run again to resume.")
     elapsed = time.perf_counter() - started
-    for path in paths:
+    summary_path = args.out / guess_count_matrix.SUBDIR / guess_count_matrix.SUMMARY_FILE
+    for path in sorted(summary_path.parent.iterdir()):
         print(f"{path} ({path.stat().st_size / 1_000_000:.1f} MB)")
-    summary = json.loads(paths[-1].read_text())
+    summary = json.loads(summary_path.read_text())
     for how in chosen:
         entry = summary[how.id]
         print(f"\n{how.name}: {entry['complete_rows']} Openers complete")
