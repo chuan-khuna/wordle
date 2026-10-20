@@ -1,0 +1,18 @@
+---
+title: "Sample: Candidate Set"
+summary: "PLACEHOLDER. The second Article of the sample Series, building on Feedback."
+prerequisites: [sample-feedback]
+series: sample-solving-wordle
+order: 2
+video: "0:12"
+---
+
+This is placeholder content, and it builds on [Feedback](/articles/sample-feedback). Each <Term>Feedback</Term> rules out <Term of="Candidate">candidates</Term>, and what is left is the <Term>Candidate Set</Term>.
+
+If the set holds $N$ words and a Guess splits it evenly into $k$ groups, the next set has about $N/k$ words. The <Term>Expected Information</Term> of that Guess is
+
+$$
+-\sum_{i} p_i \log_2 p_i
+$$
+
+bits, where $p_i$ is the share of the set that falls in group $i$.
