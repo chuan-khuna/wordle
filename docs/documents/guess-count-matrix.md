@@ -68,7 +68,7 @@ On Ctrl+C (or an error in a worker) the calling thread sets a stop flag; each wo
 
 With `progress=True` (the command always sets it), tqdm draws on stderr:
 
-- **Openers** (position 0): rows committed out of the rows to fill across every chosen Strategy, with rate and time left. On a resume the total also counts the rows already complete and the bar starts there, so it reads "rows done of 14,855 × Strategies"; with `--opener` it counts only those rows.
+- **Openers** (position 0, the label yellow through `termcolor`): rows committed out of the rows to fill across every chosen Strategy, with rate and time left. On a resume the total also counts the rows already complete and the bar starts there, so it reads "rows done of 14,855 × Strategies"; with `--opener` it counts only those rows.
 - **One bar per worker** (positions 1 to `threads`, each on its own line, so they never write over each other): labelled `<strategy id> <opener>`, Answers settled out of 2,315. `guess_counts` takes a `settled(n)` callback, called each time a group of `n` Answers gets its Guess Count; the bar resets for each Opener and is removed when its worker ends.
 
 ## Resuming

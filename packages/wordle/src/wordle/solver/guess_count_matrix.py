@@ -34,6 +34,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
+from termcolor import colored
 from tqdm import tqdm
 
 from wordle.engine.game import MAX_GUESSES as GUESS_LIMIT
@@ -274,7 +275,7 @@ def _fill(
     stop = threading.Event()
     finished: queue.Queue = queue.Queue()  # (Strategy, row, counts), or an exception from a worker
     overall = tqdm(
-        total=complete + len(jobs), initial=complete, desc="Openers", unit="row", position=0,
+        total=complete + len(jobs), initial=complete, desc=colored("Openers", "yellow"), unit="row", position=0,
         dynamic_ncols=True, disable=not progress,
     )  # fmt: skip
 

@@ -77,6 +77,7 @@ All three game commands take `--answer WORD` or `--seed N` to skip the menu, and
 | `numpy` | Scoring every Guess against every Answer for the Feedback matrices |
 | `rich` | Drawing the board, keyboard and panel in colour |
 | `tqdm` | The progress bars of `just precompute-guess-counts` |
+| `termcolor` | The yellow "Openers" label of that command's overall bar |
 | `pytest` (dev) | Tests |
 
 `engine/` uses only the standard library.

@@ -4,11 +4,11 @@
 
 **Blocked by:** 05 (rows committed from several threads must follow the resume rules)
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] The thread question and `--threads N` work; the build function takes the thread count
 - [x] One thread and several threads give byte-identical files (test)
-- [ ] The overall bar and the per-thread bars show as described, and do not garble each other
+- [x] The overall bar and the per-thread bars show as described, and do not garble each other
 - [x] Ctrl+C with several threads still keeps the finished rows
 - [x] The Guess Count Matrix document describes the threads and bars, with a measured speed-up on a few hundred Candidates-only and a few dozen global Openers
 
@@ -21,3 +21,5 @@ Built in `solver/guess_count_matrix.py` (`build(..., threads, progress)` and `_f
 Measured on an M1 Pro (CPython 3.14 with the GIL): Candidates-only Strategies get slower with threads (300 Openers: 10.1 s on 1, 31.9 s on 8); global ones gain 2.6x on 4 threads and 3.3x to 3.7x on 8 (24 Openers: 199 s -> 60 s). Ticket 07 should consider processes.
 
 Not ticked: the bars were checked only from captured stderr in a non-interactive shell (one "Openers" bar at position 0, one labelled bar per thread on positions 1..N with cursor-up codes, total and initial right); how they look in a real terminal, and that they don't garble each other there, still needs a look by a human. Status stays ready-for-agent until then.
+
+2026-10-20: checked by hand in a real terminal (4 threads, `bits-candidates`): the overall bar and the per-thread bars show as described and do not garble each other, and Ctrl+C kept the 37 finished rows and wrote the summary. Closed. The "Openers" label is now yellow (`termcolor`).
