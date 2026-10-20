@@ -21,7 +21,7 @@ use super::guess_counts::{duration_label, end_note, with_commas};
 use super::precompute::threads_label;
 
 /// How many log lines are kept; older ones are dropped (and counted).
-pub const MAX_LOG_LINES: usize = 200;
+pub const MAX_LOG_LINES: usize = 1_000;
 
 pub const MATRICES_FOLDER: &str = "precompute-cache/feedback-rust/";
 pub const GUESS_COUNTS_FOLDER: &str = "precompute-cache/guess-counts-rust/";
