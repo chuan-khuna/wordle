@@ -2,11 +2,9 @@
 
 A Benchmark plays every Answer with one Strategy, starting from that Strategy's
 own best Opener, and counts the Guesses each Game took. The Guess Limit is six:
-a Game that needs more is a Loss. Three Strategies are compared:
-
-  1. Expected Information over All words (the Guess List)
-  2. Expected Information over Candidates only
-  3. Expected Candidates over All words
+a Game that needs more is a Loss. Every named Strategy of
+`wordle.solver.strategy` is compared: Expected Information or Expected Candidates,
+each over Candidates only or over All words (the Guess List).
 
 The Opener leaderboard ranks every Guess List word as a first Guess by
 Expected Information over the whole Answer List.
@@ -19,13 +17,12 @@ are the same as playing each Game alone.
 
 import json
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
 from wordle.solver.matrix import WIN
-from wordle.solver.strategy import Pool, Rank, Scope
+from wordle.solver.strategy import STRATEGIES, Strategy
 from wordle.solver.matrix import CACHE_DIR
 from wordle_backend.solver import WebSolver
 
@@ -38,31 +35,13 @@ SAFETY_LIMIT = 12  # no Strategy here needs more than 8 Guesses; this only stops
 LEADERBOARD_SIZE = 500  # Openers saved
 
 
-@dataclass(frozen=True)
-class BenchmarkStrategy:
-    """One Strategy of the Benchmark: how Guesses are chosen, and what to call it."""
-
-    id: str
-    name: str
-    pool: Pool
-    scope: Scope
-    by: Rank
-
-
-BENCHMARK_STRATEGIES = (
-    BenchmarkStrategy("bits-all", "Expected Information, all words", "guesses", "global", "bits"),
-    BenchmarkStrategy("bits-candidates", "Expected Information, Candidates only", "answers", "candidates", "bits"),
-    BenchmarkStrategy("expected-all", "Expected Candidates, all words", "guesses", "global", "expected"),
-)
-
-
-def best_opener(solver: WebSolver, how: BenchmarkStrategy) -> str:
+def best_opener(solver: WebSolver, how: Strategy) -> str:
     return solver.rank(
         solver.all_candidates(), pool=how.pool, scope=how.scope, by=how.by, top=1
     )[0].word
 
 
-def guess_counts(solver: WebSolver, how: BenchmarkStrategy, opener: str) -> dict[str, int]:
+def guess_counts(solver: WebSolver, how: Strategy, opener: str) -> dict[str, int]:
     """The Guess Count of every Answer: its Game played with `how`, starting from `opener`."""
     counts: dict[str, int] = {}
     # Each node is (Candidate Set, Guess to play). Every Answer in the set is still unsolved.
@@ -84,7 +63,7 @@ def guess_counts(solver: WebSolver, how: BenchmarkStrategy, opener: str) -> dict
     return counts
 
 
-def run_benchmark(solver: WebSolver, how: BenchmarkStrategy, answers: list[str] | None = None) -> dict:
+def run_benchmark(solver: WebSolver, how: Strategy, answers: list[str] | None = None) -> dict:
     """The Benchmark of one Strategy: its Opener, Guess Distribution and Average Guess Count.
 
     `answers` limits the Games to a subset of the Answer List (for tests); default is all.
@@ -115,7 +94,7 @@ def run_benchmark(solver: WebSolver, how: BenchmarkStrategy, answers: list[str] 
 def run_benchmarks(solver: WebSolver, threads: int = 1) -> list[dict]:
     """The Benchmark of every Strategy, in order. Threads help: numpy releases the GIL."""
     with ThreadPoolExecutor(max_workers=threads) as pool:
-        return list(pool.map(lambda how: run_benchmark(solver, how), BENCHMARK_STRATEGIES))
+        return list(pool.map(lambda how: run_benchmark(solver, how), STRATEGIES))
 
 
 def opener_leaderboard(solver: WebSolver, size: int = LEADERBOARD_SIZE) -> list[dict]:

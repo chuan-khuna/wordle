@@ -39,6 +39,25 @@ CODES = matrix.WIN + 1  # 243 possible Feedback Codes
 ROWS_PER_STEP = 1024  # matrix rows counted per step, to keep the working arrays small
 
 
+@dataclass(frozen=True)
+class Strategy:
+    """A named way of choosing Guesses: which Guesses to consider, and how to rank them."""
+
+    id: str
+    name: str
+    pool: Pool
+    scope: Scope
+    by: Rank
+
+
+STRATEGIES = (
+    Strategy("bits-candidates", "Expected Information, Candidates only", "answers", "candidates", "bits"),
+    Strategy("expected-candidates", "Expected Candidates, Candidates only", "answers", "candidates", "expected"),
+    Strategy("bits-all", "Expected Information, all words", "guesses", "global", "bits"),
+    Strategy("expected-all", "Expected Candidates, all words", "guesses", "global", "expected"),
+)
+
+
 def pack(marks: Feedback) -> int:
     """A Feedback as its Feedback Code (0 to 242)."""
     code = 0

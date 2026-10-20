@@ -16,7 +16,7 @@ import { useWidgetParam } from "./useWidgetParam";
 const ROLE_COLORS = ["var(--accent)", "var(--present)", "var(--correct)", "var(--error)"];
 const LOST = "Lost";
 
-const DEFAULT_STRATEGIES = "bits-all,bits-candidates,expected-all";
+const DEFAULT_STRATEGIES = "bits-candidates,expected-candidates,bits-all,expected-all";
 
 interface Bar {
   count: string;
@@ -39,7 +39,7 @@ export function pickStrategies<T extends { id: string }>(all: readonly T[], text
  * Widget 6: the Benchmark. Every chosen Strategy plays all 2315 Answers; the chart groups the Guess Distribution
  * by Guess Count (1 to 6), with the Losses as a last group, one bar per Strategy. A table below gives each
  * Strategy's Opener, Average Guess Count, Losses (with the lost Answers) and the exact counts.
- * Props: `strategies` (comma separated ids, default all three: `bits-all`, `bits-candidates`, `expected-all`),
+ * Props: `strategies` (comma separated ids, default all four: `bits-candidates`, `expected-candidates`, `bits-all`, `expected-all`),
  * `id` (URL param `id.strategies`). The URL param `strategies` overrides the prop.
  */
 export function BenchmarkChart(props: { strategies?: string; id?: string }) {

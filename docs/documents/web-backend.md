@@ -40,12 +40,13 @@ The backend reads the matrices from `precompute-cache/feedback/` at the repo roo
 
 ## Benchmark and openers
 
-`benchmark.py` plays a Benchmark for each of three Strategies, every one from its own best Opener (the first pick of that Strategy on the full Answer List), under the Guess Limit of six:
+`benchmark.py` plays a Benchmark for each of the four named Strategies (`STRATEGIES` in `packages/wordle/src/wordle/solver/strategy.py`, in this order), every one from its own best Opener (the first pick of that Strategy on the full Answer List), under the Guess Limit of six:
 
 | `id` | Strategy (`pool`, `scope`, `by`) | Opener |
 | --- | --- | --- |
+| `bits-candidates` | Expected Information, Candidates only (`answers`, `candidates`, `bits`) | raise |
+| `expected-candidates` | Expected Candidates, Candidates only (`answers`, `candidates`, `expected`) | raise |
 | `bits-all` | Expected Information over All words (`guesses`, `global`, `bits`) | tarse |
-| `bits-candidates` | Expected Information over Candidates only (`answers`, `candidates`, `bits`) | raise |
 | `expected-all` | Expected Candidates over All words (`guesses`, `global`, `expected`) | roate |
 
 Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree with one `rank` call per node instead of one per Game; the Guess Counts are the same as playing each Game alone (a test checks this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over the won Games only.
@@ -54,8 +55,9 @@ Results on all 2,315 Answers (Guess Count 1 to 6, then Losses):
 
 | Strategy | Opener | 1 | 2 | 3 | 4 | 5 | 6 | Losses | Average |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `bits-all` | tarse | 0 | 61 | 1256 | 943 | 53 | 2 | 0 | 3.429 |
 | `bits-candidates` | raise | 1 | 131 | 999 | 919 | 207 | 47 | 11 | 3.582 |
+| `expected-candidates` | raise | 1 | 131 | 957 | 946 | 224 | 42 | 14 | 3.603 |
+| `bits-all` | tarse | 0 | 61 | 1256 | 943 | 53 | 2 | 0 | 3.429 |
 | `expected-all` | roate | 0 | 55 | 1136 | 1084 | 40 | 0 | 0 | 3.479 |
 
 `bits-candidates` agrees with the table in [solver-strategy.md](solver-strategy.md) (its average there, 3.60, counts the 11 Losses at 7 or 8 Guesses). The Python package has no Benchmark of its own.

@@ -20,7 +20,7 @@ def strategy():
 @pytest.fixture(scope="module")
 def results(strategy):
     """The Benchmark of each Strategy on the subset, run once."""
-    return {how.id: benchmark.run_benchmark(strategy, how, SUBSET) for how in benchmark.BENCHMARK_STRATEGIES}
+    return {how.id: benchmark.run_benchmark(strategy, how, SUBSET) for how in benchmark.STRATEGIES}
 
 
 def play_alone(strategy, how, opener, answer):
@@ -33,7 +33,7 @@ def play_alone(strategy, how, opener, answer):
     return number
 
 
-@pytest.mark.parametrize("how", benchmark.BENCHMARK_STRATEGIES, ids=lambda how: how.id)
+@pytest.mark.parametrize("how", benchmark.STRATEGIES, ids=lambda how: how.id)
 def test_tree_play_matches_playing_each_game(strategy, results, how):
     result = results[how.id]
     alone = [play_alone(strategy, how, result["opener"], answer) for answer in SUBSET]

@@ -32,6 +32,8 @@ Ties go to a Candidate, then to the other measure, then to alphabetical order. `
 - The old code had one matrix (common words × common words), so "all words" could only mean that list; here the Guess pool can be the Answer List or the full Guess List.
 - Scoring uses `uint8` Feedback Codes and vectorised counting instead of per-column pandas work.
 
+`STRATEGIES` in the same module names the four combinations of scope (Candidates only, or all words) and ranking (`bits-candidates`, `expected-candidates`, `bits-all`, `expected-all`), each with an id, a display name, a pool, a scope and a ranking; the web backend's Benchmark plays every one.
+
 Tests: `packages/wordle/tests/test_strategy.py` checks the stats against a brute-force count with `wordle.engine.feedback.feedback`.
 
 ## Where a Candidates-only search struggles
