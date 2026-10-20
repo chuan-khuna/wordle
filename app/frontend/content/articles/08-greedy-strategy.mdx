@@ -9,7 +9,7 @@ We can now build the <Term>Solver</Term>. Its <Term>Strategy</Term> is the simpl
 
 Each step is the three ideas of this Part in a row. Find the Candidates. Split them with every Guess. Play the top one. That Guess is the <Term>Suggestion</Term>.
 
-```python title="packages/wordle/src/wordle/solver/strategy.py" {11-14}
+```python title="The greedy choice" {11-14}
 def suggest(
     self,
     candidates: np.ndarray,

@@ -50,7 +50,7 @@ len(sizes), max(sizes)   # (142, 263)
 
 The package counts the same groups from a row of the Feedback Matrix, for thousands of Guesses at once. This is how it scores them. Both measures come from the same counts:
 
-```python title="packages/wordle/src/wordle/solver/strategy.py" {6-7}
+```python title="Scoring a Feedback Split" {6-7}
 def _score(counts: np.ndarray, total: int) -> tuple[np.ndarray, np.ndarray]:
     """(bits, expected Candidates) for each row of Feedback counts."""
     c = counts.astype(np.float64)

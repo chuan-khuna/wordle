@@ -36,7 +36,7 @@ def candidates(state, answers):
 
 The package does the same job, but much faster. Working out a Feedback again for every word on every step would be slow. Instead it looks each one up in a <Term>Feedback Matrix</Term>, a table of every Guess against every Answer that is scored once before any Game:
 
-```python title="packages/wordle/src/wordle/solver/strategy.py" {4-5}
+```python title="Narrowing the Candidates" {4-5}
 def narrow(self, candidates: np.ndarray, guess: str, code: int) -> np.ndarray:
     """The Candidates that would have given Feedback Code `code` for `guess`."""
     row = self.guesses_vs_answers[self._guess_row[guess]]

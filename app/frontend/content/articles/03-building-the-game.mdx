@@ -11,7 +11,7 @@ You now have the rules and the Feedback function. That is enough to build the wh
 
 A Guess in the code is a word with its Feedback and its number. The <Term>State</Term> is all the Guesses so far, each with its Feedback. That is everything a player, or a Solver, can see.
 
-```python title="packages/wordle/src/wordle/engine/game.py" {8-9,16-17}
+```python title="A Guess and the State" {8-9,16-17}
 @dataclass(frozen=True)
 class Guess:
     number: int
@@ -39,7 +39,7 @@ Notice that both classes are frozen, and `add` does not change the State. It bui
 
 The Game holds the Answer, the <Term>Guess Limit</Term> and the current State. It decides when it is over.
 
-```python title="packages/wordle/src/wordle/engine/game.py" {4,9,13,16-19}
+```python title="The Game" {4,9,13,16-19}
 @dataclass
 class Game:
     answer: str

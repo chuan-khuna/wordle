@@ -180,12 +180,12 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 Fenced code in any MDX file is highlighted at build time by `rehype-pretty-code` + Shiki (no highlighter JS reaches the browser; the built HTML has the coloured spans). Write the language, then optional meta:
 
 ````
-```python title="packages/wordle/src/wordle/engine/feedback.py" {64-69} showLineNumbers
+```python title="Two-pass Feedback" {64-69}
 ...
 ```
 ````
 
-- `title="..."` adds a caption row with a file name; `{3-5,9}` highlights lines (quiet fill plus an `accent` left rule); every block shows CSS-counter line numbers (`meta` colour, `user-select: none`, so they are not copied); `showLineNumbers` is accepted but no longer needed. No language means plain text. Inline `code` keeps its small `highlight-low` chip.
+- `title="..."` adds a caption row naming the idea the code shows (for example "Two-pass Feedback"), not a file path: the code is there to explain the idea; `{3-5,9}` highlights lines (quiet fill plus an `accent` left rule); every block shows CSS-counter line numbers (`meta` colour, `user-select: none`, so they are not copied); `showLineNumbers` is accepted but no longer needed. No language means plain text. Inline `code` keeps its small `highlight-low` chip.
 - **Block style** (`globals.css`, under `prose-theme`): `<figure data-rehype-pretty-code-figure>` with a hairline `border-rule` frame, `highlight-low` fill, `rounded-sm`, no shadow, `font-mono` `text-sm`. Long lines scroll inside the `<pre>` (`overflow-x: auto`), never the page.
 - **Copy button**: `mdx-components.tsx` maps `figure` to `CodeFigure.tsx` (a small Client Component) for highlighted figures only: a shadcn `Button` (`ghost`, `icon-xs`, `Copy` then `Check` for 2s, `aria-label="Copy code"`, plus an `sr-only` `role="status"` "Code copied"). It copies the code element's text.
 - **Turbopack**: the plugin is named by string in `next.config.ts` and its options are plain JSON. The Shiki theme is a VS Code-format object (`tokenColors`; rehype-pretty-code only takes an inline theme in that shape) whose colours are `var(--code-*)`, so no function (`createCssVariablesTheme`) is needed.
