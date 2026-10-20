@@ -14,7 +14,7 @@ app/frontend/
     articles/<slug>.mdx     Articles (frontmatter + MDX)
     series/<slug>.mdx       Series
   src/
-    mdx-components.tsx      components every MDX file can use without importing (<Term>)
+    mdx-components.tsx      components every MDX file can use without importing (<Term>, the Widgets)
     app/
       layout.tsx            <html>, the no-flash theme script, the site header with the theme picker, KaTeX CSS
       page.tsx              the index page: the Series and all Articles
@@ -24,6 +24,10 @@ app/frontend/
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ThemePicker.tsx
     components/Term.tsx, VideoEmbed.tsx, ArticleList.tsx
+    components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, Tile, ui, useWidgetParam
+    lib/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
+    lib/widget-state.ts     the `guess:feedback,...` State text format
+    lib/api.ts              fetch helpers for /api (errors carry the API's `detail`)
     lib/content.ts          reads and validates content/ (frontmatter via gray-matter)
     lib/glossary.ts         parses the root GLOSSARY.md for <Term>
     lib/themes.ts           the theme ids, names and appearance, in the gpui picker's order
@@ -41,6 +45,7 @@ Versions (current when the app was made, all at least 7 days old): Next 16.4, Re
 | `bun run build` | Production build |
 | `bun run lint` | ESLint |
 | `bun run typecheck` | `tsc --noEmit` |
+| `bun test` | Unit tests (`src/lib/*.test.ts`); the cross-check against `/api/feedback` runs when the backend is up |
 
 Run `just backend-precompute` once first, or the backend answers 503 where it needs the matrices.
 
@@ -103,3 +108,41 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 ## Maths
 
 Write `$inline$` and `$$display$$` (remark-math, rendered by rehype-katex). Prose is styled by `@tailwindcss/typography` as `prose prose-theme`, where `prose-theme` (in `globals.css`) sets the typography colours from the theme roles.
+
+## Widgets
+
+Interactive figures, registered in `mdx-components.tsx` (no import needed). They are Client Components wrapped in `<Suspense>` (they read the URL with `useSearchParams`, which a static page needs). Tiles use the theme roles (`bg-correct text-on-correct` and so on); Marks are also in each tile's `aria-label`, so colour is never the only cue.
+
+**Starting state and URL params.** A Widget starts from its MDX props. A URL query param of the same meaning overrides the prop, so a video take can be reproduced from a link. Edits are written back to the URL with `history.replaceState` (the param is removed again when it equals the prop), so the address bar is always a link to the current take. Params are read once, when the Widget mounts.
+
+**Two Widgets in one Article.** Give each an `id`; its params are then named `<id>.<name>` (`fb.guess`, `cs.state`). Without an `id` the plain names are used (`guess`, `answer`, `state`), so two Widgets of the same kind without ids would share state.
+
+### Feedback scorer
+
+```mdx
+<FeedbackScorer id="fb" guess="speed" answer="abide" />
+```
+
+| Prop | URL param | Meaning |
+| --- | --- | --- |
+| `guess`, `answer` | `guess`, `answer` (or `<id>.guess`, `<id>.answer`) | starting words, letters only |
+| `id` | | namespace for the params |
+
+Shows five tiles, then the two passes worked out for that pair (Correct first; then left to right, a letter is Present while the Answer still has an unused copy, otherwise Absent), as in [feedback-scoring.md](feedback-scoring.md). Example link: `/articles/sample-feedback?fb.guess=eerie&fb.answer=crane`.
+
+**Local and API.** The Marks and the explanation come from a TypeScript port (`lib/feedback.ts`), so they update at once and the explanation has its steps. After a short pause the Widget also calls `GET /api/feedback`: it is the authority on which words are on the Guess List (a 400 shows its message, e.g. `guess 'zzzzz' is not a valid five-letter word`) and a mismatch between its Marks and the port is reported. `lib/feedback.test.ts` checks the port against the repeated-letter examples of the scoring document, and against the running API when it is up (`BACKEND_URL`, default `http://127.0.0.1:8000`).
+
+### Candidate filter
+
+```mdx
+<CandidateFilter id="cs" state="crane:00102,slate:01200" />
+```
+
+| Prop | URL param | Meaning |
+| --- | --- | --- |
+| `state` | `state` (or `<id>.state`) | the State: rows `guess:feedback` joined by commas |
+| `id` | | namespace for the param |
+
+A row's feedback is five digits, 0 Absent, 1 Present, 2 Correct (`crane:00102`); a row without `:feedback` starts all Absent; malformed rows are dropped; at most six rows. In the Widget the reader types each Guess and clicks its tiles to cycle the Marks (Absent, Present, Correct). Every complete row shows its Candidate Set count before and after (`2309 → 49`), and below are the final count and the words (the first 48, with a button for all). It makes one `POST /api/candidates` per prefix of the State (Guess 0, 1, ..., n), so an invalid Guess or Feedback shows the API's message on its row; incomplete rows are ignored until they have five letters. Example link: `/articles/sample-candidate-set?cs.state=crane:20000`.
+
+Both Widgets show loading and error states (`role="alert"` for errors, `aria-live` for results), use real labelled inputs and buttons so they work from the keyboard, and wrap at phone width.
