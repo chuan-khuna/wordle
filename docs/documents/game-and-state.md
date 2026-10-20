@@ -17,7 +17,7 @@ How `packages/wordle/src/wordle/game.py` models a Game. The terms (Game, Guess, 
 ## Making a Game
 
 ```python
-from wordle.game import Game
+from wordle.engine.game import Game
 
 Game("crane")                      # fixed Answer; must be on the Answer List
 Game.random()                      # random Answer; the Seed it used is in game.seed
@@ -56,8 +56,8 @@ game.is_won, game.is_lost, game.is_over
 A `Game` follows the real rules and refuses Guesses once it is over. To keep guessing past six, start the Game with `max_guesses=None`. To see what any word would have got (for example the _AKER trap: MAKER, TAKER, FAKER… against BAKER), call `feedback()` directly; it has no limits:
 
 ```python
-from wordle.feedback import feedback
-from wordle.game import Guess
+from wordle.engine.feedback import feedback
+from wordle.engine.game import Guess
 
 for word in ["maker", "taker", "faker", "baker"]:
     print(Guess(0, word, feedback(word, "baker")))

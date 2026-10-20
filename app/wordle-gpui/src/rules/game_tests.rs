@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn seeds_pick_the_same_answers_as_the_python_game() {
-    // uv run python -c "from wordle.game import Game; print(Game.random(7).answer)"
+    // uv run python -c "from wordle.engine.game import Game; print(Game.random(7).answer)"
     for (seed, answer) in [(0, "rerun"), (7, "octet"), (42, "craft"), (999_999, "glade")] {
         assert_eq!(Game::random(seed, Some(MAX_GUESSES)).answer(), answer);
     }

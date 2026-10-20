@@ -12,35 +12,38 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just wordle-gpui`, `just test`, `just test-gpui`
+justfile                    `just wordle`, `just matrices`, `just wordle-gpui`, `just test`, `just test-gpui`
 src/main.py                 entry point: `uv run src/main.py`
+src/matrices.py             entry point: `uv run src/matrices.py` (precompute the Feedback matrices)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml
     src/wordle/
-      feedback.py           Mark, Feedback and the scoring rule
-      words.py              loads the Answer List and Guess List
-      game.py               Game, Guess, State
+      engine/               the game logic, with no screen code:
+        feedback.py         Mark, Feedback and the scoring rule
+        words.py            loads the Answer List and Guess List
+        game.py             Game, Guess, State
       cli.py                the terminal game (questionary + rich)
+      solver/               matrix.py (Feedback matrices), cli.py (the questions asked by `just matrices`)
       __main__.py           `python -m wordle`
       data/                 answers.txt, guesses.txt, SOURCES.md
     tests/
 ```
 
-A future Solver can be added as another member, e.g. `packages/wordle-solver`, depending on `wordle`.
+The Solver lives in `wordle/solver/`, above `engine/`; it adds `numpy` as a dependency. See [feedback-matrices.md](feedback-matrices.md).
 
 ## Layers inside `wordle`
 
 Each module only uses the ones above it:
 
-1. **`feedback.py`**: pure function from a Guess and an Answer to Feedback. No game rules, no I/O. See [feedback-scoring.md](feedback-scoring.md).
-2. **`words.py`**: reads the word lists bundled in `data/` once (`load_word_lists()` is cached).
-3. **`game.py`**: the rules of a Game: six Guesses, which words are allowed, Win and Loss. See [game-and-state.md](game-and-state.md).
+1. **`engine/feedback.py`**: pure function from a Guess and an Answer to Feedback. No game rules, no I/O. See [feedback-scoring.md](feedback-scoring.md).
+2. **`engine/words.py`**: reads the word lists bundled in `data/` once (`load_word_lists()` is cached).
+3. **`engine/game.py`**: the rules of a Game: six Guesses, which words are allowed, Win and Loss. See [game-and-state.md](game-and-state.md).
 4. **`cli.py`**: everything on screen and every prompt. See [terminal-ui.md](terminal-ui.md).
 
-Keeping the screen code out of `game.py` means the Solver and Benchmark can play Games with no terminal at all.
+Keeping the screen code out of `engine/` means the Solver and Benchmark can play Games with no terminal at all.
 
 ## Ways to run it
 
@@ -61,7 +64,8 @@ All three game commands take `--answer WORD` or `--seed N` to skip the menu, and
 | Package | Used for |
 | --- | --- |
 | `questionary` | Menus and text prompts with live validation |
+| `numpy` | Scoring every Guess against every Answer for the Feedback matrices |
 | `rich` | Drawing the board, keyboard and panel in colour |
 | `pytest` (dev) | Tests |
 
-`feedback.py`, `words.py` and `game.py` use only the standard library.
+`engine/` uses only the standard library.

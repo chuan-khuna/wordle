@@ -1,8 +1,8 @@
 import pytest
 
-from wordle.feedback import Mark
-from wordle.game import MAX_GUESSES, Game, GameOver, InvalidGuess
-from wordle.words import load_word_lists
+from wordle.engine.feedback import Mark
+from wordle.engine.game import MAX_GUESSES, Game, GameOver, InvalidGuess
+from wordle.engine.words import load_word_lists
 
 
 def test_word_lists():

@@ -1,6 +1,6 @@
 import pytest
 
-from wordle.feedback import Mark, feedback
+from wordle.engine.feedback import Mark, feedback
 
 C, P, A = Mark.CORRECT, Mark.PRESENT, Mark.ABSENT
 

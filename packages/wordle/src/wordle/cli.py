@@ -8,9 +8,9 @@ from rich.console import Console, Group
 from rich.panel import Panel
 from rich.text import Text
 
-from wordle.feedback import Mark
-from wordle.game import MAX_GUESSES, MAX_SEED, Game, InvalidGuess, State
-from wordle.words import WORD_LENGTH, load_word_lists
+from wordle.engine.feedback import Mark
+from wordle.engine.game import MAX_GUESSES, MAX_SEED, Game, InvalidGuess, State
+from wordle.engine.words import WORD_LENGTH, load_word_lists
 
 console = Console()
 

@@ -10,3 +10,6 @@ dist/
 
 # macOS
 .DS_Store
+
+# Precomputed Feedback matrices (regenerate with `uv run wordle-matrices`)
+matrices/

@@ -1,5 +1,5 @@
 //! The rules of a Game: the Guess Limit, which words are allowed, Win and Loss.
-//! Mirrors `packages/wordle/src/wordle/game.py`.
+//! Mirrors `packages/wordle/src/wordle/engine/game.py`.
 
 use std::collections::hash_map::RandomState;
 use std::fmt;

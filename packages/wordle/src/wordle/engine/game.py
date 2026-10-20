@@ -2,8 +2,8 @@ import random
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-from wordle.feedback import Feedback, Mark, feedback
-from wordle.words import WORD_LENGTH, WordLists, load_word_lists
+from wordle.engine.feedback import Feedback, Mark, feedback
+from wordle.engine.words import WORD_LENGTH, WordLists, load_word_lists
 
 MAX_GUESSES = 6
 

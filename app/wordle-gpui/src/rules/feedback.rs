@@ -1,5 +1,5 @@
 //! Work out the Feedback for a Guess: which letters are Correct, Present or Absent.
-//! The same two-pass rule as `packages/wordle/src/wordle/feedback.py`.
+//! The same two-pass rule as `packages/wordle/src/wordle/engine/feedback.py`.
 
 use std::collections::HashMap;
 

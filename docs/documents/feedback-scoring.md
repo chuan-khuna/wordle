@@ -1,6 +1,6 @@
 # Feedback scoring
 
-How `feedback(guess, answer)` in `packages/wordle/src/wordle/feedback.py` decides each letter's Mark.
+How `feedback(guess, answer)` in `packages/wordle/src/wordle/engine/feedback.py` decides each letter's Mark.
 
 ## The rule
 
