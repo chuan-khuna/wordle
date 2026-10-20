@@ -171,6 +171,10 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 
 **Contrast.** The palettes' `on-*` roles are tuned for big tile letters. Against their Mark colour, small text reaches 4.5:1 in only 15 of 30 cases (correct, present, absent; worst: Nord absent 1.96, Rosé Pine Dawn present 2.05, Tokyo Night absent 2.17). So the label text is not `on-*`: tokens.css derives `ink-correct`, `ink-present`, `ink-absent` (`text-ink-*`), black or white by the lightness of the Mark colour (relative colour, threshold OKLCH L 0.6). The better of black and white is always at least about 4.5:1; across the ten palettes the lowest is 4.51 (Flexoki Light correct), most are above 6. The palettes are untouched. Tiles still use `on-*`.
 
+## `<Word>`
+
+`<Word>speed</Word>` works in any MDX file with no import. It draws the word as five small letter tiles inline in the prose (JetBrains Mono caps, tile radius, sized in `em` so it does not grow the line), with a hairline `rule-strong` frame. `<Word feedback="00101">speed</Word>` paints each tile with its Mark (digits 0 Absent, 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works that Feedback out with `lib/feedback.ts`. Painted tiles use the same `bg-*` and `text-ink-*` pair as `<Mark>`, for contrast. Screen readers get one `role="img"` label: the word, then each letter's Mark when there is Feedback ("SPEED: S Absent, P Absent, E Present, …"). The word (and `answer`) must be on the Guess List, read at build time from `packages/wordle/src/wordle/data/guesses.txt` by `lib/words.ts`; an unknown word, malformed `feedback`, or both `feedback` and `answer` throws and fails the build.
+
 ## Code blocks
 
 Fenced code in any MDX file is highlighted at build time by `rehype-pretty-code` + Shiki (no highlighter JS reaches the browser; the built HTML has the coloured spans). Write the language, then optional meta:
@@ -181,7 +185,7 @@ Fenced code in any MDX file is highlighted at build time by `rehype-pretty-code`
 ```
 ````
 
-- `title="..."` adds a caption row with a file name; `{3-5,9}` highlights lines (quiet fill plus an `accent` left rule); `showLineNumbers` adds CSS-counter line numbers (not copied). No language means plain text. Inline `code` keeps its small `highlight-low` chip.
+- `title="..."` adds a caption row with a file name; `{3-5,9}` highlights lines (quiet fill plus an `accent` left rule); every block shows CSS-counter line numbers (`meta` colour, `user-select: none`, so they are not copied); `showLineNumbers` is accepted but no longer needed. No language means plain text. Inline `code` keeps its small `highlight-low` chip.
 - **Block style** (`globals.css`, under `prose-theme`): `<figure data-rehype-pretty-code-figure>` with a hairline `border-rule` frame, `highlight-low` fill, `rounded-sm`, no shadow, `font-mono` `text-sm`. Long lines scroll inside the `<pre>` (`overflow-x: auto`), never the page.
 - **Copy button**: `mdx-components.tsx` maps `figure` to `CodeFigure.tsx` (a small Client Component) for highlighted figures only: a shadcn `Button` (`ghost`, `icon-xs`, `Copy` then `Check` for 2s, `aria-label="Copy code"`, plus an `sr-only` `role="status"` "Code copied"). It copies the code element's text.
 - **Turbopack**: the plugin is named by string in `next.config.ts` and its options are plain JSON. The Shiki theme is a VS Code-format object (`tokenColors`; rehype-pretty-code only takes an inline theme in that shape) whose colours are `var(--code-*)`, so no function (`createCssVariablesTheme`) is needed.

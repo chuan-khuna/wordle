@@ -171,10 +171,10 @@ body {
   background: color-mix(in oklab, var(--highlight-med) 55%, transparent);
   border-left-color: var(--accent);
 }
-.prose-theme figure[data-rehype-pretty-code-figure] code[data-line-numbers] {
+.prose-theme figure[data-rehype-pretty-code-figure] > pre code {
   counter-reset: line;
 }
-.prose-theme figure[data-rehype-pretty-code-figure] code[data-line-numbers] > [data-line]::before {
+.prose-theme figure[data-rehype-pretty-code-figure] > pre code > [data-line]::before {
   counter-increment: line;
   content: counter(line);
   display: inline-block;

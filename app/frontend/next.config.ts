@@ -40,7 +40,7 @@ const withMDX = createMDX({
     remarkPlugins: ["remark-frontmatter", "remark-math"],
     rehypePlugins: [
       ["rehype-katex", { strict: "error", throwOnError: true }],
-      // Build-time syntax highlighting (Shiki): ```python title="file.py" {3-5} showLineNumbers
+      // Build-time syntax highlighting (Shiki): ```python title="file.py" {3-5} (line numbers come from CSS)
       ["rehype-pretty-code", { theme: codeTheme, keepBackground: false, defaultLang: "text" }],
     ],
   },
