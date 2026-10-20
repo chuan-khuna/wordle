@@ -12,8 +12,8 @@ type Item = { slug: string; title: string; number: number };
 type Group = { id: string; number: number; title: string; articles: Item[] };
 
 /**
- * The site-wide sidebar: the site title (home) at the top, the Articles grouped under their Part titles, the theme menu at
- * the bottom (a palette icon opening the theme menu). A sticky full-height column from `lg`; below that a compact top bar whose button opens
+ * The site-wide sidebar: the site title (home) at the top with the theme menu (a palette icon) beside it, then the Articles
+ * grouped under their Part titles. A sticky full-height column from `lg`; below that a compact top bar whose button opens
  * the Article list, beside the theme menu button. One markup, so CSS only decides what is shown.
  */
 export function Sidebar({ title, parts }: { title: string; parts: Group[] }) {
@@ -25,13 +25,13 @@ export function Sidebar({ title, parts }: { title: string; parts: Group[] }) {
   return (
     <aside className="border-b border-rule bg-background font-sans lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-r lg:border-b-0">
       <Collapsible open={open} onOpenChange={(next) => setOpenOn(next ? pathname : null)} className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center justify-between gap-4 px-gutter py-3 lg:block lg:px-gutter lg:pt-8 lg:pb-4">
+        <div className="flex items-center justify-between gap-4 px-gutter py-3 lg:pt-8 lg:pb-4">
           <Link href="/" className="text-base font-medium tracking-tight text-text hover:underline hover:decoration-accent hover:underline-offset-4">
             {title}
           </Link>
-          <div className="flex items-center gap-1 lg:hidden">
+          <div className="flex items-center gap-1">
             <ThemePicker align="end" />
-            <CollapsibleTrigger asChild>
+            <CollapsibleTrigger asChild className="lg:hidden">
               <Button>{open ? "Close" : "Articles"}</Button>
             </CollapsibleTrigger>
           </div>
@@ -65,10 +65,6 @@ export function Sidebar({ title, parts }: { title: string; parts: Group[] }) {
             </section>
           ))}
         </nav>
-          <div className="hidden items-center gap-2 border-t border-rule px-gutter py-3 lg:flex">
-            <ThemePicker />
-            <span className="text-sm text-meta">Theme</span>
-          </div>
         </CollapsibleContent>
       </Collapsible>
     </aside>
