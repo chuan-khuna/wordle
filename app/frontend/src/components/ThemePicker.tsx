@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { STORAGE_KEY, SYSTEM } from "@/lib/theme-script";
+import { DEFAULT_THEME, STORAGE_KEY } from "@/lib/theme-script";
 import { THEMES } from "@/lib/themes";
 
 function subscribe(onChange: () => void) {
@@ -20,13 +20,13 @@ function subscribe(onChange: () => void) {
   return () => window.removeEventListener("wordle-theme", onChange);
 }
 
-// The head script sets data-theme-choice before React runs; the server renders "system".
-const getChoice = () => document.documentElement.dataset.themeChoice ?? SYSTEM;
-const getServerChoice = () => SYSTEM;
+// The head script sets data-theme before React runs; the server renders the default.
+const getChoice = () => document.documentElement.dataset.theme ?? DEFAULT_THEME;
+const getServerChoice = () => DEFAULT_THEME;
 
 /**
- * The theme menu: an icon button that opens a radio list of "System" and the palettes, Light then Dark,
- * with the current choice checked. The choice is saved in localStorage (`wordle-theme`; System removes it)
+ * The theme menu: an icon button that opens a radio list of the palettes, Light then Dark,
+ * with the current choice checked. The choice is saved in localStorage (`wordle-theme`)
  * and announced with a `wordle-theme` event, which the head script (lib/theme-script.ts) applies.
  */
 export function ThemePicker({ align = "start" }: { align?: "start" | "end" }) {
@@ -34,8 +34,7 @@ export function ThemePicker({ align = "start" }: { align?: "start" | "end" }) {
 
   function choose(next: string) {
     try {
-      if (next === SYSTEM) localStorage.removeItem(STORAGE_KEY);
-      else localStorage.setItem(STORAGE_KEY, next);
+      localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // Storage can be blocked; the theme still applies for this visit.
     }
@@ -54,8 +53,6 @@ export function ThemePicker({ align = "start" }: { align?: "start" | "end" }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56">
         <DropdownMenuRadioGroup value={choice} onValueChange={choose}>
-          <DropdownMenuRadioItem value={SYSTEM}>System</DropdownMenuRadioItem>
-          <DropdownMenuSeparator />
           <DropdownMenuLabel>Light</DropdownMenuLabel>
           {light.map((theme) => (
             <DropdownMenuRadioItem key={theme.id} value={theme.id}>
