@@ -117,6 +117,79 @@ body {
   background: none;
   padding: 0;
 }
+/* Code blocks (rehype-pretty-code + Shiki, highlighted at build time). Token colours are roles of the
+   palette, each pulled toward `text` so it stays readable on `highlight-low` in all ten palettes. The
+   Shiki theme (next.config.ts) points at these variables, so the theme picker restyles code live. */
+:root {
+  --code-text: var(--text);
+  --code-comment: var(--color-meta);
+  --code-punct: var(--color-meta);
+  --code-keyword: color-mix(in oklab, var(--accent) 40%, var(--text));
+  --code-string: color-mix(in oklab, var(--success) 40%, var(--text));
+  --code-number: color-mix(in oklab, var(--present) 30%, var(--text));
+  --code-function: color-mix(in oklab, var(--heading) 40%, var(--text));
+  --code-type: color-mix(in oklab, var(--error) 40%, var(--text));
+}
+.prose-theme :where(figure[data-rehype-pretty-code-figure]):not(:where(.not-prose, .not-prose *)) {
+  position: relative;
+  margin-block: var(--spacing-flow);
+  border: var(--rule-width, 1px) solid var(--color-rule);
+  border-radius: var(--radius-sm);
+  background: var(--highlight-low);
+  max-width: 100%;
+}
+.prose-theme figure[data-rehype-pretty-code-figure] > [data-rehype-pretty-code-title] {
+  padding: 0.4rem 3rem 0.4rem 1rem;
+  border-bottom: 1px solid var(--color-rule);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-meta);
+  overflow-wrap: anywhere;
+}
+.prose-theme figure[data-rehype-pretty-code-figure] > pre {
+  margin: 0;
+  padding: 0.75rem 0;
+  background: none;
+  border-radius: 0;
+  overflow-x: auto; /* long lines scroll inside the block, never the page */
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--code-text);
+}
+.prose-theme figure[data-rehype-pretty-code-figure] > pre code {
+  display: grid;
+  min-width: max-content;
+  font-size: inherit;
+  color: inherit;
+}
+.prose-theme figure[data-rehype-pretty-code-figure] [data-line] {
+  padding-inline: 1rem;
+  border-left: 2px solid transparent;
+}
+.prose-theme figure[data-rehype-pretty-code-figure] [data-highlighted-line] {
+  background: color-mix(in oklab, var(--highlight-med) 55%, transparent);
+  border-left-color: var(--accent);
+}
+.prose-theme figure[data-rehype-pretty-code-figure] code[data-line-numbers] {
+  counter-reset: line;
+}
+.prose-theme figure[data-rehype-pretty-code-figure] code[data-line-numbers] > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 2ch;
+  margin-right: 1.5ch;
+  text-align: right;
+  color: var(--color-meta);
+  user-select: none;
+}
+/* The copy button sits at the top-right corner of the frame (over the title row, or the first line). */
+.prose-theme figure[data-rehype-pretty-code-figure] > .code-copy {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+}
 .prose-theme :where(hr):not(:where(.not-prose, .not-prose *)) {
   margin-block: var(--spacing-section);
 }
