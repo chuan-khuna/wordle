@@ -15,3 +15,5 @@
 See [spec](../spec.md).
 
 ## Comments
+
+- 2026-10-20: the byte-level format and what this writer must match (header, row/column order, zeroed rows, `manifest.json`, CSV `True`/`False`, float printing) are in [docs/documents/npy-in-python-and-rust.md](../../../docs/documents/npy-in-python-and-rust.md#contract-for-a-second-writer-of-the-guess-count-matrix).
