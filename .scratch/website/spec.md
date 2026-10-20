@@ -57,7 +57,7 @@ English, written in glossary terms only. Colours appear only in the Widgets and 
 
 1. The rules: Answer, Guess, Answer List and Guess List, a Win within six Guesses → no Widget
 2. Feedback (the two-pass repeated-letter rule) → Feedback scorer
-3. Building the Game in Python: State, Turns and the game loop → no Widget
+3. Building the Game in Python: the State, each Guess and the game loop → no Widget
 
 **Part 2: Solving Wordle** (an introduction that guides the reader's thinking towards the best Opener)
 
