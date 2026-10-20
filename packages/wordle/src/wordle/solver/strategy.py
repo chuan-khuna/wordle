@@ -151,6 +151,10 @@ class Solver:
         row = self.guesses_vs_answers[self._guess_row[guess]]
         return candidates[row[candidates] == code]
 
+    def codes(self, guess: str, candidates: np.ndarray) -> np.ndarray:
+        """The Feedback Code `guess` gets against each Candidate."""
+        return self.guesses_vs_answers[self._guess_row[guess]][candidates]
+
     def candidates(self, state: State) -> np.ndarray:
         """The Candidate Set for a State: every Answer that fits all its Feedback."""
         candidates = self.all_candidates()

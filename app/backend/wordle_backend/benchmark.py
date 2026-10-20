@@ -9,21 +9,18 @@ each over Candidates only or over All words (the Guess List).
 The Opener leaderboard ranks every Guess List word as a first Guess by
 Expected Information over the whole Answer List.
 
-Games are not played one by one. Every Answer that has got the same Feedback so
-far shares a Candidate Set, and so the same next Guess, so the Answers are played
-together as a tree: one `rank` call per node instead of one per Game. The results
-are the same as playing each Game alone.
+Games are not played one by one: `wordle.solver.guess_counts` plays every Answer
+together as a tree, which gives the same results as playing each Game alone.
 """
 
 import json
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import numpy as np
 
-from wordle.solver.matrix import WIN
-from wordle.solver.strategy import STRATEGIES, Strategy
+from wordle.solver.guess_counts import guess_counts
 from wordle.solver.matrix import CACHE_DIR
+from wordle.solver.strategy import STRATEGIES, Strategy
 from wordle_backend.solver import WebSolver
 
 BENCHMARK_DIR = CACHE_DIR / "benchmark"
@@ -31,7 +28,6 @@ BENCHMARK_FILE = "benchmark.json"
 OPENERS_FILE = "openers.json"
 
 GUESS_LIMIT = 6
-SAFETY_LIMIT = 12  # no Strategy here needs more than 8 Guesses; this only stops a runaway
 LEADERBOARD_SIZE = 500  # Openers saved
 
 
@@ -41,37 +37,14 @@ def best_opener(solver: WebSolver, how: Strategy) -> str:
     )[0].word
 
 
-def guess_counts(solver: WebSolver, how: Strategy, opener: str) -> dict[str, int]:
-    """The Guess Count of every Answer: its Game played with `how`, starting from `opener`."""
-    counts: dict[str, int] = {}
-    # Each node is (Candidate Set, Guess to play). Every Answer in the set is still unsolved.
-    pending = [(solver.all_candidates(), opener, 1)]
-    while pending:
-        candidates, guess, number = pending.pop()
-        codes = solver.codes(guess, candidates)
-        for code in np.unique(codes):
-            group = candidates[codes == code]
-            if code == WIN:
-                for i in group:
-                    counts[solver.answers[i]] = number
-            elif number >= SAFETY_LIMIT:
-                for i in group:
-                    counts[solver.answers[i]] = number + 1  # unsolved: a Loss anyway
-            else:
-                next_guess = solver.rank(group, pool=how.pool, scope=how.scope, by=how.by, top=1)[0].word
-                pending.append((group, next_guess, number + 1))
-    return counts
-
-
 def run_benchmark(solver: WebSolver, how: Strategy, answers: list[str] | None = None) -> dict:
     """The Benchmark of one Strategy: its Opener, Guess Distribution and Average Guess Count.
 
     `answers` limits the Games to a subset of the Answer List (for tests); default is all.
     """
     opener = best_opener(solver, how)
-    counts = guess_counts(solver, how, opener)
-    if answers is not None:
-        counts = {answer: counts[answer] for answer in answers}
+    by_answer = dict(zip(solver.answers, guess_counts(solver, how, opener).tolist()))
+    counts = by_answer if answers is None else {answer: by_answer[answer] for answer in answers}
     distribution = [sum(1 for n in counts.values() if n == k) for k in range(1, GUESS_LIMIT + 1)]
     lost = sorted(answer for answer, n in counts.items() if n > GUESS_LIMIT)
     won = len(counts) - len(lost)

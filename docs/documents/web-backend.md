@@ -30,7 +30,7 @@ Feedback and Feedback Codes (`wordle.engine.feedback`, `wordle.solver.strategy.p
 
 ## The Solver wrapper
 
-`solver.py` holds `WebSolver(Solver)`. The only behaviour it changes is `rank`: with one or two Candidates left it searches Candidates only, whatever `scope` says (guessing one is never worse). The package's `Solver.suggest` does this switch for a single Suggestion, but `rank` returns lists of Suggestions and the API and the Benchmark use it directly, so the backend wraps `rank` rather than forking the engine or changing the package. It adds three small helpers: `is_guess`, `is_answer` and `codes(guess, candidates)`.
+`solver.py` holds `WebSolver(Solver)`. The only behaviour it changes is `rank`: with one or two Candidates left it searches Candidates only, whatever `scope` says (guessing one is never worse). The package's `Solver.suggest` does this switch for a single Suggestion, but `rank` returns lists of Suggestions and the API and the Benchmark use it directly, so the backend wraps `rank` rather than forking the engine or changing the package. It adds two small helpers: `is_guess` and `is_answer`.
 
 ## Feedback matrices and precompute
 
@@ -49,7 +49,7 @@ The backend reads the matrices from `precompute-cache/feedback/` at the repo roo
 | `bits-all` | Expected Information over All words (`guesses`, `global`, `bits`) | tarse |
 | `expected-all` | Expected Candidates over All words (`guesses`, `global`, `expected`) | roate |
 
-Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree with one `rank` call per node instead of one per Game; the Guess Counts are the same as playing each Game alone (a test checks this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over the won Games only.
+Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree (`guess_counts` in `packages/wordle/src/wordle/solver/guess_counts.py`, described in [Solver Strategy](solver-strategy.md); `benchmark.py` calls it) with one search per node instead of one per Game; the Guess Counts are the same as playing each Game alone (tests in the package and here check this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over the won Games only.
 
 Results on all 2,315 Answers (Guess Count 1 to 6, then Losses):
 

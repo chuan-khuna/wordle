@@ -34,7 +34,3 @@ class WebSolver(Solver):
 
     def is_answer(self, word: str) -> bool:
         return word in self._answer_column
-
-    def codes(self, guess: str, candidates: np.ndarray) -> np.ndarray:
-        """The Feedback Code `guess` gets against each Candidate."""
-        return self.guesses_vs_answers[self._guess_row[guess]][candidates]

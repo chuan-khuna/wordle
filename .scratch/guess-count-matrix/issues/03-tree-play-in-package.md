@@ -4,14 +4,16 @@
 
 **Blocked by:** 02 (the tree play takes the package's named Strategy, and both change the backend's Benchmark module)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The package exposes the tree play for one Strategy and one Opener, returning the Guess Count of every Answer in Answer List order
-- [ ] A next-Guess cache keyed by Candidate Set, safe to share between threads, can be passed in and reused across Openers
-- [ ] The backend's Benchmark uses the package's tree play; `benchmark.json` is unchanged when re-run
-- [ ] The test that tree play matches playing each Game alone runs against the package function (in the package's tests) for all four Strategies
-- [ ] The solver documentation describes the tree play and the cache
+- [x] The package exposes the tree play for one Strategy and one Opener, returning the Guess Count of every Answer in Answer List order
+- [x] A next-Guess cache keyed by Candidate Set, safe to share between threads, can be passed in and reused across Openers
+- [x] The backend's Benchmark uses the package's tree play; `benchmark.json` is unchanged when re-run
+- [x] The test that tree play matches playing each Game alone runs against the package function (in the package's tests) for all four Strategies
+- [x] The solver documentation describes the tree play and the cache
 
 See [spec](../spec.md).
 
 ## Comments
+
+Added `wordle.solver.guess_counts` (`guess_counts(solver, how, opener, cache=None)` returning an int16 array in Answer List order, and `NextGuessCache` keyed by (Strategy, candidate bytes), a lock-free dict). `Solver.codes` moved into the package from `WebSolver`. `benchmark.json` is byte-identical after a re-run.
