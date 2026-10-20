@@ -6,10 +6,12 @@ import { type GuessCountOpener, type GuessCountsResponse, getGuessCounts } from 
 import { type Bar, chartDomain, filterOpeners, groupOpeners, labelRows } from "@/lib/opener-bars";
 import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/opener-column";
 import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/opener-lookup";
+import { OPENER_PRESETS, presetFor } from "@/lib/opener-presets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseHighlight } from "./OpenerTable";
 import { WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
@@ -34,6 +36,9 @@ const ANSWER_FILL = "var(--correct)";
 const OTHER_FILL = "var(--present)";
 const MARKED_FILL = "var(--accent)";
 
+// Above this many found words the stat cards give way to one dense row per word.
+const COMPACT_OVER = 6;
+
 const isOn = (text: string) => text === "true" || text === "1";
 
 /** A round Y axis step that gives about five gridlines up to `max`. */
@@ -48,6 +53,7 @@ interface Props {
   answersOnly?: boolean;
   highlight?: string;
   controls?: boolean;
+  tabs?: boolean;
   id?: string;
 }
 
@@ -60,7 +66,8 @@ interface Props {
  * rescales to the Openers shown. On a phone the chart scrolls sideways inside its frame.
  * Props: `strategy` (default `bits-all`), `answersOnly` (chart only Answer List Openers, default false),
  * `highlight` (comma separated words), `controls` (show the Strategy picker, the highlight field and the Answer List
- * toggle, default true), `id` (URL params `id.strategy`, ...). Each URL param of the same name overrides its prop.
+ * toggle, default true), `tabs` (a tab row that sets the highlight words to a preset list; with no `highlight` it starts
+ * on the first, default false), `id` (URL params `id.strategy`, ...). Each URL param of the same name overrides its prop.
  */
 export function OpenerDistribution(props: Props) {
   return (
@@ -75,15 +82,24 @@ function Distribution({
   answersOnly: answersProp = false,
   highlight: highlightProp = "",
   controls: controlsProp = true,
+  tabs: tabsProp = false,
   id,
 }: Props) {
   const uid = useId();
   const [strategy, setStrategy] = useWidgetParam(id, "strategy", strategyProp);
   const [answersText, setAnswersText] = useWidgetParam(id, "answersOnly", String(answersProp));
-  const [highlightText, setHighlightText] = useWidgetParam(id, "highlight", highlightProp);
   const [controlsText] = useWidgetParam(id, "controls", String(controlsProp));
+  const [tabsText] = useWidgetParam(id, "tabs", String(tabsProp));
+  const tabs = isOn(tabsText);
+  // With tabs and no highlight given, start on the first preset.
+  const [highlightText, setHighlightText] = useWidgetParam(
+    id,
+    "highlight",
+    tabs && highlightProp.trim() === "" ? OPENER_PRESETS[0].words.join(",") : highlightProp,
+  );
   const answersOnly = isOn(answersText);
   const controls = isOn(controlsText);
+  const activePreset = presetFor([...parseHighlight(highlightText)]);
   const { data, error, loading } = useLoad(`guess-counts:${strategy}`, (signal) => getGuessCounts(strategy, signal));
 
   return (
@@ -136,6 +152,27 @@ function Distribution({
         </div>
       )}
 
+      {tabs && (
+        <Tabs
+          value={activePreset?.id ?? ""}
+          onValueChange={(v) => setHighlightText(OPENER_PRESETS.find((p) => p.id === v)?.words.join(",") ?? "")}
+          className="mb-3"
+        >
+          <TabsList aria-label="Highlighted words">
+            {OPENER_PRESETS.map((p) => (
+              <TabsTrigger key={p.id} value={p.id}>
+                {p.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {OPENER_PRESETS.map((p) => (
+            <TabsContent key={p.id} value={p.id} className="mt-2 text-sm text-meta">
+              {p.caption}
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
+
       <div aria-live="polite" className="min-h-6 text-sm">
         {loading && <p className="text-meta">Loading the Openers…</p>}
         {error && (
@@ -184,9 +221,9 @@ function Chart({
   const [selected, setSelected] = useState<number | null>(null);
   const column = useMemo(() => (selected === null ? null : barColumn(bars, selected, marked)), [bars, selected, marked]);
   const partial = data.complete_rows < data.total_rows;
-  // The frame scrolls to the most recently added word, when it is on the chart.
+  // The frame scrolls to the most recently added word, when it is on the chart (not for a long list: it stays at the best end).
   const last = lookups[lookups.length - 1];
-  const focus = last?.kind === "found" && last.charted ? last.opener.word : null;
+  const focus = words.length <= COMPACT_OVER && last?.kind === "found" && last.charted ? last.opener.word : null;
 
   return (
     <>
@@ -246,7 +283,45 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
   if (found.length === 0 && unknown.length === 0) return null;
   return (
     <div aria-live="polite" className="mb-3 space-y-2 text-sm">
-      {found.length > 0 && (
+      {found.length > COMPACT_OVER && (
+        <div className="max-h-64 overflow-y-auto rounded-sm border border-rule">
+          <table className="w-full min-w-max text-xs tabular-nums">
+            <thead className="sticky top-0 bg-background text-meta">
+              <tr className="text-right">
+                <th scope="col" className="px-2 py-1 text-left font-normal">
+                  Word
+                </th>
+                <th scope="col" className="px-2 py-1 font-normal">
+                  Rank
+                </th>
+                <th scope="col" className="px-2 py-1 font-normal">
+                  Average Guess Count
+                </th>
+                <th scope="col" className="px-2 py-1 text-left font-normal">
+                  Bar
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {found.map((l) => (
+                <tr key={l.opener.word} className="border-t border-rule text-right">
+                  <td className="px-2 py-1 text-left">
+                    <span className="font-mono text-sm font-semibold uppercase tracking-wider text-text">{l.opener.word}</span>
+                    {l.opener.is_answer && <span className="ml-2 rounded-xs border border-rule px-1 py-0.5 text-[11px] text-meta">Answer</span>}
+                  </td>
+                  <td className="px-2 py-1 text-text">#{l.opener.rank.toLocaleString("en-US")}</td>
+                  <td className="px-2 py-1 font-mono text-text">{l.opener.average_guess_count.toFixed(3)}</td>
+                  <td className="whitespace-nowrap px-2 py-1 text-left text-meta">
+                    {(l.hundredths / 100).toFixed(2)} ·{" "}
+                    {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden by Answer List only"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {found.length > 0 && found.length <= COMPACT_OVER && (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {found.map((l) => {
             const { opener } = l;

@@ -20,7 +20,7 @@ export default function OpenersPage() {
           <Link href="/articles/opener-distribution" className="underline">How it works</Link>.
         </p>
       </header>
-      <OpenerDistribution />
+      <OpenerDistribution tabs />
     </div>
   );
 }

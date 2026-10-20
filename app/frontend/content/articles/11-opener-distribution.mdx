@@ -9,9 +9,9 @@ The <Term>Benchmark</Term> played one <Term>Opener</Term> for each <Term>Strateg
 
 For each Strategy, every word is the Opener of 2,315 Games, one for each Answer, and the Solver finishes each Game on its own. That is 14,855 × 2,315 Games, and we keep one number for each: the <Term>Guess Count</Term>. The table of all of them is the <Term>Guess Count Matrix</Term>. Average each row and you have the <Term>Average Guess Count</Term> of every Opener: how many Guesses it needs, on average, to win.
 
-Now count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. Each block is one Opener, and they are stacked in bars 0.01 wide, the best at the bottom. The Solver here uses Expected Information over all words. All 14,855 words are drawn: one colour for the words on the <Term>Answer List</Term>, another for the rest. Four words are marked, and each has a card with its numbers. Click a bar to list the Openers in it:
+Now count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. Each block is one Opener, and they are stacked in bars 0.01 wide, the best at the bottom. The Solver here uses Expected Information over all words. All 14,855 words are drawn: one colour for the words on the <Term>Answer List</Term>, another for the rest. The tabs below mark lists of words (the best, some myths, some bad Openers), and each marked word has its numbers above it. Click a bar to list the Openers in it:
 
-<OpenerDistribution id="od" strategy="bits-all" controls={false} highlight="tarse,salet,raise,crane" />
+<OpenerDistribution id="od" strategy="bits-all" controls={false} tabs />
 
 ## What it shows
 
