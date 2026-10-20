@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const { series, articles } = content();
+  const { series } = content();
   return (
     <html lang="en" suppressHydrationWarning className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
       <head>
@@ -25,7 +25,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen bg-background font-serif text-text">
         <div className="lg:grid lg:grid-cols-[var(--container-nav)_minmax(0,1fr)]">
-          <Sidebar title={series.title} articles={articles.map(({ slug, title }) => ({ slug, title }))} />
+          <Sidebar
+            title={series.title}
+            parts={series.parts.map(({ id, number, title, articles }) => ({
+              id,
+              number,
+              title,
+              articles: articles.map(({ slug, title, number }) => ({ slug, title, number })),
+            }))}
+          />
           <main className="mx-auto w-full min-w-0 max-w-page px-gutter py-12 sm:px-gutter-wide sm:py-16">{children}</main>
         </div>
       </body>

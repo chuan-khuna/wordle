@@ -11,13 +11,13 @@ app/frontend/
   .npmrc                    min-release-age=7
   next.config.ts            the /api rewrite to BACKEND_URL, and @next/mdx with its plugins
   content/
-    series.mdx              the site's one Series (frontmatter + MDX)
-    articles/<slug>.mdx     Articles (frontmatter + MDX)
+    series.mdx              the site's one Series and its Parts (frontmatter + MDX)
+    articles/NN-<slug>.mdx  Articles (frontmatter + MDX); NN is the number in the Series
   src/
     mdx-components.tsx      components every MDX file can use without importing (<Term>, the Widgets)
     app/
       layout.tsx            <html>, the no-flash theme script, the sidebar, KaTeX CSS
-      page.tsx              the home page, which is the Series page: title, intro, video, the Articles in order
+      page.tsx              the home page, which is the Series page: title, intro, video, then each Part with its Articles
       articles/[slug]/      an Article page
       globals.css           Tailwind, the base body style, the prose-theme rules and KaTeX tweaks
       tokens.css            the design tokens: colour roles, fonts, type scale, space, measure, shape, focus, shared utilities
@@ -29,6 +29,7 @@ app/frontend/
     lib/widget-state.ts     the `guess:feedback,...` State text format
     lib/api.ts              fetch helpers and response types for /api (errors carry the API's `detail`)
     lib/content.ts          reads and validates content/ (frontmatter via gray-matter)
+    lib/parts.ts            formatNumber, parseArticleFiles (NN-slug file names) and validateParts (parts.test.ts)
     lib/glossary.ts         parses the root GLOSSARY.md for <Term>
     lib/themes.ts           the theme ids, names and appearance, in the gpui picker's order
     lib/theme-script.ts     the inline script that sets the theme before paint
@@ -89,31 +90,51 @@ Content lives in `content/`, outside `src/`. The site has exactly one Series, "S
 
 **Frontmatter.** `remark-frontmatter` only strips the `---` block from the rendered output. The data is read by `lib/content.ts` with gray-matter, straight from the files with `fs`. That gives the index, the backlinks and the validation one plain function over all files, with no need to compile and import every MDX file to read a few fields.
 
-**Add an Article.** Create `content/articles/<slug>.mdx`:
+**Add or reorder an Article.** The file name is `NN-slug.mdx`: the two-digit prefix is the Article's number (and its place in the Series), the rest is its URL slug (`05-candidate-set.mdx` is `/articles/candidate-set`). Prerequisites use the slug without the prefix, so renumbering never breaks a link or a Prerequisite. To insert or move an Article, rename files so the numbers run 01..N again (`git mv`). There is no `order` field. Create `content/articles/NN-<slug>.mdx`:
 
 ```mdx
 ---
 title: "Feedback Split"
 summary: "One line shown in lists."
 prerequisites: [candidate-set]   # slugs of other Articles, or []
-order: 3                         # position in the Series, unique
+part: solving-wordle             # id of a Part in series.mdx, required
 video: "4:10"                    # optional: where it starts in the Series video ("m:ss", "h:mm:ss" or seconds)
 ---
 
 Body in MDX. Inline maths $x^2$, display maths in `$$ ... $$`, and <Term>Feedback Split</Term>.
 ```
 
-The Article page shows the Series title (a link home) and its position, its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links across all Articles in `order`.
+The Article page header shows its Part and number (`Part 2 · Solving Wordle · 05`), then its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links across all Articles in number order.
 
-**Sidebar** (`components/Sidebar.tsx`, rendered by `layout.tsx` on every page; there is no top header). Top to bottom: the site title (the Series title, a link home), the Articles in `order` as number and title, and the theme picker. The current Article has `aria-current="page"` (found with `usePathname`, so it is a Client Component) and is styled `border-text font-medium text-text`. From the `lg` breakpoint (1024px) it is a column (the layout grid is `--container-nav` + the rest): `position: sticky`, full viewport height, the Article list scrolls inside it if long, and the theme picker stays at the bottom. Below `lg` it is a compact top bar with the title and an "Articles" button (`aria-expanded`, `aria-controls`) that opens the list and the theme picker below the bar; it closes by itself after navigating. It is one markup, so CSS only decides what is shown, and the page never scrolls sideways. `<main>` is `max-w-page` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at the measure (68ch) while Widgets and display maths use the full column. The home page text stays at the measure.
+**Sidebar** (`components/Sidebar.tsx`, rendered by `layout.tsx` on every page; there is no top header). Top to bottom: the site title (the Series title, a link home), the Articles grouped under their Part titles (`Part 1 · Wordle`, then number and title each), and the theme picker. The current Article has `aria-current="page"` (found with `usePathname`, so it is a Client Component) and is styled `border-text font-medium text-text`. From the `lg` breakpoint (1024px) it is a column (the layout grid is `--container-nav` + the rest): `position: sticky`, full viewport height, the Article list scrolls inside it if long, and the theme picker stays at the bottom. Below `lg` it is a compact top bar with the title and an "Articles" button (`aria-expanded`, `aria-controls`) that opens the list and the theme picker below the bar; it closes by itself after navigating. It is one markup, so CSS only decides what is shown, and the page never scrolls sideways. `<main>` is `max-w-page` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at the measure (68ch) while Widgets and display maths use the full column. The home page text stays at the measure.
 
-**The Series** (`content/series.mdx`): frontmatter `title`, `intro` and optional `video` (a YouTube id or URL), then optional MDX body text. The home page `/` is the Series page: it embeds the video and lists the Articles in `order`, each with a "Watch from m:ss" link. There is no `/series/...` route.
+**The Series** (`content/series.mdx`): frontmatter `title`, `intro`, `parts` and optional `video` (a YouTube id or URL), then optional MDX body text. The home page `/` is the Series page: the title, intro and video (if any), then each Part (number, title, intro) with its Articles in number order, each with its number, title and summary, plus a "Watch from m:ss" link when both the Series and the Article have a video time. There is no `/series/...` route.
 
-**Video timestamps.** An Article's `video` is a start time in the Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or a Series without one, has no link.
+**Parts.** `parts` is an ordered list of `{id, title, intro}`. The Series has two: `wordle` (Part 1, Articles 01-03: the game) and `solving-wordle` (Part 2, Articles 04-11: the road to the best Opener). Every Article names its Part's `id` in `part`, and the file numbers run through the whole Series, so a Part's Articles are consecutive.
 
-**Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, two Articles with the same `order`, and missing or malformed frontmatter.
+**Numbering.** An Article's number is the `NN` of its file name (1 to 11), and `lib/parts.ts` `formatNumber` is the one formatter: always two digits with leading zeros (`01` ... `11`). It is shown in the sidebar, on the home page, in the Article header and in the previous/next links, always in `font-mono` with tabular figures.
 
-**Sample content.** `content/series.mdx` and `content/articles/sample-*` are placeholder, written to exercise all of this. The real Series replaces it in a later ticket.
+**Video timestamps.** An Article's `video` is a start time in the Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or a Series without one, has no link; none of the current content has a video yet (ticket 10).
+
+**Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, the file names (`parseArticleFiles`: not `NN-slug.mdx` with exactly two digits, a repeated number, a repeated slug, or numbers that are not exactly 01..N with no gaps), and missing or malformed frontmatter. Parts (`lib/parts.ts` `validateParts`): an Article without `part` (`frontmatter "part" is missing`), an unknown Part (`unknown Part "x". Known Parts: ...`), a Part with no Articles (named against `content/series.mdx`), a Part whose Articles are not consecutive in number (names the Article of another Part between them), and a Part id used twice.
+
+**The content.** The eleven Articles follow the spec's outline. Prerequisites form a chain, with extra edges where an idea depends on an earlier one.
+
+| No. | Slug (file `NN-slug.mdx`) | Part | Prerequisites | Body |
+| --- | --- | --- | --- | --- |
+| 01 | `rules` | 1 | | stub |
+| 02 | `feedback` | 1 | `rules` | Feedback scorer |
+| 03 | `building-the-game` | 1 | `feedback` | stub |
+| 04 | `solving-introduction` | 2 | `building-the-game` | stub |
+| 05 | `candidate-set` | 2 | `solving-introduction`, `feedback` | Candidate filter |
+| 06 | `feedback-split` | 2 | `candidate-set` | Split explorer |
+| 07 | `expected-information` | 2 | `feedback-split` | Split explorer |
+| 08 | `openers` | 2 | `expected-information` | Opener table |
+| 09 | `greedy-strategy` | 2 | `openers`, `candidate-set` | Step-through Game |
+| 10 | `benchmark` | 2 | `greedy-strategy` | Benchmark chart |
+| 11 | `greedy-vs-optimal` | 2 | `benchmark` | stub |
+
+Articles with a stub body carry `{/* TODO(ticket 10): draft */}`; ticket 10 writes the full text.
 
 ## `<Term>`
 
@@ -144,7 +165,7 @@ Interactive figures, registered in `mdx-components.tsx` (no import needed). They
 | `guess`, `answer` | `guess`, `answer` (or `<id>.guess`, `<id>.answer`) | starting words, letters only |
 | `id` | | namespace for the params |
 
-Shows five tiles, then the two passes worked out for that pair (Correct first; then left to right, a letter is Present while the Answer still has an unused copy, otherwise Absent), as in [feedback-scoring.md](feedback-scoring.md). Example link: `/articles/sample-feedback?fb.guess=eerie&fb.answer=crane`.
+Shows five tiles, then the two passes worked out for that pair (Correct first; then left to right, a letter is Present while the Answer still has an unused copy, otherwise Absent), as in [feedback-scoring.md](feedback-scoring.md). Example link: `/articles/feedback?fb.guess=eerie&fb.answer=crane`.
 
 **Local and API.** The Marks and the explanation come from a TypeScript port (`lib/feedback.ts`), so they update at once and the explanation has its steps. After a short pause the Widget also calls `GET /api/feedback`: it is the authority on which words are on the Guess List (a 400 shows its message, e.g. `guess 'zzzzz' is not a valid five-letter word`) and a mismatch between its Marks and the port is reported. `lib/feedback.test.ts` checks the port against the repeated-letter examples of the scoring document, and against the running API when it is up (`BACKEND_URL`, default `http://127.0.0.1:8000`).
 
@@ -159,7 +180,7 @@ Shows five tiles, then the two passes worked out for that pair (Correct first; t
 | `state` | `state` (or `<id>.state`) | the State: rows `guess:feedback` joined by commas |
 | `id` | | namespace for the param |
 
-A row's feedback is five digits, 0 Absent, 1 Present, 2 Correct (`crane:00102`); a row without `:feedback` starts all Absent; malformed rows are dropped; at most six rows. In the Widget the reader types each Guess and clicks its tiles to cycle the Marks (Absent, Present, Correct). Every complete row shows its Candidate Set count before and after (`2309 → 49`), and below are the final count and the words (the first 48, with a button for all). It makes one `POST /api/candidates` per prefix of the State (Guess 0, 1, ..., n), so an invalid Guess or Feedback shows the API's message on its row; incomplete rows are ignored until they have five letters. Example link: `/articles/sample-candidate-set?cs.state=crane:20000`.
+A row's feedback is five digits, 0 Absent, 1 Present, 2 Correct (`crane:00102`); a row without `:feedback` starts all Absent; malformed rows are dropped; at most six rows. In the Widget the reader types each Guess and clicks its tiles to cycle the Marks (Absent, Present, Correct). Every complete row shows its Candidate Set count before and after (`2309 → 49`), and below are the final count and the words (the first 48, with a button for all). It makes one `POST /api/candidates` per prefix of the State (Guess 0, 1, ..., n), so an invalid Guess or Feedback shows the API's message on its row; incomplete rows are ignored until they have five letters. Example link: `/articles/candidate-set?cs.state=crane:20000`.
 
 ### Feedback Split explorer
 
@@ -171,10 +192,10 @@ A row's feedback is five digits, 0 Absent, 1 Present, 2 Correct (`crane:00102`);
 | --- | --- | --- |
 | `guess` | `guess` (or `<id>.guess`) | the Guess to split on |
 | `state` | `state` (or `<id>.state`) | optional State, `guess:feedback` rows joined by commas; the Candidate Set it leaves is what is split (default: the whole Answer List) |
-| `bits` | | default `true`; `bits={false}` hides Expected Information (Article 3 shows the Split without it, Article 4 adds it) |
+| `bits` | | default `true`; `bits={false}` hides Expected Information (Article 06 shows the Split without it, Article 07 adds it) |
 | `id` | | namespace for the params |
 
-One `POST /api/split` (after a short pause) gives the groups, shown as a bar chart (one bar per Feedback, height = words in the group, x labelled with the Feedback digits) with Expected Candidates, the Candidate count, the group count and largest group, and Expected Information in bits unless hidden. A Guess can have up to about 150 groups, so the chart draws the 30 largest (`CHART_BARS`) and a scrollable list below holds every group, each with its tiles, Feedback and word count. Clicking a bar, or a list row (a button with `aria-pressed`), selects that group and lists its words (the first 60, with a button for all). An invalid Guess or State shows the API's message. Example link: `/articles/sample-expected-information?ei.guess=crane&ei.state=slate:01200`.
+One `POST /api/split` (after a short pause) gives the groups, shown as a bar chart (one bar per Feedback, height = words in the group, x labelled with the Feedback digits) with Expected Candidates, the Candidate count, the group count and largest group, and Expected Information in bits unless hidden. A Guess can have up to about 150 groups, so the chart draws the 30 largest (`CHART_BARS`) and a scrollable list below holds every group, each with its tiles, Feedback and word count. Clicking a bar, or a list row (a button with `aria-pressed`), selects that group and lists its words (the first 60, with a button for all). An invalid Guess or State shows the API's message. Example link: `/articles/expected-information?ei.guess=crane&ei.state=slate:01200`.
 
 ### Step-through Game
 
@@ -191,7 +212,7 @@ One `POST /api/split` (after a short pause) gives the groups, shown as a bar cha
 | `step` | `step` | the Guess shown, 1-based (default 1), clamped to the Game's length; edited by Prev/Next, so a video take can start at any step |
 | `id` | | namespace for the params |
 
-The defaults are the main Strategy: Expected Information over all Guesses. One `GET /api/solve` returns the whole Game; the Widget then shows tiles for each Guess so far, Prev and Next buttons (and the Left and Right arrow keys while focus is inside the Widget, outside its inputs), "Guess n of N", the Candidate Set size before and after the Guess, and a table of the Solver's top five Suggestions at that step with their bits, Expected Candidates and whether each is a Candidate (the first row is the Guess played). Example link: `/articles/sample-greedy-strategy?g.answer=watch&g.step=3`.
+The defaults are the main Strategy: Expected Information over all Guesses. One `GET /api/solve` returns the whole Game; the Widget then shows tiles for each Guess so far, Prev and Next buttons (and the Left and Right arrow keys while focus is inside the Widget, outside its inputs), "Guess n of N", the Candidate Set size before and after the Guess, and a table of the Solver's top five Suggestions at that step with their bits, Expected Candidates and whether each is a Candidate (the first row is the Guess played). Example link: `/articles/greedy-strategy?g.answer=watch&g.step=3`.
 
 ### Opener table and Benchmark chart (Widgets 5 and 6)
 
@@ -199,7 +220,7 @@ Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api
 
 **Opener table** (`OpenerTable`). Props: `top` (default 20, 1 to 500), `highlight` (comma separated words, e.g. `"crane,slate"`), `id`. URL params `top`, `highlight` (`op.top` with `id="op"`) override the props. A table of rank, Opener, bits, Expected Candidates, groups, largest group and Candidate?. Every heading is a button that sorts by that column (click again to reverse; `aria-sort` is set). Highlighted words are emphasised and listed even when they rank below `top`; when `highlight` is set the Widget fetches all 500 rows. The table scrolls horizontally inside its card at phone width. A "Rows to show" input edits `top`.
 
-**Benchmark chart** (`BenchmarkChart`). Props: `strategies` (comma separated ids from `bits-all`, `bits-candidates`, `expected-all`; default all three; unknown ids are dropped, none valid means all), `id`. URL param `strategies` (`bm.strategies`) overrides it. The chart is grouped bars (`barY` with `layout: group()`, `z` = Strategy): x is the Guess Count 1 to 6 plus a final "Lost" group for the Losses, so Losses are on the chart and not folded into the distribution; y is Games. Each Strategy has a fixed theme-role colour by its position in the API list (`--accent`, `--present`, `--correct`, `--error`), so it keeps its colour when a subset is shown. Below the chart a table gives each Strategy's Opener, Average Guess Count, Losses (red when above zero), and the exact Guess Distribution, then the lost Answers of each Strategy. Example link: `/articles/sample-benchmark?bm.strategies=bits-all,expected-all`.
+**Benchmark chart** (`BenchmarkChart`). Props: `strategies` (comma separated ids from `bits-all`, `bits-candidates`, `expected-all`; default all three; unknown ids are dropped, none valid means all), `id`. URL param `strategies` (`bm.strategies`) overrides it. The chart is grouped bars (`barY` with `layout: group()`, `z` = Strategy): x is the Guess Count 1 to 6 plus a final "Lost" group for the Losses, so Losses are on the chart and not folded into the distribution; y is Games. Each Strategy has a fixed theme-role colour by its position in the API list (`--accent`, `--present`, `--correct`, `--error`), so it keeps its colour when a subset is shown. Below the chart a table gives each Strategy's Opener, Average Guess Count, Losses (red when above zero), and the exact Guess Distribution, then the lost Answers of each Strategy. Example link: `/articles/benchmark?bm.strategies=bits-all,expected-all`.
 
 ### Charts
 

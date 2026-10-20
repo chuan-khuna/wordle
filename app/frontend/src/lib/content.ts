@@ -1,23 +1,42 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import { parseArticleFiles, validateParts } from "@/lib/parts";
 
 const CONTENT_DIR = path.resolve(process.cwd(), "content");
+
+export type Part = {
+  id: string;
+  /** 1-based position in the Series. */
+  number: number;
+  title: string;
+  intro: string;
+  /** Its Articles, in order. */
+  articles: Article[];
+};
 
 export type Series = {
   title: string;
   intro: string;
-  /** YouTube video id of the video that follows the Series. */
+  /** YouTube video id of the video that follows the Series, if there is one yet. */
   video?: string;
+  /** In order. */
+  parts: Part[];
 };
 
 export type Article = {
+  /** URL slug: the file name without its `NN-` prefix. */
   slug: string;
+  /** The file name without `.mdx` (`05-candidate-set`), for importing the body. */
+  fileName: string;
   title: string;
   summary: string;
   /** Slugs of the Articles this one builds on. */
   prerequisites: string[];
-  order: number;
+  /** Id of the Part it belongs to. */
+  part: string;
+  /** Its position in the whole Series, from the file name's prefix (shown as two digits, see `formatNumber`). */
+  number: number;
   /** Where this Article starts in the Series' video, in seconds. */
   videoStart?: number;
 };
@@ -25,20 +44,18 @@ export type Article = {
 export type Content = {
   /** The site's one Series (content/series.mdx). */
   series: Series;
-  /** In `order`. */
+  /** In number order. */
   articles: Article[];
   /** Articles that list the slug as a Prerequisite. */
   backlinks: (slug: string) => Article[];
 };
 
-function files(dir: string): { slug: string; file: string; data: Record<string, unknown> }[] {
-  return readdirSync(path.join(CONTENT_DIR, dir))
-    .filter((f) => f.endsWith(".mdx"))
-    .sort()
-    .map((f) => {
-      const file = `content/${dir}/${f}`;
-      return { slug: f.slice(0, -4), file, data: matter(readFileSync(path.join(CONTENT_DIR, dir, f), "utf8")).data };
-    });
+function articleFiles(): { slug: string; fileName: string; number: number; file: string; data: Record<string, unknown> }[] {
+  const names = readdirSync(path.join(CONTENT_DIR, "articles")).filter((f) => f.endsWith(".mdx"));
+  return parseArticleFiles(names).map((a) => {
+    const file = `content/articles/${a.name}.mdx`;
+    return { ...a, fileName: a.name, file, data: matter(readFileSync(path.join(CONTENT_DIR, "articles", `${a.name}.mdx`), "utf8")).data };
+  });
 }
 
 function seriesData(): { file: string; data: Record<string, unknown> } {
@@ -69,15 +86,19 @@ function videoId(v: string): string {
 
 function load(): Content {
   const { file: seriesFile, data: sd } = seriesData();
-  const series: Series = {
-    title: text(sd, "title", seriesFile),
-    intro: text(sd, "intro", seriesFile),
-    video: sd.video === undefined ? undefined : videoId(text(sd, "video", seriesFile)),
-  };
+  const rawParts = sd.parts;
+  if (!Array.isArray(rawParts) || rawParts.length === 0) {
+    throw new Error(`${seriesFile}: frontmatter "parts" must be a non-empty list of {id, title, intro}.`);
+  }
+  const partDefs = rawParts.map((p: unknown, i) => {
+    const d = (typeof p === "object" && p !== null ? p : {}) as Record<string, unknown>;
+    const where = `${seriesFile} (parts[${i}])`;
+    return { id: text(d, "id", where), title: text(d, "title", where), intro: text(d, "intro", where) };
+  });
 
-  const raw = files("articles");
+  const raw = articleFiles();
   const articleSlugs = new Set(raw.map((a) => a.slug));
-  const articles: Article[] = raw.map(({ slug, file, data }) => {
+  const articles: Article[] = raw.map(({ slug, fileName, number, file, data }) => {
     const prerequisites = data.prerequisites ?? [];
     if (!Array.isArray(prerequisites) || prerequisites.some((p) => typeof p !== "string")) {
       throw new Error(`${file}: frontmatter "prerequisites" must be a list of Article slugs.`);
@@ -88,26 +109,29 @@ function load(): Content {
         throw new Error(`${file}: unknown Prerequisite "${p}". Known Articles: ${[...articleSlugs].join(", ")}.`);
       }
     }
-    if (typeof data.order !== "number" || !Number.isInteger(data.order)) {
-      throw new Error(`${file}: frontmatter "order" must be an integer.`);
-    }
     return {
       slug,
+      fileName,
       title: text(data, "title", file),
       summary: text(data, "summary", file),
       prerequisites: prerequisites as string[],
-      order: data.order,
+      part: typeof data.part === "string" ? data.part : "",
+      number,
       videoStart: data.video === undefined ? undefined : seconds(data.video, file),
     };
   });
 
-  articles.sort((a, b) => a.order - b.order);
-  for (let i = 1; i < articles.length; i++) {
-    const [a, b] = [articles[i - 1], articles[i]];
-    if (a.order === b.order) {
-      throw new Error(`Articles "${a.slug}" and "${b.slug}" have the same order (${a.order}).`);
-    }
-  }
+  validateParts(
+    partDefs,
+    raw.map(({ slug, file, number, data }) => ({ slug, file, part: data.part, number })),
+    seriesFile,
+  );
+  const series: Series = {
+    title: text(sd, "title", seriesFile),
+    intro: text(sd, "intro", seriesFile),
+    video: sd.video === undefined ? undefined : videoId(text(sd, "video", seriesFile)),
+    parts: partDefs.map((p, i) => ({ ...p, number: i + 1, articles: articles.filter((a) => a.part === p.id) })),
+  };
 
   // A Prerequisite cycle would make "builds on" meaningless.
   const bySlug = new Map(articles.map((a) => [a.slug, a]));

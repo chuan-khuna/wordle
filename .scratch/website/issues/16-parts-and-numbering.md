@@ -1,6 +1,6 @@
 # Parts and two-digit Article numbers
 
-Status: ready-for-agent
+Status: done
 Blocked by: 14
 
 Group the Series' Articles into Parts (see the "Part" entry in `GLOSSARY.md` and the updated spec).
@@ -12,3 +12,7 @@ Group the Series' Articles into Parts (see the "Part" entry in `GLOSSARY.md` and
 - Update `docs/documents/web-frontend.md`.
 
 See [spec](../spec.md).
+
+## Comments
+
+Done. Two Parts in `content/series.mdx`; the eleven real Articles are files `NN-slug.mdx` (the number comes from the file name, the URL slug is the name without it, and there is no `order` field). Build-time errors name the file for: unknown or missing Part, Part with no Articles, Part not consecutive, bad prefix, repeated number or slug, numbers not 01..N. Numbers are shown as two digits everywhere with `formatNumber`. Sample wording removed; Articles 01, 03, 04 and 11 are stubs marked `TODO(ticket 10): draft`. No videos in the content yet. Tests in `src/lib/parts.test.ts`.

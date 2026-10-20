@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { content } from "@/lib/content";
+import { formatNumber } from "@/lib/parts";
 
 export const dynamicParams = false;
 
@@ -19,9 +20,10 @@ const linkClass = "link";
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { articles, series, backlinks } = content();
+  const part = series.parts.find((p) => p.id === articles.find((a) => a.slug === slug)?.part);
   const article = articles.find((a) => a.slug === slug);
   if (!article) notFound();
-  const { default: Body } = await import(`@content/articles/${slug}.mdx`);
+  const { default: Body } = await import(`@content/articles/${article.fileName}.mdx`);
 
   const at = articles.findIndex((a) => a.slug === slug);
   const prev = articles[at - 1];
@@ -33,10 +35,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     <article className="relative min-w-0 space-y-12">
         <header className="max-w-measure space-y-4">
           <p className="eyebrow">
-            <Link href="/" className={linkClass}>
-              {series.title}
-            </Link>{" "}
-            &middot; Article {at + 1} of {articles.length}
+            Part {part?.number} &middot; {part?.title} &middot;{" "}
+            <span className="font-mono tabular-nums">{formatNumber(article.number)}</span>
           </p>
           <h1 className="text-3xl sm:text-4xl font-medium tracking-tight text-balance text-text">{article.title}</h1>
           <p className="text-lg text-meta">{article.summary}</p>
@@ -80,14 +80,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         >
           {prev ? (
             <Link href={`/articles/${prev.slug}`} rel="prev" className={linkClass}>
-              &larr; {prev.title}
+              &larr; <span className="font-mono tabular-nums">{formatNumber(prev.number)}</span> {prev.title}
             </Link>
           ) : (
             <span />
           )}
           {next ? (
             <Link href={`/articles/${next.slug}`} rel="next" className={`${linkClass} text-right`}>
-              {next.title} &rarr;
+              <span className="font-mono tabular-nums">{formatNumber(next.number)}</span> {next.title} &rarr;
             </Link>
           ) : (
             <span />
