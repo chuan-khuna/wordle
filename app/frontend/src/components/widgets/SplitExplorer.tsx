@@ -2,13 +2,15 @@
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { WORD_LENGTH } from "@/lib/feedback";
-import { parseState } from "@/lib/widget-state";
+import { rowsFromState } from "@/lib/state-board";
+import { formatState } from "@/lib/widget-state";
 import { SplitChart } from "./SplitChart";
-import { WidgetFrame, WordInput, cleanWord } from "./ui";
+import { StateBoard } from "./StateBoard";
+import { WidgetFrame } from "./ui";
+import { WordRow, cleanWord } from "./WordRow";
+import { useGuessCheck } from "./useGuessCheck";
 import { useWidgetParam } from "./useWidgetParam";
 
 type Result = { key: string; data: SplitResponse | null; error: string | null };
@@ -33,18 +35,14 @@ export function SplitExplorer(props: { guess?: string; state?: string; bits?: bo
 function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, id }: { guess?: string; state?: string; bits?: boolean; id?: string }) {
   const uid = useId();
   const [guess, setGuess] = useWidgetParam(id, "guess", cleanWord(guessProp));
-  const [stateText, setStateText] = useWidgetParam(id, "state", stateProp.trim());
+  const [stateText, setStateText] = useWidgetParam(id, "state", formatState(rowsFromState(stateProp)));
   const g = cleanWord(guess);
-  const turns = useMemo(
-    () =>
-      parseState(stateText)
-        .filter((r) => r.guess.length === WORD_LENGTH)
-        .map((r) => ({ guess: r.guess, feedback: r.marks.join("") })),
-    [stateText],
-  );
+  const rows = useMemo(() => rowsFromState(stateText), [stateText]);
+  const turns = useMemo(() => rows.map((r) => ({ guess: r.guess, feedback: r.marks.join("") })), [rows]);
+  const check = useGuessCheck(g);
   const turnsKey = turns.map((t) => `${t.guess}:${t.feedback}`).join(",");
   const key = `${g}|${turnsKey}`;
-  const ready = g.length === WORD_LENGTH;
+  const ready = g.length === WORD_LENGTH && !check.checking && !check.error;
 
   const [result, setResult] = useState<Result | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -79,27 +77,17 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", bits = true, i
 
   return (
     <WidgetFrame title="Feedback Split explorer">
-      <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
-        <WordInput id={`${uid}-g`} label="Guess" value={guess} onChange={setGuess} />
+      <div className="grid gap-x-8 gap-y-5 sm:grid-cols-[auto_1fr]">
+        <WordRow id={`${uid}-g`} label="Guess" value={g} onChange={setGuess} error={check.error} />
         <div>
-          <Label htmlFor={`${uid}-s`} className="mb-1 block text-sm font-normal text-meta">
-            State (optional): <span className="font-mono">guess:feedback</span>, comma separated
-          </Label>
-          <Input
-            id={`${uid}-s`}
-            value={stateText}
-            onChange={(e) => setStateText(e.target.value.toLowerCase().replace(/[^a-z0-9:,]/g, ""))}
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="crane:00102,slate:01200"
-            className="font-mono"
-          />
+          <p className="mb-1.5 text-sm text-meta">State (optional): the Guesses so far and their Marks</p>
+          <StateBoard rows={rows} onChange={(next) => setStateText(formatState(next))} label="State" />
         </div>
       </div>
 
       <div aria-live="polite" className="mt-3 min-h-6 text-sm">
-        {!ready && <p className="text-meta">Type a five-letter Guess.</p>}
-        {ready && !current && <p className="text-meta">Splitting the Candidate Set…</p>}
+        {g.length < WORD_LENGTH && <p className="text-meta">Type a five-letter Guess.</p>}
+        {ready && !current && !check.error && <p className="text-meta">Splitting the Candidate Set…</p>}
         {current?.error && (
           <p role="alert" className="text-error">
             {current.error}

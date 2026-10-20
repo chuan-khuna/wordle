@@ -1,6 +1,6 @@
 # Wordle-style word and State inputs in the Widgets
 
-Status: ready-for-agent
+Status: done
 Blocked by: 19
 
 Replace the Widgets' text inputs with Wordle-style tile inputs.
@@ -17,3 +17,7 @@ Replace the Widgets' text inputs with Wordle-style tile inputs.
 Keep every Widget's props and URL params (the URL still holds the State as `guess:feedback,…`, updated on every change), the per-row "Candidates before → after" counts in the Candidate filter, and keyboard and touch use. Remove the old inputs and any helpers left unused. Update `docs/documents/web-frontend.md`.
 
 See [spec](../spec.md).
+
+## Comments
+
+New `WordRow` (one hidden labelled `<input>` driving five tiles; shake on a refused word, not with reduced motion) and `StateBoard` (rows of clickable Mark tiles plus a typing row, Backspace pull-back, Win, six rows, "Start over"), with the pure logic and tests in `lib/state-board.ts`. Words are validated through the existing `GET /api/feedback?guess=w&answer=w` (400 for a word not on the Guess List) by `useGuessCheck`, 200ms after the fifth letter, and again on Enter in the board; the Step-through Game's Answer uses the message of its `/api/solve` call (Answer List). No backend change. `WordInput`, `cleanWord` in `ui.tsx` and the old "Add a Guess", "Remove" and "Clear" controls are gone. Tile names are now "S, Present". Docs: `web-frontend.md`. Not done: the 30 Mark tiles are all tab stops (no roving tabindex).

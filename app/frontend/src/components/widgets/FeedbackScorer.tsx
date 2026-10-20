@@ -4,7 +4,9 @@ import { Suspense, useEffect, useId, useState } from "react";
 import { getFeedback } from "@/lib/api";
 import { MARK_NAMES, WORD_LENGTH, marksToString, traceFeedback } from "@/lib/feedback";
 import { Tile } from "./Tile";
-import { WidgetFrame, WordInput, cleanWord } from "./ui";
+import { WidgetFrame } from "./ui";
+import { WordRow, cleanWord } from "./WordRow";
+import { useGuessCheck } from "./useGuessCheck";
 import { useWidgetParam } from "./useWidgetParam";
 
 type Check = { key: string; error: string | null; marks: string | null };
@@ -31,10 +33,14 @@ function Scorer({ guess: guessProp = "", answer: answerProp = "", id }: { guess?
   const a = cleanWord(answer);
   const ready = g.length === WORD_LENGTH && a.length === WORD_LENGTH;
   const key = `${g}|${a}`;
+  // Each word is checked against the Guess List on its own, so the message sits under the right row.
+  const guessCheck = useGuessCheck(g);
+  const answerCheck = useGuessCheck(a);
+  const wordsOk = ready && !guessCheck.checking && !answerCheck.checking && !guessCheck.error && !answerCheck.error;
 
   const [check, setCheck] = useState<Check | null>(null);
   useEffect(() => {
-    if (!ready) return;
+    if (!wordsOk) return;
     const ctl = new AbortController();
     const timer = setTimeout(() => {
       getFeedback(g, a, ctl.signal).then(
@@ -48,22 +54,23 @@ function Scorer({ guess: guessProp = "", answer: answerProp = "", id }: { guess?
       clearTimeout(timer);
       ctl.abort();
     };
-  }, [ready, g, a, key]);
+  }, [wordsOk, g, a, key]);
 
-  const trace = ready ? traceFeedback(g, a) : null;
-  const current = ready && check?.key === key ? check : null;
+  // The Marks are worked out here at once; the API only vouches for the words and cross-checks them.
+  const trace = ready && !guessCheck.error && !answerCheck.error ? traceFeedback(g, a) : null;
+  const current = wordsOk && check?.key === key ? check : null;
   const localMarks = trace ? marksToString(trace.marks) : null;
 
   return (
     <WidgetFrame title="Feedback scorer">
       <div className="grid gap-3 sm:grid-cols-2">
-        <WordInput id={`${uid}-g`} label="Guess" value={guess} onChange={setGuess} />
-        <WordInput id={`${uid}-a`} label="Answer" value={answer} onChange={setAnswer} />
+        <WordRow id={`${uid}-g`} label="Guess" value={g} onChange={setGuess} error={guessCheck.error} />
+        <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={answerCheck.error} />
       </div>
 
       <div aria-live="polite" className="mt-3 min-h-6 text-sm">
         {!ready && <p className="text-meta">Type a five-letter Guess and Answer.</p>}
-        {ready && !current && <p className="text-meta">Checking the words…</p>}
+        {ready && !current && !guessCheck.error && !answerCheck.error && <p className="text-meta">Checking the words…</p>}
         {current?.error && (
           <p role="alert" className="text-error">
             {current.error}

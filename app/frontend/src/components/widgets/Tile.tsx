@@ -24,7 +24,7 @@ export function Tile({
   tiny?: boolean;
 }) {
   const base = tiny ? TINY : small ? SMALL : BASE;
-  const label = `${letter || "empty"}: ${MARK_NAMES[mark]}`;
+  const label = `${letter ? letter.toUpperCase() : "Empty"}, ${MARK_NAMES[mark]}`;
   if (!onCycle) {
     return (
       <span className={`${base} ${PAINT[mark]}`} role="img" aria-label={label}>
@@ -36,8 +36,8 @@ export function Tile({
     <button
       type="button"
       onClick={onCycle}
-      aria-label={`${label}. Press to change the Mark.`}
-      title={MARK_NAMES[mark]}
+      aria-label={label}
+      title={`${MARK_NAMES[mark]}: click to change`}
       className={`${base} ${PAINT[mark]} cursor-pointer`}
     >
       {letter || "·"}

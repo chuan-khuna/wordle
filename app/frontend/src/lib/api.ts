@@ -33,6 +33,20 @@ export interface CandidatesResponse {
 export const getFeedback = (guess: string, answer: string, signal?: AbortSignal) =>
   api<FeedbackResponse>(`/api/feedback?guess=${guess}&answer=${answer}`, { signal });
 
+/**
+ * Whether a word is on the Guess List, asked of the API through `GET /api/feedback` (the Guess against itself):
+ * null when it is, else the API's message ("guess 'zzzzz' is not a valid five-letter word").
+ */
+export async function checkGuess(word: string, signal?: AbortSignal): Promise<string | null> {
+  try {
+    await getFeedback(word, word, signal);
+    return null;
+  } catch (e) {
+    if (e instanceof Error && e.name === "AbortError") throw e;
+    return e instanceof Error ? e.message : "Could not check the word.";
+  }
+}
+
 export const postCandidates = (state: { guess: string; feedback: string }[], signal?: AbortSignal) =>
   api<CandidatesResponse>("/api/candidates", {
     method: "POST",

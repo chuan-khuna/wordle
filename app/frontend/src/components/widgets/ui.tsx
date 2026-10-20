@@ -1,11 +1,4 @@
 import type { ReactNode } from "react";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-/** Lowercase letters only, at most five. */
-export function cleanWord(text: string): string {
-  return text.toLowerCase().replace(/[^a-z]/g, "").slice(0, 5);
-}
 
 /** Every Widget is a figure in the text: hairline rules above and below, a small caption-style title, UI sans. */
 export function WidgetFrame({ title, children }: { title: string; children: ReactNode }) {
@@ -14,39 +7,6 @@ export function WidgetFrame({ title, children }: { title: string; children: Reac
       <h3 className="eyebrow mb-4">{title}</h3>
       {children}
     </section>
-  );
-}
-
-export function WordInput({
-  id,
-  label,
-  value,
-  onChange,
-  hideLabel,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  hideLabel?: boolean;
-}) {
-  return (
-    <div>
-      <Label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1 block text-sm font-normal text-meta"}>
-        {label}
-      </Label>
-      <Input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(cleanWord(e.target.value))}
-        maxLength={5}
-        autoComplete="off"
-        autoCapitalize="none"
-        spellCheck={false}
-        placeholder="five letters"
-        className="font-mono uppercase placeholder:font-sans placeholder:text-sm placeholder:normal-case"
-      />
-    </div>
   );
 }
 

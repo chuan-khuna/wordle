@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tile } from "./Tile";
-import { WidgetFrame, WordInput, cleanWord } from "./ui";
+import { WidgetFrame } from "./ui";
+import { WordRow, cleanWord } from "./WordRow";
 import { useWidgetParam } from "./useWidgetParam";
 
 type Result = { key: string; data: SolveResponse | null; error: string | null };
@@ -106,7 +107,7 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
       <div onKeyDown={onKeyDown}>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="col-span-2 lg:col-span-1">
-            <WordInput id={`${uid}-a`} label="Answer" value={answer} onChange={setAnswer} />
+            <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={current?.error} />
           </div>
           <SelectField id={`${uid}-p`} label="Guesses from" value={pool} onChange={setPool} options={[["guesses", "all words"], ["answers", "Answers only"]]} />
           <SelectField id={`${uid}-s`} label="Search" value={scope} onChange={setScope} options={[["global", "all Guesses"], ["candidates", "Candidates only"]]} />
@@ -116,11 +117,6 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
         <div aria-live="polite" className="mt-3 min-h-6 text-sm">
           {!ready && <p className="text-meta">Type a five-letter Answer.</p>}
           {ready && !current && <p className="text-meta">The Solver is playing…</p>}
-          {current?.error && (
-            <p role="alert" className="text-error">
-              {current.error}
-            </p>
-          )}
         </div>
 
         {data && shown && (

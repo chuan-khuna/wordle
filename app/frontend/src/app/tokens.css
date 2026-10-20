@@ -172,3 +172,18 @@
 
 /* Form controls, buttons and tables are the shadcn components in components/ui/ (Input, Select, Button, Table),
    restyled there with these tokens. */
+
+/* A word row that was refused shakes once, sideways. Not with reduced motion: the message and the red
+   border still say it. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+@utility animate-shake {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: shake 0.35s ease-in-out;
+  }
+}
