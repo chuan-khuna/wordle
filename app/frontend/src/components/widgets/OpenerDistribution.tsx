@@ -250,13 +250,14 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {found.map((l) => {
             const { opener } = l;
-            // How far up the ranking: the best Opener fills the bar, the worst leaves it empty.
-            const standing = l.of > 1 ? (100 * (l.of - opener.rank)) / (l.of - 1) : 100;
             const bar = (l.hundredths / 100).toFixed(2);
             return (
-              <li key={opener.word} className="rounded-sm border border-l-4 border-rule p-3" style={{ borderLeftColor: MARKED_FILL }}>
+              <li key={opener.word} className="rounded-sm border border-rule p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <span className="font-mono text-xl font-semibold uppercase leading-none tracking-wider text-text">{opener.word}</span>
+                  <p className="flex items-center gap-2 leading-none">
+                    <span className="font-mono text-xl font-semibold uppercase tracking-wider text-text">{opener.word}</span>
+                    {opener.is_answer && <span className="rounded-xs border border-rule px-1.5 py-0.5 text-xs text-meta">Answer</span>}
+                  </p>
                   <p className="text-right leading-none">
                     <span className="text-xl font-semibold tabular-nums text-text">#{opener.rank.toLocaleString("en-US")}</span>
                     <span className="mt-1 block text-xs text-meta">of {l.of.toLocaleString("en-US")}</span>
@@ -266,14 +267,12 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
                   <span className="font-mono text-3xl font-semibold leading-none tabular-nums text-text">{opener.average_guess_count.toFixed(3)}</span>
                   <span className="text-xs text-meta">Average Guess Count</span>
                 </p>
-                <div aria-hidden className="mt-3 h-1 rounded-full bg-highlight-med" title={`Ahead of ${Math.round(standing)}% of the Openers`}>
-                  <div className="h-full rounded-full" style={{ width: `${standing}%`, background: MARKED_FILL }} />
-                </div>
                 <p className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-meta">
-                  <span>{opener.is_answer ? "Answer List ✓" : "Not an answer"}</span>
-                  <span>
-                    {opener.losses} {opener.losses === 1 ? "loss" : "losses"}
-                  </span>
+                  {opener.losses > 0 && (
+                    <span>
+                      {opener.losses} {opener.losses === 1 ? "loss" : "losses"}
+                    </span>
+                  )}
                   <span>
                     Bar {bar} ·{" "}
                     {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden by Answer List only"}
