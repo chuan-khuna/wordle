@@ -30,3 +30,17 @@ test("with the Answer List filter on, a word off the list is found but not chart
   expect(lookupOpener(openers, "tarse", true)).toMatchObject({ kind: "found", charted: false, inBar: 1 });
   expect(lookupOpener(openers, "salet", true)).toMatchObject({ kind: "found", charted: true, inBar: 1 });
 });
+
+import { sortLookups } from "@/lib/opener-lookup";
+
+test("sortLookups puts found words in rank order and unknown ones last, in the order typed", () => {
+  const lookups = ["crane", "zzzzz", "salet", "yyyyy", "tarse"].map((w) => lookupOpener(openers, w, false));
+  const sorted = sortLookups(lookups);
+  expect(sorted.map((l) => (l.kind === "found" ? l.opener.word : l.kind === "unknown" ? l.word : "?"))).toEqual([
+    "tarse",
+    "salet",
+    "crane",
+    "zzzzz",
+    "yyyyy",
+  ]);
+});

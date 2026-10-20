@@ -36,3 +36,10 @@ export function lookupOpener<T extends Row>(openers: readonly T[], query: string
   const inBar = openers.filter((o) => (!answersOnly || o.is_answer) && barOf(o.average_guess_count) === hundredths).length;
   return { kind: "found", opener, of: openers.length, hundredths, inBar, charted: !answersOnly || opener.is_answer };
 }
+
+/** Lookups for a card list: the found words by rank, best first, then the unknown ones in the order given. */
+export function sortLookups<T extends Row>(lookups: readonly OpenerLookup<T>[]): OpenerLookup<T>[] {
+  const found = lookups.flatMap((l) => (l.kind === "found" ? [l] : []));
+  const unknown = lookups.filter((l) => l.kind === "unknown");
+  return [...found.sort((a, b) => a.opener.rank - b.opener.rank), ...unknown];
+}

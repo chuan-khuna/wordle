@@ -5,7 +5,7 @@ import { type MouseEvent, type PointerEvent, Suspense, memo, useEffect, useId, u
 import { type GuessCountOpener, type GuessCountsResponse, getGuessCounts } from "@/lib/api";
 import { type Bar, chartDomain, filterOpeners, groupOpeners, labelRows } from "@/lib/opener-bars";
 import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/opener-column";
-import { type OpenerLookup, lookupOpener } from "@/lib/opener-lookup";
+import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/opener-lookup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,6 +180,7 @@ function Chart({
   const words = useMemo(() => [...parseHighlight(highlight)], [highlight]);
   const marked = useMemo(() => new Set(words), [words]);
   const lookups = useMemo(() => words.map((w) => lookupOpener(data.openers, w, answersOnly)), [data, words, answersOnly]);
+  const cards = useMemo(() => sortLookups(lookups), [lookups]);
   const [selected, setSelected] = useState<number | null>(null);
   const column = useMemo(() => (selected === null ? null : barColumn(bars, selected, marked)), [bars, selected, marked]);
   const partial = data.complete_rows < data.total_rows;
@@ -195,7 +196,7 @@ function Chart({
           {data.complete_rows.toLocaleString("en-US")} of {data.total_rows.toLocaleString("en-US")} Openers played
         </p>
       )}
-      <StatCards lookups={lookups} partial={partial} />
+      <StatCards lookups={cards} partial={partial} />
       <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Colours">
         <li className="flex items-center gap-1.5">
           <span aria-hidden className="inline-block h-3 w-3 rounded-xs" style={{ background: ANSWER_FILL }} />
@@ -238,7 +239,7 @@ function Chart({
   );
 }
 
-/** One card per highlighted word on the Guess List, then a note for each that is not. */
+/** One card per highlighted word on the Guess List, best rank first, then a note for each that is not. */
 function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpener>[]; partial: boolean }) {
   const found = lookups.filter((l) => l.kind === "found");
   const unknown = lookups.filter((l) => l.kind === "unknown");
@@ -247,30 +248,40 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
     <div aria-live="polite" className="mb-3 space-y-2 text-sm">
       {found.length > 0 && (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {found.map((l) => (
-            <li key={l.opener.word} className="rounded-sm border border-rule p-3">
-              <p className="mb-2 flex items-center gap-2">
-                <span aria-hidden className="inline-block h-3 w-3 rounded-xs" style={{ background: MARKED_FILL }} />
-                <span className="font-mono text-base font-semibold uppercase text-text">{l.opener.word}</span>
-              </p>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <Stat label="Rank" value={`${l.opener.rank.toLocaleString("en-US")} of ${l.of.toLocaleString("en-US")}`} />
-                <Stat label="Average Guess Count" value={l.opener.average_guess_count.toFixed(3)} />
-                <Stat label="Losses" value={String(l.opener.losses)} />
-                <Stat label="On the Answer List" value={l.opener.is_answer ? "Yes" : "No"} />
-                <div className="col-span-2">
-                  <Stat
-                    label="Bar"
-                    value={
-                      l.charted
-                        ? `${(l.hundredths / 100).toFixed(2)}, with ${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}`
-                        : `${(l.hundredths / 100).toFixed(2)}, hidden by Answer List only`
-                    }
-                  />
+          {found.map((l) => {
+            const { opener } = l;
+            // How far up the ranking: the best Opener fills the bar, the worst leaves it empty.
+            const standing = l.of > 1 ? (100 * (l.of - opener.rank)) / (l.of - 1) : 100;
+            const bar = (l.hundredths / 100).toFixed(2);
+            return (
+              <li key={opener.word} className="rounded-sm border border-l-4 border-rule p-3" style={{ borderLeftColor: MARKED_FILL }}>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-mono text-xl font-semibold uppercase leading-none tracking-wider text-text">{opener.word}</span>
+                  <p className="text-right leading-none">
+                    <span className="text-xl font-semibold tabular-nums text-text">#{opener.rank.toLocaleString("en-US")}</span>
+                    <span className="mt-1 block text-xs text-meta">of {l.of.toLocaleString("en-US")}</span>
+                  </p>
                 </div>
-              </dl>
-            </li>
-          ))}
+                <p className="mt-3 flex items-baseline gap-2">
+                  <span className="font-mono text-3xl font-semibold leading-none tabular-nums text-text">{opener.average_guess_count.toFixed(3)}</span>
+                  <span className="text-xs text-meta">Average Guess Count</span>
+                </p>
+                <div aria-hidden className="mt-3 h-1 rounded-full bg-highlight-med" title={`Ahead of ${Math.round(standing)}% of the Openers`}>
+                  <div className="h-full rounded-full" style={{ width: `${standing}%`, background: MARKED_FILL }} />
+                </div>
+                <p className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-meta">
+                  <span>{opener.is_answer ? "Answer List ✓" : "Not an answer"}</span>
+                  <span>
+                    {opener.losses} {opener.losses === 1 ? "loss" : "losses"}
+                  </span>
+                  <span>
+                    Bar {bar} ·{" "}
+                    {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden by Answer List only"}
+                  </span>
+                </p>
+              </li>
+            );
+          })}
         </ul>
       )}
       {unknown.map((l) => (
@@ -278,15 +289,6 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
           <span className="font-mono uppercase">{l.word}</span>: {partial ? "not in the Guess List, or not played yet" : "Not in the Guess List"}
         </p>
       ))}
-    </div>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-meta">{label}</dt>
-      <dd className="font-mono text-text">{value}</dd>
     </div>
   );
 }
