@@ -23,5 +23,5 @@ test-gpui:
     cargo test
 
 # Precompute the Feedback matrices (asks for the thread count). Takes --threads N, --out DIR, --yes
-matrices *args:
-    uv run src/matrices.py {{args}}
+precompute *args:
+    uv run src/precompute.py {{args}}

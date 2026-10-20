@@ -15,7 +15,7 @@ from wordle.solver.matrix import (
 )
 
 
-def main() -> None:
+def precompute_matrix() -> None:
     parser = argparse.ArgumentParser(description="Precompute the Feedback matrices.")
     parser.add_argument("--out", type=Path, default=DEFAULT_DIR, help="output directory")
     parser.add_argument(
@@ -56,4 +56,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    precompute_matrix()

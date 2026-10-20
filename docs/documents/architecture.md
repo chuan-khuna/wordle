@@ -14,7 +14,7 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 pyproject.toml              workspace root
 justfile                    `just wordle`, `just matrices`, `just wordle-gpui`, `just test`, `just test-gpui`
 src/main.py                 entry point: `uv run src/main.py`
-src/matrices.py             entry point: `uv run src/matrices.py` (precompute the Feedback matrices)
+src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
 packages/
