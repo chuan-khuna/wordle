@@ -6,12 +6,12 @@ A personal website that hosts Articles (the scripts behind the user's videos). E
 
 ## Shape
 
-- `app/backend/`: Python and Flask, a **standalone** uv project. It is not a workspace member and never imports `packages/wordle`. Like `app/wordle-gpui`, it has:
+- `app/backend/`: Python and FastAPI (served by uvicorn), a **standalone** uv project. It is not a workspace member and never imports `packages/wordle`. Like `app/wordle-gpui`, it has:
   - its own copies of `answers.txt` / `guesses.txt` / `SOURCES.md` (from `packages/wordle/src/wordle/data/`),
   - its own Feedback, Candidates and Strategy code,
   - its own precompute command, which writes the Feedback matrices and the Benchmark results into `app/backend/matrices/` (gitignored). The `.npy` files are byte-identical to the other two apps' files.
 - `app/frontend/`: Next.js (App Router), TypeScript, Tailwind and bun. `bunfig.toml` sets `minimumReleaseAge = 604800` and `.npmrc` sets `min-release-age=7`.
-- Runs locally for now: `just backend`, `just frontend`, `just web` (both), `just backend-precompute`, `just test-backend`. Next proxies `/api/*` to Flask through `rewrites`, and the Flask URL comes from an env var (`BACKEND_URL`), so a later deployment only needs config.
+- Runs locally for now: `just backend`, `just frontend`, `just web` (both), `just backend-precompute`, `just test-backend`. Next proxies `/api/*` to FastAPI through `rewrites`, and the backend URL comes from an env var (`BACKEND_URL`), so a later deployment only needs config.
 
 ## Backend API (JSON; words are lowercase five-letter strings)
 
@@ -63,7 +63,7 @@ English, written in glossary terms only. Colours appear only in the Widgets.
 
 ## Out of scope
 
-Play and Assist pages, Hard Mode, computing an optimal decision tree, and hosting/deployment (a later ticket: Vercel plus a Flask container that builds its matrices during `docker build`).
+Play and Assist pages, Hard Mode, computing an optimal decision tree, and hosting/deployment (a later ticket: Vercel plus a FastAPI container that builds its matrices during `docker build`).
 
 ## Docs
 

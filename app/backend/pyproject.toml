@@ -1,15 +1,17 @@
 [project]
 name = "wordle-backend"
 version = "0.1.0"
-description = "The Flask API behind the Wordle website: Feedback, Candidates and the Solver."
+description = "The FastAPI app behind the Wordle website: Feedback, Candidates and the Solver."
 requires-python = ">=3.14"
 dependencies = [
-    "flask>=3.1.0",
+    "fastapi>=0.150.0",
     "numpy>=2.5.4",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
 ]
 

@@ -17,7 +17,7 @@ src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
-  backend/                  the website's Flask API, a standalone uv project outside the workspace (see web-backend.md)
+  backend/                  the website's FastAPI app, a standalone uv project outside the workspace (see web-backend.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml

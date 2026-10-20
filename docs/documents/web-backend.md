@@ -1,12 +1,12 @@
 # Web backend
 
-The Flask API behind the website, in `app/backend/`. It is a **standalone uv project**: not a member of the root workspace, and it never imports `packages/wordle`. Like `app/wordle-gpui`, it keeps its own copy of the word lists and its own implementation of Feedback and Candidates. The website's plan is in `.scratch/website/spec.md`.
+The FastAPI app behind the website, in `app/backend/`. It is a **standalone uv project**: not a member of the root workspace, and it never imports `packages/wordle`. Like `app/wordle-gpui`, it keeps its own copy of the word lists and its own implementation of Feedback and Candidates. The website's plan is in `.scratch/website/spec.md`.
 
 ## Layout
 
 ```
 app/backend/
-  pyproject.toml          flask, numpy; pytest as a dev tool
+  pyproject.toml          fastapi, uvicorn, numpy; pytest and httpx as dev tools
   wordle_backend/
     words.py              loads the Answer List and Guess List from data/
     feedback.py           the two-pass Feedback rule and Feedback Codes
