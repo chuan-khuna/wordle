@@ -105,10 +105,9 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
   return (
     <WidgetFrame title="Step-through Game">
       <div onKeyDown={onKeyDown}>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <div className="col-span-2 lg:col-span-1">
-            <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={current?.error} />
-          </div>
+        {/* The Answer's five tiles need their own line: in a quarter-width cell they ran under the first option. */}
+        <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={current?.error} />
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SelectField id={`${uid}-p`} label="Guesses from" value={pool} onChange={setPool} options={[["guesses", "all words"], ["answers", "Answers only"]]} />
           <SelectField id={`${uid}-s`} label="Search" value={scope} onChange={setScope} options={[["global", "all Guesses"], ["candidates", "Candidates only"]]} />
           <SelectField id={`${uid}-b`} label="Rank by" value={by} onChange={setBy} options={[["bits", "Expected Information"], ["expected", "Expected Candidates"]]} />
@@ -206,7 +205,7 @@ function SelectField({
         {label}
       </Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id}>
+        <SelectTrigger id={id} className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent position="popper">
