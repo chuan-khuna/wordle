@@ -197,7 +197,17 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 
 ## `<Word>`
 
-`<Word>speed</Word>` works in any MDX file with no import. It draws the word as five small letter tiles inline in the prose (JetBrains Mono caps, tile radius, sized in `em` so it does not grow the line), with a quiet hairline `rule` frame (the divider colour). The tile styles live in `components/letter-tile.ts`, shared with `<Letter>`. `<Word feedback="00101">speed</Word>` paints each tile with its Mark (digits 0 Absent, 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works that Feedback out with `lib/feedback.ts`. Painted tiles use the same `bg-*` and `text-ink-*` pair as `<Mark>`, for contrast. Screen readers get one `role="img"` label: the word, then each letter's Mark when there is Feedback ("SPEED: S Absent, P Absent, E Present, …"). The word (and `answer`) must be on the Guess List, read at build time from `packages/wordle/src/wordle/data/guesses.txt` by `lib/words.ts`; an unknown word, malformed `feedback`, or both `feedback` and `answer` throws and fails the build.
+`<Word>speed</Word>` works in any MDX file with no import. It has three variants, picked with `variant`:
+
+- **`simple`** (the default without Feedback): the word in JetBrains Mono caps at `0.8em` with `tracking-caps` (as `<Mark>`), in one hairline `rule` frame (the divider colour) around the whole word, tile radius.
+- **`text`**: the same mono caps with no frame, for dense spots such as a run of words in one sentence.
+- **`cell`** (the default with Feedback): five small letter tiles (mono caps, tile radius, sized in `em` so they do not grow the line), plain tiles with the `rule` frame when there is no Feedback. The tile styles live in `components/letter-tile.ts`, shared with `<Letter>`.
+
+Tiles are what show Feedback, so `simple` or `text` together with `feedback` or `answer` throws, as does an unknown variant. `simple` and `text` are plain text, so screen readers read the word as is. `<Word feedback="00101">speed</Word>` paints each tile with its Mark (digits 0 Absent, 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works that Feedback out with `lib/feedback.ts`. Painted tiles use the same `bg-*` and `text-ink-*` pair as `<Mark>`, for contrast. Screen readers get one `role="img"` label: the word, then each letter's Mark when there is Feedback ("SPEED: S Absent, P Absent, E Present, …"). The word (and `answer`) must be on the Guess List, read at build time from `packages/wordle/src/wordle/data/guesses.txt` by `lib/words.ts`; an unknown word, malformed `feedback`, or both `feedback` and `answer` throws and fails the build.
+
+**Blanks.** `_` is a blank letter, for a family of words: `<Word>_atch</Word>` shows _ATCH in `simple` and `text`, and an empty plain tile in `cell`. Instead of being on the Guess List, a word with blanks must fit at least one word on it (`fitsPattern` in `lib/words.ts`, tested in `lib/words.test.ts`), so a typo such as `_acth` still fails the build. It takes no `feedback` or `answer`. Screen readers get it spelled out as a `role="img"` label ("blank, A, T, C, H").
+
+In prose, write a letter of a word as `<Letter>` (below), not a bare capital, so it reads as a letter and not as text ("the first <Letter>e</Letter>", "none of <Letter>c</Letter>, <Letter>r</Letter>…").
 
 ## `<Letter>`
 
