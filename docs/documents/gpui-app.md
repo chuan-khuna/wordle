@@ -189,8 +189,10 @@ Two settings change what is searched:
 | **Search** (the mode) | Candidates | Only words that could still be the Answer |
 | | All words | Every word in the set, even ruled-out ones, which can split the Candidates better |
 
+From top to bottom the panel shows the settings, the Candidates, the best guess and then the search field with its chart.
+
+- **Candidates:** every word that could still be the Answer, with their count. Up to 20 are laid out as a grid, five to a row; more are one run of text in a box that scrolls. Clicking the heading folds the list away.
 - **Suggestions:** the top eight, each with its bits and the Candidates expected to be left (`Σ n²/N`). A dot in the Correct colour marks a word that could be the Answer, so guessing it might win now. Ties go to such a word.
-- **Candidates:** every word that could still be the Answer, with their count, in their own section under the Suggestions. Up to 20 are laid out as a grid, five to a row; more are one run of text in a box that scrolls.
 - **Chart:** click a Suggestion, or type any Guess List word into **Search a word to chart…**, to see its Feedback Split as horizontal bars. Each bar is one Feedback, drawn as its five Marks in the theme's colours, as long as the number of Candidates that would give it (the Win bar is in the Correct colour). The title gives the expected number of words left and the bits. Every group is drawn, biggest first, in a box that scrolls once it is taller than 320 px. **Type it** puts the word on the board.
 - **Search field:** a click sends the keys there instead of the board. Enter, Escape or a click on the board sends them back. ⌘V (Ctrl+V) pastes letters into it.
 

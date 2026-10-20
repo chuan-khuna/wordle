@@ -65,6 +65,8 @@ pub struct SolverState {
     query: String,
     /// Whether keys go to the search field rather than the board.
     pub searching: bool,
+    /// Whether the Candidate list is shown or folded down to its heading.
+    candidates_open: bool,
 }
 
 impl Default for SolverState {
@@ -80,6 +82,7 @@ impl Default for SolverState {
             selected: None,
             query: String::new(),
             searching: false,
+            candidates_open: true,
         }
     }
 }
@@ -174,6 +177,11 @@ impl WordleApp {
         self.refresh_solver(cx);
     }
 
+    fn toggle_candidates(&mut self, cx: &mut Context<Self>) {
+        self.solver.candidates_open = !self.solver.candidates_open;
+        cx.notify();
+    }
+
     /// Show `word`'s Feedback Split in the chart.
     fn select_solver_word(&mut self, word: &str, cx: &mut Context<Self>) {
         self.solver.selected = Some(word.to_string());
@@ -266,16 +274,13 @@ impl WordleApp {
                 (MatrixSet::ValidGuesses, SearchMode::Everything) => "Tries every allowed word, even ones that can't win.",
             }));
 
-        let candidates = self.solver.candidates.len();
         let status = div()
-            .flex()
-            .items_center()
-            .justify_between()
             .px_3()
-            .pt_3()
             .pb_1()
-            .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child(if opener { "BEST OPENER" } else { "BEST GUESS" }))
-            .child(div().text_xs().text_color(rgb(t.subtle)).child(format!("{} candidate{}", group_thousands(candidates), if candidates == 1 { "" } else { "s" })));
+            .text_xs()
+            .font_weight(FontWeight::BOLD)
+            .text_color(rgb(t.muted))
+            .child(if opener { "BEST OPENER" } else { "BEST GUESS" });
 
         div()
             .id("solver")
@@ -290,10 +295,11 @@ impl WordleApp {
             .pb_3()
             .child(div().px_3().pt_3().pb_2().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child("SOLVER"))
             .child(settings)
+            .child(separator(t).mx_3().my_2())
+            .child(self.render_candidates(cx))
+            .child(separator(t).mx_3().my_2())
             .child(status)
             .child(self.render_suggestions(cx))
-            .child(separator(t).mx_3().my_2())
-            .child(self.render_candidates())
             .child(separator(t).mx_3().my_2())
             .child(self.render_search(cx))
             .children(self.solver.selected.as_ref().map(|word| match strategy::distribution(word, &self.solver.candidates) {
@@ -350,11 +356,13 @@ impl WordleApp {
 
     /// Every current Candidate, in Answer List order, in a box that scrolls once it is full. One
     /// text run rather than a chip per word, so the 2,315 words before the first Guess stay cheap.
-    fn render_candidates(&self) -> impl IntoElement {
+    /// Clicking the heading folds the list away.
+    fn render_candidates(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let answers = &word_lists().answers;
         let words: Vec<String> = self.solver.candidates.iter().map(|&index| answers[index].to_uppercase()).collect();
         let count = words.len();
+        let open = self.solver.candidates_open;
         let body = if words.is_empty() {
             div().text_color(rgb(t.muted)).child("No word fits every Feedback so far.")
         } else if words.len() <= GRID_WORDS {
@@ -369,8 +377,21 @@ impl WordleApp {
             .flex_col()
             .gap_1()
             .px_3()
-            .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child(format!("CANDIDATES ({})", group_thousands(count))))
-            .child(div().id("solver-candidates").max_h(CANDIDATES_HEIGHT).overflow_y_scroll().text_xs().child(body))
+            .child(
+                div()
+                    .id("solver-candidates-toggle")
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .cursor_pointer()
+                    .text_xs()
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(rgb(t.muted))
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_candidates(cx)))
+                    .child(widgets::icon(if open { widgets::IconName::ChevronDown } else { widgets::IconName::ChevronRight }, t.muted))
+                    .child(format!("CANDIDATES ({})", group_thousands(count))),
+            )
+            .when(open, |section| section.child(div().id("solver-candidates").max_h(CANDIDATES_HEIGHT).overflow_y_scroll().text_xs().child(body)))
     }
 
     /// The field to chart any word on the Guess List. Clicking it sends the keys there instead of the board.
