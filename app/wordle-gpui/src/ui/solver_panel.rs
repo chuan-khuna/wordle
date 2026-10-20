@@ -42,6 +42,8 @@ const CHART_HEIGHT: Pixels = px(320.);
 const CANDIDATES_HEIGHT: f32 = 120.;
 /// The height of one row of the Candidate grid, which `uniform_list` needs to draw only the rows in view.
 const CANDIDATE_ROW_HEIGHT: f32 = 24.;
+/// Up to this many Candidates are drawn in the text colour; more are greyed.
+const BRIGHT_WORDS: usize = 10;
 /// Candidates per row of the grid.
 const GRID_COLUMNS: usize = 5;
 
@@ -470,10 +472,8 @@ impl WordleApp {
             uniform_list("solver-candidates", rows, move |range, _, _| {
                 range
                     .map(|row| {
-                        let cells = words[row * GRID_COLUMNS..((row + 1) * GRID_COLUMNS).min(words.len())]
-                            .iter()
-                            .map(|word| div().w(relative(1. / GRID_COLUMNS as f32)).child(word.clone()));
-                        div().flex().items_center().h(px(CANDIDATE_ROW_HEIGHT)).children(cells)
+                        let cells = words[row * GRID_COLUMNS..((row + 1) * GRID_COLUMNS).min(words.len())].iter().map(|word| div().child(word.clone()));
+                        div().w_full().grid().grid_cols(GRID_COLUMNS as u16).items_center().h(px(CANDIDATE_ROW_HEIGHT)).children(cells)
                     })
                     .collect::<Vec<_>>()
             })
@@ -482,7 +482,8 @@ impl WordleApp {
             .font_family(widgets::MONO_FONT)
             .font_weight(FontWeight::BOLD)
             .text_sm()
-            .text_color(rgb(t.text))
+            // Few enough to read at a glance: full text colour; more are greyed.
+            .text_color(rgb(if count <= BRIGHT_WORDS { t.text } else { t.subtle }))
             .into_any_element()
         };
         div()
