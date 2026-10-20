@@ -609,7 +609,14 @@ function Bars({
             return (
               <g key={l.word} className="pointer-events-none">
                 <line x1={l.x} x2={l.x} y1={labelY + 3} y2={floor - (l.j + 1) * unit} stroke="var(--text)" strokeWidth={1} />
-                <text x={l.x} y={labelY} textAnchor="middle" fill="var(--text)" className="font-mono font-semibold uppercase">
+                <text
+                  x={l.x}
+                  y={labelY}
+                  textAnchor="middle"
+                  fill="var(--text)"
+                  className="font-mono font-semibold uppercase"
+                  style={{ paintOrder: "stroke", stroke: "var(--background)", strokeWidth: 4, strokeLinejoin: "round" }}
+                >
                   {l.word}
                 </text>
               </g>
