@@ -25,7 +25,7 @@ export function SplitWords({ word, group, candidates }: { word: string; group: S
       <p className="mt-1.5 text-xs text-meta">
         <span className="font-mono text-text">{group.marks}</span>: {chanceSentence(group.count, candidates)}
       </p>
-      <ul className="mt-3 grid max-h-64 min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(6ch,1fr))] content-start gap-x-2 gap-y-1 overflow-y-auto overscroll-contain border-y border-rule py-2 font-mono text-sm @2xl:max-h-none">
+      <ul className="mt-3 grid max-h-64 min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(6ch,1fr))] content-start gap-x-2 gap-y-1 overflow-y-auto overscroll-contain border-y border-rule py-2 font-mono text-sm uppercase uppercase @2xl:max-h-none">
         {group.words.map((w) => (
           <li key={w}>{w}</li>
         ))}

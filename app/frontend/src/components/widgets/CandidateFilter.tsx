@@ -115,7 +115,7 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
             </p>
             {finalOutcome.count > 0 && (
               // Every Candidate, in a box that scrolls once the list is long (the whole Answer List is 2315 words).
-              <ul className="mt-2 grid max-h-64 grid-cols-[repeat(auto-fill,minmax(6ch,1fr))] content-start gap-x-2 gap-y-1 overflow-y-auto overscroll-contain border-y border-rule py-2 font-mono text-sm">
+              <ul className="mt-2 grid max-h-64 grid-cols-[repeat(auto-fill,minmax(6ch,1fr))] content-start gap-x-2 gap-y-1 overflow-y-auto overscroll-contain border-y border-rule py-2 font-mono text-sm uppercase uppercase">
                 {finalOutcome.words.map((w) => (
                   <li key={w}>{w}</li>
                 ))}

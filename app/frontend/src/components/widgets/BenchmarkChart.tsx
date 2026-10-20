@@ -130,7 +130,7 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
                 .map((s) => (
                   <div key={s.id}>
                     <dt className="inline text-meta">{s.name} lost: </dt>
-                    <dd className="inline font-mono">{s.lost_answers.join(", ")}</dd>
+                    <dd className="inline font-mono uppercase">{s.lost_answers.join(", ")}</dd>
                   </div>
                 ))}
             </dl>
