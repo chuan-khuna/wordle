@@ -25,3 +25,8 @@ test-gpui:
 # Precompute the Feedback matrices (asks for the thread count). Takes --threads N, --out DIR, --yes
 precompute *args:
     uv run src/precompute.py {{args}}
+
+# Run the website backend's tests
+[working-directory: 'app/backend']
+test-backend:
+    uv run pytest

@@ -12,11 +12,12 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just matrices`, `just wordle-gpui`, `just test`, `just test-gpui`
+justfile                    `just wordle`, `just matrices`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
+  backend/                  the website's Flask API, a standalone uv project outside the workspace (see web-backend.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml
@@ -55,6 +56,7 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `uv run wordle` | Same, via the package's console script |
 | `uv run python -m wordle` | Same, via `__main__.py` |
 | `uv run pytest` | Run the tests of every package |
+| `just test-backend` | Run the website backend's tests. See [web-backend.md](web-backend.md) |
 | `uv build --package wordle` | Build a wheel; it includes the word lists |
 
 All three game commands take `--answer WORD` or `--seed N` to skip the menu, and `--unlimited` for no Guess Limit.
