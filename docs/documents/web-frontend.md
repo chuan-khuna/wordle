@@ -11,20 +11,19 @@ app/frontend/
   .npmrc                    min-release-age=7
   next.config.ts            the /api rewrite to BACKEND_URL, and @next/mdx with its plugins
   content/
+    series.mdx              the site's one Series (frontmatter + MDX)
     articles/<slug>.mdx     Articles (frontmatter + MDX)
-    series/<slug>.mdx       Series
   src/
     mdx-components.tsx      components every MDX file can use without importing (<Term>, the Widgets)
     app/
-      layout.tsx            <html>, the no-flash theme script, the site header with the theme picker, KaTeX CSS
-      page.tsx              the index page: the Series and all Articles
+      layout.tsx            <html>, the no-flash theme script, the sidebar, KaTeX CSS
+      page.tsx              the home page, which is the Series page: title, intro, video, the Articles in order
       articles/[slug]/      an Article page
-      series/[slug]/        a Series page
       globals.css           Tailwind, the base body style, the prose-theme rules and KaTeX tweaks
       tokens.css            the design tokens: colour roles, fonts, type scale, space, measure, shape, focus, shared utilities
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
-    components/ThemePicker.tsx
-    components/Term.tsx, VideoEmbed.tsx, ArticleList.tsx
+    components/Sidebar.tsx, ThemePicker.tsx
+    components/Term.tsx, VideoEmbed.tsx
     components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with GroupChart), StepThroughGame, OpenerTable, BenchmarkChart, Tile, ui, useWidgetParam, useLoad
     lib/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
     lib/widget-state.ts     the `guess:feedback,...` State text format
@@ -71,10 +70,10 @@ The gpui app's ten palettes (see [gpui-app.md](gpui-app.md)) with the same role 
 
 The look is a minimal editorial one: the text leads and chrome recedes. All non-colour tokens live in `app/tokens.css` (with the role-to-colour mapping, formerly in `globals.css`); the palettes stay in `themes.css`. Components use the Tailwind utilities the tokens generate and no raw sizes, fonts or colours.
 
-- **Fonts** (`next/font/google` in `layout.tsx`, self-hosted at build, exposed as `--font-newsreader`, `--font-inter`, `--font-jetbrains-mono` and mapped to `font-serif`, `font-sans`, `font-mono`): Newsreader for prose, headings and the body default; Inter for UI (header, nav, Widgets, tables, eyebrow labels); JetBrains Mono for tiles, Feedback digits, words and numbers (tabular figures).
+- **Fonts** (`next/font/google` in `layout.tsx`, self-hosted at build, exposed as `--font-newsreader`, `--font-inter`, `--font-jetbrains-mono` and mapped to `font-serif`, `font-sans`, `font-mono`): Newsreader for prose, headings and the body default; Inter for UI (sidebar, Widgets, tables, eyebrow labels); JetBrains Mono for tiles, Feedback digits, words and numbers (tabular figures).
 - **Type scale**: `text-xs` to `text-4xl`, each with a line-height (`--text-*--line-height`). `text-base` is the 18px prose size at 1.7 leading. `tracking-tight` for display sizes, `tracking-caps` for small uppercase labels.
 - **Space**: Tailwind's scale for small gaps, plus `gutter` / `gutter-wide` (page padding), `flow` (between blocks), `figure` (around a Widget) and `section` (between sections), as `px-gutter`, `my-figure`, `space-y-section`.
-- **Measure and page**: `max-w-measure` (68ch) for prose and text blocks, `max-w-page` (68rem) for the page, `--container-nav` for the Series side nav column.
+- **Measure and page**: `max-w-measure` (68ch) for prose and text blocks, `max-w-page` (68rem) for the page, `--container-nav` for the sidebar column.
 - **Rules**: `border-rule` (`highlight-med`) is the hairline for frames, dividers and the chart grid; `border-rule-strong` (`highlight-high`) for input borders and table heads. 1px (`--rule-width`).
 - **Shape**: radius 1-3px (tiles keep 3px), `--shadow-*` are `none`.
 - **Focus**: one global `:focus-visible` ring (2px `accent`, 2px offset); components do not restyle it.
@@ -82,9 +81,9 @@ The look is a minimal editorial one: the text leads and chrome recedes. All non-
 - **Shared utilities** (in `tokens.css`): `link`, `eyebrow` (small uppercase UI label), `field` (input and select), `btn`, `data-table`. A Widget is `WidgetFrame` in `widgets/ui.tsx`: hairline rules above and below and an `eyebrow` title, no fill. Charts use `CHART_CLASS` (UI sans, `text-meta`, tooltip variables) and `CHART_THEME` (grid in `highlight-med`).
 - **Prose** (`prose-theme` in `globals.css`) takes fonts, sizes and colours from the tokens; its rules skip `not-prose` blocks (Widgets). KaTeX is sized at 1.08em and long display maths scrolls inside itself.
 
-## Articles and Series
+## Series and Articles
 
-Content lives in `content/`, outside `src/`. Every page is statically generated (`generateStaticParams`, `dynamicParams = false`), so an unknown URL is a 404.
+Content lives in `content/`, outside `src/`. The site has exactly one Series, "Solving Wordle" (`content/series.mdx`), and every Article belongs to it. Every page is statically generated (`generateStaticParams`, `dynamicParams = false`), so an unknown URL is a 404.
 
 **MDX pipeline.** `next.config.ts` wraps the config in `@next/mdx`. The remark and rehype plugins are named by string with serialisable options (`"remark-frontmatter"`, `"remark-math"`, `["rehype-katex", {...}]`), because Turbopack cannot be handed functions. `app/layout.tsx` imports `katex/dist/katex.min.css`. KaTeX is set to throw on bad maths, so a typo in a formula fails the build.
 
@@ -97,25 +96,24 @@ Content lives in `content/`, outside `src/`. Every page is statically generated 
 title: "Feedback Split"
 summary: "One line shown in lists."
 prerequisites: [candidate-set]   # slugs of other Articles, or []
-series: solving-wordle           # a slug in content/series/
-order: 3                         # position in the Series, unique within it
+order: 3                         # position in the Series, unique
 video: "4:10"                    # optional: where it starts in the Series video ("m:ss", "h:mm:ss" or seconds)
 ---
 
 Body in MDX. Inline maths $x^2$, display maths in `$$ ... $$`, and <Term>Feedback Split</Term>.
 ```
 
-The Article page shows its Series and position, its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links within its Series.
+The Article page shows the Series title (a link home) and its position, its Prerequisites (from `prerequisites`), the Articles that list it as a Prerequisite ("Builds on this Article", the backlinks), and previous and next links across all Articles in `order`.
 
-**Series side nav** (`components/SeriesNav.tsx`). It lists the Series title (a link to the Series page) and every Article of the Series in `order`, as number and title; the current Article has `aria-current="page"` and is styled with theme roles (`border-text font-medium text-text`). From the `lg` breakpoint (1024px) it is a column beside the Article (grid `14rem` + the rest), `position: sticky` so it stays in view while scrolling, and it scrolls inside itself if the Series is long. Below that it is a collapsed `<details>` above the Article, so the page never scrolls sideways. The list is rendered twice and CSS shows one of the two, so there is no client JavaScript. The site `<main>` is `max-w-6xl` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at 70ch while Widgets and display maths use the full column. The index and Series pages stay `max-w-3xl`.
+**Sidebar** (`components/Sidebar.tsx`, rendered by `layout.tsx` on every page; there is no top header). Top to bottom: the site title (the Series title, a link home), the Articles in `order` as number and title, and the theme picker. The current Article has `aria-current="page"` (found with `usePathname`, so it is a Client Component) and is styled `border-text font-medium text-text`. From the `lg` breakpoint (1024px) it is a column (the layout grid is `--container-nav` + the rest): `position: sticky`, full viewport height, the Article list scrolls inside it if long, and the theme picker stays at the bottom. Below `lg` it is a compact top bar with the title and an "Articles" button (`aria-expanded`, `aria-controls`) that opens the list and the theme picker below the bar; it closes by itself after navigating. It is one markup, so CSS only decides what is shown, and the page never scrolls sideways. `<main>` is `max-w-page` so Widgets have room; text blocks of the prose (paragraphs, lists, headings, quotes) are capped at the measure (68ch) while Widgets and display maths use the full column. The home page text stays at the measure.
 
-**Add a Series.** Create `content/series/<slug>.mdx` with frontmatter `title`, `intro` and optional `video` (a YouTube id or URL), then optional MDX body text. The Series page embeds the video and lists its Articles in `order`, each with a "Watch from m:ss" link.
+**The Series** (`content/series.mdx`): frontmatter `title`, `intro` and optional `video` (a YouTube id or URL), then optional MDX body text. The home page `/` is the Series page: it embeds the video and lists the Articles in `order`, each with a "Watch from m:ss" link. There is no `/series/...` route.
 
-**Video timestamps.** An Article's `video` is a start time in its Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or in a Series without one, has no link.
+**Video timestamps.** An Article's `video` is a start time in the Series' video. Only the Series page uses it, as a "Watch from m:ss" link to YouTube (`&t=<seconds>s`) beside each Article; the Article page itself shows no video. An Article without `video`, or a Series without one, has no link.
 
-**Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Series, unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, two Articles with the same `order` in a Series, and missing or malformed frontmatter.
+**Build-time checks** (`lib/content.ts`; a failure stops `bun run build` with the file name in the message): unknown Prerequisite, an Article that is its own Prerequisite, a Prerequisite cycle, two Articles with the same `order`, and missing or malformed frontmatter.
 
-**Sample content.** `content/*/sample-*` is placeholder, written to exercise all of this. The real Series replaces it in a later ticket.
+**Sample content.** `content/series.mdx` and `content/articles/sample-*` are placeholder, written to exercise all of this. The real Series replaces it in a later ticket.
 
 ## `<Term>`
 

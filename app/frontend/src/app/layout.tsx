@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Newsreader } from "next/font/google";
-import Link from "next/link";
 import "katex/dist/katex.min.css";
-import { ThemePicker } from "@/components/ThemePicker";
+import { Sidebar } from "@/components/Sidebar";
+import { content } from "@/lib/content";
 import { themeScript } from "@/lib/theme-script";
 import "./globals.css";
 
@@ -17,21 +17,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const { series, articles } = content();
   return (
     <html lang="en" suppressHydrationWarning className={`${serif.variable} ${sans.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-screen bg-background font-serif text-text">
-        <header className="border-b border-rule font-sans">
-          <div className="mx-auto flex max-w-page items-center justify-between gap-4 px-gutter py-4 sm:px-gutter-wide">
-            <Link href="/" className="whitespace-nowrap text-base font-medium tracking-tight text-text hover:underline hover:decoration-accent hover:underline-offset-4">
-              Solving Wordle
-            </Link>
-            <ThemePicker />
-          </div>
-        </header>
-        <main className="mx-auto overflow-x-clip max-w-page px-gutter py-12 sm:px-gutter-wide sm:py-16">{children}</main>
+        <div className="lg:grid lg:grid-cols-[var(--container-nav)_minmax(0,1fr)]">
+          <Sidebar title={series.title} articles={articles.map(({ slug, title }) => ({ slug, title }))} />
+          <main className="mx-auto w-full min-w-0 max-w-page px-gutter py-12 sm:px-gutter-wide sm:py-16">{children}</main>
+        </div>
       </body>
     </html>
   );

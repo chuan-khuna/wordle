@@ -5,10 +5,9 @@ import matter from "gray-matter";
 const CONTENT_DIR = path.resolve(process.cwd(), "content");
 
 export type Series = {
-  slug: string;
   title: string;
   intro: string;
-  /** YouTube video id of the video that follows this Series. */
+  /** YouTube video id of the video that follows the Series. */
   video?: string;
 };
 
@@ -18,20 +17,18 @@ export type Article = {
   summary: string;
   /** Slugs of the Articles this one builds on. */
   prerequisites: string[];
-  series: string;
   order: number;
-  /** Where this Article starts in its Series' video, in seconds. */
+  /** Where this Article starts in the Series' video, in seconds. */
   videoStart?: number;
 };
 
 export type Content = {
-  series: Series[];
-  /** Sorted by Series, then `order`. */
+  /** The site's one Series (content/series.mdx). */
+  series: Series;
+  /** In `order`. */
   articles: Article[];
   /** Articles that list the slug as a Prerequisite. */
   backlinks: (slug: string) => Article[];
-  /** The Articles of a Series, in `order`. */
-  inSeries: (series: string) => Article[];
 };
 
 function files(dir: string): { slug: string; file: string; data: Record<string, unknown> }[] {
@@ -42,6 +39,11 @@ function files(dir: string): { slug: string; file: string; data: Record<string, 
       const file = `content/${dir}/${f}`;
       return { slug: f.slice(0, -4), file, data: matter(readFileSync(path.join(CONTENT_DIR, dir, f), "utf8")).data };
     });
+}
+
+function seriesData(): { file: string; data: Record<string, unknown> } {
+  const file = "content/series.mdx";
+  return { file, data: matter(readFileSync(path.join(CONTENT_DIR, "series.mdx"), "utf8")).data };
 }
 
 function text(data: Record<string, unknown>, key: string, file: string): string {
@@ -66,21 +68,16 @@ function videoId(v: string): string {
 }
 
 function load(): Content {
-  const series: Series[] = files("series").map(({ slug, file, data }) => ({
-    slug,
-    title: text(data, "title", file),
-    intro: text(data, "intro", file),
-    video: data.video === undefined ? undefined : videoId(text(data, "video", file)),
-  }));
-  const seriesSlugs = new Set(series.map((s) => s.slug));
+  const { file: seriesFile, data: sd } = seriesData();
+  const series: Series = {
+    title: text(sd, "title", seriesFile),
+    intro: text(sd, "intro", seriesFile),
+    video: sd.video === undefined ? undefined : videoId(text(sd, "video", seriesFile)),
+  };
 
   const raw = files("articles");
   const articleSlugs = new Set(raw.map((a) => a.slug));
   const articles: Article[] = raw.map(({ slug, file, data }) => {
-    const seriesSlug = text(data, "series", file);
-    if (!seriesSlugs.has(seriesSlug)) {
-      throw new Error(`${file}: unknown series "${seriesSlug}". Known Series: ${[...seriesSlugs].join(", ") || "(none)"}.`);
-    }
     const prerequisites = data.prerequisites ?? [];
     if (!Array.isArray(prerequisites) || prerequisites.some((p) => typeof p !== "string")) {
       throw new Error(`${file}: frontmatter "prerequisites" must be a list of Article slugs.`);
@@ -99,17 +96,16 @@ function load(): Content {
       title: text(data, "title", file),
       summary: text(data, "summary", file),
       prerequisites: prerequisites as string[],
-      series: seriesSlug,
       order: data.order,
       videoStart: data.video === undefined ? undefined : seconds(data.video, file),
     };
   });
 
-  articles.sort((a, b) => a.series.localeCompare(b.series) || a.order - b.order);
+  articles.sort((a, b) => a.order - b.order);
   for (let i = 1; i < articles.length; i++) {
     const [a, b] = [articles[i - 1], articles[i]];
-    if (a.series === b.series && a.order === b.order) {
-      throw new Error(`Articles "${a.slug}" and "${b.slug}" have the same order (${a.order}) in Series "${a.series}".`);
+    if (a.order === b.order) {
+      throw new Error(`Articles "${a.slug}" and "${b.slug}" have the same order (${a.order}).`);
     }
   }
 
@@ -125,7 +121,6 @@ function load(): Content {
     series,
     articles,
     backlinks: (slug) => articles.filter((a) => a.prerequisites.includes(slug)),
-    inSeries: (s) => articles.filter((a) => a.series === s),
   };
 }
 
