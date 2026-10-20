@@ -3,11 +3,11 @@
 //! rate and the time left, a line per matrix or Strategy, and the log, newest at the bottom. Its
 //! state is in `overlays/precompute_run.rs`; the game underneath is left as it was.
 
-use gpui::{Div, FontWeight, ScrollStrategy, div, prelude::*, px, relative, rgb, uniform_list};
+use gpui::{Div, FontWeight, HighlightStyle, ScrollStrategy, StyledText, div, prelude::*, px, relative, rgb, uniform_list};
 
 use super::WordleApp;
 use super::widgets::{self, MONO_FONT};
-use crate::overlays::precompute_run::{self, End, MAX_LOG_LINES, Phase, Tone};
+use crate::overlays::precompute_run::{self, End, MAX_LOG_LINES, Phase, Span, Tone};
 use crate::overlays::guess_counts::with_commas;
 use crate::theme::Theme;
 
@@ -190,5 +190,23 @@ fn log_line(t: &'static Theme, line: &precompute_run::LogLine) -> Div {
         .font_family(MONO_FONT)
         .text_xs()
         .child(div().flex_none().text_color(rgb(t.muted)).child(precompute_run::clock(line.at)))
-        .child(div().text_color(rgb(colour)).truncate().child(line.text.clone()))
+        .child(div().text_color(rgb(colour)).truncate().child(coloured(t, line)))
+}
+
+/// The line's text with its Strategy ids, Openers, numbers and paths in colours of their own. An
+/// error keeps its one colour, so it reads as a whole.
+fn coloured(t: &Theme, line: &precompute_run::LogLine) -> StyledText {
+    let text = StyledText::new(line.text.clone());
+    if line.tone == Tone::Error {
+        return text;
+    }
+    text.with_highlights(precompute_run::highlights(&line.text).into_iter().map(|(range, span)| {
+        let (colour, weight) = match span {
+            Span::Strategy => (t.accent, None),
+            Span::Opener => (t.correct.0, Some(FontWeight::BOLD)),
+            Span::Number => (t.present.0, None),
+            Span::Path => (t.muted, None),
+        };
+        (range, HighlightStyle { color: Some(rgb(colour).into()), font_weight: weight, ..Default::default() })
+    }))
 }

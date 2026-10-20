@@ -15,13 +15,13 @@ use std::time::Duration;
 
 use wordle_gpui::solver::guess_count_matrix::{self, BuildError, Built};
 use wordle_gpui::solver::matrix::{self, ANSWERS_FILE, GUESSES_FILE};
-use wordle_gpui::solver::strategy::Strategy;
+use wordle_gpui::solver::strategy::{STRATEGIES, Strategy};
 
 use super::guess_counts::{duration_label, end_note, with_commas};
 use super::precompute::threads_label;
 
 /// How many log lines are kept; older ones are dropped (and counted).
-pub const MAX_LOG_LINES: usize = 5_000;
+pub const MAX_LOG_LINES: usize = 200;
 
 pub const MATRICES_FOLDER: &str = "precompute-cache/feedback-rust/";
 pub const GUESS_COUNTS_FOLDER: &str = "precompute-cache/guess-counts-rust/";
@@ -85,6 +85,49 @@ pub enum Tone {
     Success,
     Warning,
     Error,
+}
+
+/// A part of a log line drawn in a colour of its own, over the colour of its `Tone`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Span {
+    /// A Strategy id, such as `bits-candidates`.
+    Strategy,
+    /// The Opener after a Strategy id, such as `salet` in `bits-candidates salet:`.
+    Opener,
+    /// A number: a count (`14,855`), an average (`3.528`) or a size (`34.4`).
+    Number,
+    /// A file name or a folder (`guesses_vs_answers.npy`, `precompute-cache/feedback-rust/`).
+    Path,
+}
+
+/// The byte ranges of `text` to colour, in order. Words are split on spaces; punctuation around a
+/// word (`:`, `,`, `(`, `)`) keeps the line's own colour.
+pub fn highlights(text: &str) -> Vec<(std::ops::Range<usize>, Span)> {
+    let mut spans = Vec::new();
+    let mut after_strategy = false;
+    let mut start = 0;
+    for word in text.split(' ') {
+        let end = start + word.len();
+        let core = word.trim_start_matches('(').trim_end_matches([':', ',', ';', ')']);
+        let from = start + (word.len() - word.trim_start_matches('(').len());
+        let span = if STRATEGIES.iter().any(|strategy| strategy.id == core) {
+            Some(Span::Strategy)
+        } else if after_strategy && core.len() == 5 && core.bytes().all(|byte| byte.is_ascii_lowercase()) {
+            Some(Span::Opener)
+        } else if core.ends_with(".npy") || core.ends_with(".json") || core.contains('/') {
+            Some(Span::Path)
+        } else if core.starts_with(|c: char| c.is_ascii_digit()) && core.chars().all(|c| c.is_ascii_digit() || c == ',' || c == '.') {
+            Some(Span::Number)
+        } else {
+            None
+        };
+        if let Some(span) = span {
+            spans.push((from..from + core.len(), span));
+        }
+        after_strategy = span == Some(Span::Strategy);
+        start = end + 1;
+    }
+    spans
 }
 
 #[derive(Clone, Debug, PartialEq)]

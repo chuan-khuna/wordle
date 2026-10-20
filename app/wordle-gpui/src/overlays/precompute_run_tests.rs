@@ -195,3 +195,24 @@ fn log_times_read_as_hours_minutes_seconds() {
     assert_eq!(clock(Duration::from_millis(125_900)), "00:02:05");
     assert_eq!(clock(secs(3 * 3600 + 7)), "03:00:07");
 }
+
+#[test]
+fn log_lines_colour_strategies_openers_numbers_and_paths() {
+    let spans = |text: &str| highlights(text).into_iter().map(|(range, span)| (text[range].to_string(), span)).collect::<Vec<_>>();
+    assert_eq!(
+        spans("bits-candidates salet: 3.528 Guesses on average, 8 Losses"),
+        [("bits-candidates".into(), Span::Strategy), ("salet".into(), Span::Opener), ("3.528".into(), Span::Number), ("8".into(), Span::Number)]
+    );
+    assert_eq!(
+        spans("Saved guesses_vs_answers.npy: 14,855 × 2,315, 34.4 MB (precompute-cache/feedback-rust/guesses_vs_answers.npy)"),
+        [
+            ("guesses_vs_answers.npy".into(), Span::Path),
+            ("14,855".into(), Span::Number),
+            ("2,315".into(), Span::Number),
+            ("34.4".into(), Span::Number),
+            ("precompute-cache/feedback-rust/guesses_vs_answers.npy".into(), Span::Path),
+        ]
+    );
+    // Only a five-letter word right after a Strategy id is an Opener.
+    assert_eq!(spans("bits-all started: 864 rows already done"), [("bits-all".into(), Span::Strategy), ("864".into(), Span::Number)]);
+}
