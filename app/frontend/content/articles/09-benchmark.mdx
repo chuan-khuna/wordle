@@ -55,4 +55,24 @@ Every one of the 11 Losses is such a trap. After two or three Guesses the Candid
 
 Each board is one Game, opening with <Word>raise</Word>. The dashed rule is the Guess Limit: everything below it is a Loss. On the <Word>_atch</Word> and <Word>_o_er</Word> boards two Answers are lost, <Word>match</Word> and <Word>foyer</Word> on the seventh row and <Word>watch</Word> and <Word>goner</Word> on the eighth.
 
+### How searching all words gets out
+
+Searching all words does not wait for the trap to close. From the same State, it plays a word that is not a Candidate but holds the letters the family differs in (ringed below). Here is <Word>watch</Word> again, after the same <Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word>, and <Word>tatty</Word> after the same <Word>raise</Word> and <Word>tangy</Word>:
+
+<Boards title="Same State, two searches">
+  <Board label="Candidates only" pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
+  <Board label="All words" pattern="_atch" guesses="raise tangy caput ablow watch" highlight="ablow" />
+  <Board label="Candidates only" pattern="ta__y" guesses="raise tangy tabby tacky taffy tally tatty" />
+  <Board label="All words" pattern="ta__y" guesses="raise tangy bafta tatty" highlight="bafta" />
+</Boards>
+
+With five Candidates left, guessing one of them, say <Word>match</Word>, can only say yes or no: it splits them 1 and 4. <Word>ablow</Word> cannot be the Answer, but it holds <Letter>b</Letter>, <Letter>l</Letter> and <Letter>w</Letter>, three of the first letters in play, so each of them shows up in its own Feedback:
+
+- against <Word variant="text">batch</Word>: <Word answer="batch">ablow</Word>
+- against <Word variant="text">latch</Word>: <Word answer="latch">ablow</Word>
+- against <Word variant="text">watch</Word>: <Word answer="watch">ablow</Word>
+- against <Word variant="text">hatch</Word> or <Word variant="text">match</Word>: <Word answer="hatch">ablow</Word>
+
+That is four groups, none bigger than two, so the next Guess is at worst a coin toss. The Answer <Word>watch</Word> is found on the fifth Guess instead of the eighth. <Word>bafta</Word> does the same for the <Word>ta__y</Word> family with <Letter>b</Letter>, <Letter>f</Letter> and a <Letter>t</Letter> in the fourth place: it leaves only <Word variant="text">tacky</Word> and <Word variant="text">tally</Word> together, and <Word>tatty</Word> takes 4 Guesses instead of 7. Replayed from the same States, searching all words wins all 11 lost Games, most of them in 4 or 5 Guesses.
+
 The big gain comes from one change: letting the Solver play a word that cannot win. It takes the Losses from 11 to 0 and the average down by 0.15 Guesses. (The Opener differs too, but the trap is what costs the Games.) Which measure the Solver uses matters less: Expected Information and Expected Candidates are within 0.05 Guesses of each other.
