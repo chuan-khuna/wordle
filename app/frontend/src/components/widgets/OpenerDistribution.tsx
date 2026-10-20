@@ -259,7 +259,7 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
                     {opener.is_answer && <span className="rounded-xs border border-rule px-1.5 py-0.5 text-xs text-meta">Answer</span>}
                   </p>
                   <p className="text-right leading-none">
-                    <span className="text-xl font-semibold tabular-nums text-text">#{opener.rank.toLocaleString("en-US")}</span>
+                    <span className="text-sm font-medium tabular-nums text-text">#{opener.rank.toLocaleString("en-US")}</span>
                     <span className="mt-1 block text-xs text-meta">of {l.of.toLocaleString("en-US")}</span>
                   </p>
                 </div>
