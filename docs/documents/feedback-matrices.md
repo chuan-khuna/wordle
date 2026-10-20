@@ -9,7 +9,7 @@ The Solver picks Guesses from a Feedback Split, which needs the Feedback of a Gu
 | `answers_vs_answers.npy` | Answer List | Answer List | 2,315 × 2,315 |
 | `guesses_vs_answers.npy` | Guess List | Answer List | 14,855 × 2,315 |
 
-Rows and columns are both in sorted word order, so `matrix[g, a]` is the Feedback of Guess `g` against Answer `a`. Columns are always Answers because only Answer List words can be the Answer. The first matrix serves a Solver that only guesses Candidates; the second also lets it guess any valid word.
+Rows and columns are both in sorted word order (byte order, the same in Python and Rust), so `matrix[g, a]` is the Feedback of Guess `g` against Answer `a`. Columns are always Answers because only Answer List words can be the Answer. The first matrix serves a Solver that only guesses Candidates; the second also lets it guess any valid word.
 
 ## Cell encoding
 
@@ -112,3 +112,7 @@ The matrices are dense and have no column names, so a table format (CSV, Parquet
 ## Generating
 
 `just matrices` (or `uv run src/precompute.py`) asks how many threads to use (1, 2, 4 or 8; about 4.4 s with one, 1.2 s with eight) and whether to overwrite existing files, then writes both files to `matrices/` at the repo root, which is gitignored. `--threads N`, `--out DIR` and `--yes` skip the questions. `matrix.load()` builds them if they are missing. The vectorised scoring follows the same two-pass rule as [feedback-scoring.md](feedback-scoring.md); `packages/wordle/tests/test_matrix.py` checks it against `wordle.engine.feedback.feedback`.
+
+## The gpui app builds them too
+
+The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/rules/matrix.rs`. Both writers give byte-identical files, so either can build them and the other can read them.

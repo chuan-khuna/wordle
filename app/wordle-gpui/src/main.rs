@@ -3,6 +3,7 @@
 mod args;
 mod commands;
 mod dictionary;
+mod precompute;
 mod search;
 mod theme;
 mod ui;

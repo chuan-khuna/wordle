@@ -80,6 +80,14 @@ _Avoid_: starter, starting word, seed word
 How a possible Guess would divide the Candidate Set into groups, one group for each Feedback it could produce.
 _Avoid_: buckets, partition, distribution
 
+**Feedback Matrix**:
+A table of the Feedback of every Guess against every Answer, scored once before any Game so the Solver can look a Feedback up instead of working it out. There are two: one with the Answer List as its rows and one with the Guess List as its rows. Each cell is a Feedback Code.
+_Avoid_: score matrix, pattern matrix, lookup table
+
+**Feedback Code**:
+One Feedback packed into a single number from 0 to 242, by reading its five Marks as base-3 digits (Absent 0, Present 1, Correct 2), first letter first. 242 is a Win.
+_Avoid_: score, pattern, hash
+
 **Expected Information**:
 How much a Guess is expected to shrink the Candidate Set, averaged over its Feedback Split and counted in bits.
 _Avoid_: entropy, entropy score, info gain

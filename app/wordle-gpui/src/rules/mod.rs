@@ -3,5 +3,6 @@
 pub mod feedback;
 pub mod game;
 pub mod hints;
+pub mod matrix;
 pub mod seed;
 pub mod words;

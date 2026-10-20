@@ -6,6 +6,7 @@
 mod board;
 mod menu;
 mod palette;
+mod precompute_picker;
 mod sidebar;
 mod status_bar;
 mod theme_picker;
@@ -13,13 +14,15 @@ pub mod title_bar;
 mod widgets;
 
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::rules::game::{Game, MAX_GUESSES, random_seed};
+use wordle_gpui::rules::matrix;
 use wordle_gpui::rules::words::WORD_LENGTH;
 
 use crate::commands::{self, Command, CommandPalette, SeedField, SeedOutcome};
+use crate::precompute::{self, ThreadPicker};
 use crate::theme::picker::{self as theme_picker_state, ThemePicker};
 use crate::theme::{self, Theme};
 use board::{BACKSPACE, ENTER};
@@ -75,6 +78,8 @@ enum Overlay {
     Menu { seed: Option<SeedField> },
     Palette(CommandPalette),
     ThemePicker(ThemePicker),
+    /// Chooses how many threads precompute the Feedback matrices.
+    Precompute(ThreadPicker),
 }
 
 pub struct WordleApp {
@@ -90,6 +95,8 @@ pub struct WordleApp {
     /// Whether the Answer of a lost Game has been revealed. It stays hidden until clicked.
     answer_shown: bool,
     overlay: Option<Overlay>,
+    /// Whether the Feedback matrices are being precomputed in the background.
+    precomputing: bool,
     sidebar_open: bool,
     /// How wide the sidebar is (with its gap), dragged by `render_sidebar_handle`.
     sidebar_width: gpui::Pixels,
@@ -116,6 +123,7 @@ impl WordleApp {
             status_serial: 0,
             answer_shown: false,
             overlay: None,
+            precomputing: false,
             sidebar_open: false,
             sidebar_width: sidebar::DEFAULT_WIDTH,
             resizing_sidebar: false,
@@ -143,11 +151,16 @@ impl WordleApp {
 
     /// Show a note in the status bar for `STATUS_TIME`, then hide it.
     fn show_status(&mut self, text: impl Into<SharedString>, cx: &mut Context<Self>) {
+        self.show_status_for(text, STATUS_TIME, cx);
+    }
+
+    /// Show a note in the status bar for `time`, then hide it (or sooner, if a newer note replaces it).
+    fn show_status_for(&mut self, text: impl Into<SharedString>, time: Duration, cx: &mut Context<Self>) {
         self.status_serial += 1;
         let serial = self.status_serial;
         self.status = Some(text.into());
         cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(STATUS_TIME).await;
+            cx.background_executor().timer(time).await;
             this.update(cx, |this, cx| {
                 if this.status_serial == serial {
                     this.status = None;
@@ -222,6 +235,11 @@ impl WordleApp {
                 self.toggle_sidebar(window, cx);
             }
             Command::ChangeTheme => self.open(Overlay::ThemePicker(ThemePicker::new(self.theme)), cx),
+            Command::Precompute if self.precomputing => {
+                self.dismiss(cx);
+                self.show_status("Already precomputing the matrices", cx);
+            }
+            Command::Precompute => self.open(Overlay::Precompute(ThreadPicker::default()), cx),
             Command::ResetLayout => {
                 self.dismiss(cx);
                 self.sidebar_open = false;
@@ -231,6 +249,33 @@ impl WordleApp {
                 }
             }
         }
+        cx.notify();
+    }
+
+    /// Score every Guess against every Answer on `threads` threads, off the window's thread, and
+    /// save the two Feedback matrices (see `rules/matrix.rs`). The status bar says when it is done.
+    fn start_precompute(&mut self, threads: usize, cx: &mut Context<Self>) {
+        self.overlay = None;
+        self.precomputing = true;
+        self.show_status_for(format!("Precomputing matrices on {}…", precompute::threads_label(threads)), Duration::from_secs(600), cx);
+        let work = cx.background_spawn(async move {
+            let started = Instant::now();
+            let saved = matrix::build(&matrix::default_dir(), threads);
+            (saved, started.elapsed())
+        });
+        cx.spawn(async move |this, cx| {
+            let (saved, elapsed) = work.await;
+            this.update(cx, |app, cx| {
+                app.precomputing = false;
+                let note = match saved {
+                    Ok(_) => format!("Saved the matrices to matrices/ in {:.1}s ({})", elapsed.as_secs_f32(), precompute::threads_label(threads)),
+                    Err(error) => format!("Couldn't save the matrices: {error}"),
+                };
+                app.show_status_for(note, Duration::from_secs(5), cx);
+            })
+            .ok();
+        })
+        .detach();
         cx.notify();
     }
 
@@ -263,6 +308,11 @@ impl WordleApp {
                 theme_picker_state::Outcome::Confirm => self.overlay = None,
                 theme_picker_state::Outcome::Cancel => self.dismiss(cx),
                 theme_picker_state::Outcome::None => {}
+            },
+            Some(Overlay::Precompute(picker)) => match picker.press(key) {
+                precompute::Outcome::Run(threads) => self.start_precompute(threads, cx),
+                precompute::Outcome::Cancel => self.dismiss(cx),
+                precompute::Outcome::None => {}
             },
             Some(Overlay::Palette(palette)) => {
                 let outcome = palette.press(key, typed);
@@ -483,6 +533,7 @@ impl Render for WordleApp {
             .map(|root| match &self.overlay {
                 Some(Overlay::Palette(palette)) => root.child(self.render_palette(palette, cx)),
                 Some(Overlay::ThemePicker(picker)) => root.child(self.render_theme_picker(picker, cx)),
+                Some(Overlay::Precompute(picker)) => root.child(self.render_precompute_picker(picker, cx)),
                 _ => root,
             })
     }

@@ -85,3 +85,8 @@ fn seeds_are_shown_in_groups_of_three_from_the_right() {
 fn reset_layout_is_in_the_palette() {
     assert_eq!(Command::search("layout"), [Command::ResetLayout]);
 }
+
+#[test]
+fn precompute_is_in_the_palette() {
+    assert_eq!(Command::search("matri"), [Command::Precompute]);
+}

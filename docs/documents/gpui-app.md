@@ -20,45 +20,33 @@ The `justfile` recipes use `[working-directory: 'app/wordle-gpui']`, and set `wi
 
 ## Layout
 
+The crate is split into three layers. Each one only uses the ones above it:
+
 ```
 app/wordle-gpui/
-  Cargo.toml          gpui-pre (gpui, as gpui-kit builds on it), gpui-base (the Button), gpui-kit-assets (the icons), gpui-component (the Kbd shortcut keys), ureq and scraper for the dictionary
-  data/               answers.txt, guesses.txt, SOURCES.md (copied from packages/wordle)
+  data/         the word lists, copied from packages/wordle
   src/
-    lib.rs            the library: `pub mod rules`, usable from tests with no window
-    rules/
-      feedback.rs     Mark, Feedback and the two-pass scoring rule
-      words.rs        the word lists, built into the binary with include_str!
-      seed.rs         Python-compatible Mersenne Twister, so Seeds match the terminal game
-      game.rs         Game, Guess, Error, share_grid, random_seed
-      hints.rs        best_marks (the keyboard's colours) and live_hint
-    main.rs           parse the options, bind the keys, open the window
-    args.rs           --answer, --seed, --unlimited
-    commands.rs       Command (shared by the menu and the palette), the palette's and seed field's state
-    dictionary.rs     the Oxford Learner's Dictionary lookup (blocking; run in the background)
-    search.rs         the loose matching behind the palette and the theme picker
-    theme/
-      mod.rs          the Theme roles, THEMES and the theme search
-      rose_pine.rs, rose_pine_dawn.rs, catppuccin_mocha.rs, catppuccin_latte.rs,
-                      flexoki_dark.rs, flexoki_light.rs, tokyo_night.rs,
-                      everforest.rs, kanagawa.rs, nord.rs
-                      one theme each
-      picker.rs       the theme picker's state and keys
-    ui/
-      mod.rs          WordleApp: the state, the overlays, key routing, Render
-      title_bar.rs    the Zed-style title bar
-      status_bar.rs   the bar along the bottom
-      sidebar.rs      Guesses and their meanings
-      board.rs        the tiles and the on-screen keyboard
-      menu.rs         the hamburger and the settings menu, and the command rows both lists draw
-      palette.rs      the command palette
-      theme_picker.rs the theme picker
-      widgets.rs      panel, query field, menu row, button (gpui-base `Button`, themed)
+    rules/      the game itself: Feedback, Game, Seeds, the Feedback matrices. No window code.
+    (top level) state and keys with no drawing: commands.rs, precompute.rs, theme/picker.rs
+    ui/         drawing: WordleApp (ui/mod.rs) holds the state; every other file draws one part
 ```
 
-Everything with state and keys but no drawing (`commands.rs`, `theme/picker.rs`, `rules/`, the dictionary's parsing) has unit tests. They sit in the same folder as the code they test, as `<name>_tests.rs` (`commands.rs` has `commands_tests.rs`), pulled in by `#[cfg(test)] #[path = "commands_tests.rs"] mod tests;`. The `ui/` modules each add `impl WordleApp` blocks that draw one part of the window.
+- **`rules/`** is the library (`lib.rs`), so tests can use it with no window. `feedback.rs` and `game.rs` follow [feedback-scoring.md](feedback-scoring.md) and [game-and-state.md](game-and-state.md), and their tests check against values printed by the Python game.
+- **State and keys** live in plain structs that know nothing about gpui: a key goes in, an outcome comes out (`Outcome::Run(command)`, `Outcome::Close`). That makes them easy to unit-test.
+- **`ui/`** turns that state into elements. Each file adds an `impl WordleApp` block that draws one part of the window.
 
-`feedback.rs` and `game.rs` follow [feedback-scoring.md](feedback-scoring.md) and [game-and-state.md](game-and-state.md). Their tests check against values printed by the Python game.
+Take the command palette as the example of how the layers fit together:
+
+| Layer | File | What it does |
+| --- | --- | --- |
+| State and keys | `commands.rs` | `CommandPalette` holds the query and the highlighted row; `press("down")` moves it, `press("enter")` returns `Outcome::Run(command)` |
+| Tests | `commands_tests.rs` | Types into a `CommandPalette` and checks the outcomes, with no window |
+| Drawing | `ui/palette.rs` | Draws a `CommandPalette` as a search field and a list of rows |
+| Wiring | `ui/mod.rs` | Sends each real key press to the open overlay, and runs the `Outcome` |
+
+Tests sit next to the code they test as `<name>_tests.rs`, pulled in with `#[cfg(test)] #[path = "commands_tests.rs"] mod tests;`. Everything with state and keys has them; the drawing files don't.
+
+Other parts follow the same pattern: the theme picker (`theme/picker.rs` and `ui/theme_picker.rs`) and the thread picker for [Precompute matrices](#precompute-matrices) (`precompute.rs` and `ui/precompute_picker.rs`). The rest of the crate is small: `main.rs` opens the window, `args.rs` reads the options, `dictionary.rs` does the lookups, `theme/` has one file per theme, and `Cargo.toml` pulls in gpui, gpui-kit (buttons, icons, shortcut keys), `scraper` and `ureq`.
 
 ## Seeds match the Python game
 
@@ -88,6 +76,8 @@ Each row is one line: the name on the left and, on the right, a dim detail (the 
 - **Live hints:** dotted when on (see below).
 - **Show sidebar:** dotted when the sidebar is open (see below).
 - **Change theme…:** opens the theme picker (below). The row shows the current theme.
+- **Precompute matrices…:** opens a small picker for the thread count (see below).
+- **Reset layout:** closes the sidebar and restores the window size.
 
 The menu's last line shows the command palette's shortcut.
 
@@ -169,3 +159,12 @@ The bar is the theme's `surface` while the window is active and its `background`
 ## Building on macOS without Xcode
 
 gpui normally compiles its Metal shaders at build time with Xcode's `metal` tool. The `runtime_shaders` feature compiles them when the app starts instead, so the Command Line Tools are enough. The feature does nothing on other platforms.
+
+## Precompute matrices
+
+**Precompute matrices…** (menu or palette; search `matri`) builds the two Feedback matrices the Python package builds with `just matrices`, as the same `.npy` files in `matrices/` at the repo root. See [feedback-matrices.md](feedback-matrices.md) for what they hold.
+
+- A picker asks how many threads to use: 1, 2, 4 or 8. Up and Down move (typing 1, 2, 4 or 8 jumps to it), Enter or a click starts, Escape goes back. It starts on the largest choice the machine has cores for.
+- The work runs on gpui's background executor, so the window stays usable. The status bar says "Precomputing matrices on 4 threads…", then "Saved the matrices to matrices/ in 1.2s (4 threads)" or the error. Starting it again while it runs only says so.
+- Existing files are replaced without asking (the terminal command asks first).
+- `rules/matrix.rs` has the logic, with no window: `pack` scores one pair without allocating, `score_matrix` splits the Guess rows into one block per thread with `std::thread::scope`, and `npy_bytes` writes the file (a 64-byte-aligned header, as numpy does). A test checks `pack` against `feedback`, and the output is byte-for-byte identical to the Python package's files.
