@@ -1,6 +1,6 @@
 # Eight Strategies: Guess Pool × Search Scope × Ranking
 
-Status: ready-for-agent
+Status: done
 
 Builds on [the Guess Count Matrix](../guess-count-matrix/spec.md), [its gpui build](../guess-count-matrix-gpui/spec.md) and [the shared precompute cache](../shared-precompute-cache/spec.md).
 

@@ -144,7 +144,7 @@ Differences from the Python command: it only resumes (no start over; a manifest 
 
 ## Cost
 
-Measured before version 2, under the old ids: `bits-candidates` is now `bits-guesses-candidates` (whose Answer List rows are `bits-answers-candidates`), `bits-all` is `bits-guesses-all`, and the same for `expected-*`. An Answer List matrix has 2,315 rows instead of 14,855, so filling it takes about a sixth of the time.
+Most rows below were measured before version 2, under the old ids (the rows marked version 2 or real folder are after it): `bits-candidates` is now `bits-guesses-candidates` (whose Answer List rows are `bits-answers-candidates`), `bits-all` is `bits-guesses-all`, and the same for `expected-*`. An Answer List matrix has 2,315 rows instead of 14,855, so filling it takes about a sixth of the time.
 
 One thread. Measured: `bits-candidates` over all 14,855 Openers took 334 s (about 5.6 minutes); a global Strategy Opener takes about 5 to 9 s (`bits-all` with two Openers: 17 s), so a full global Strategy is an estimated 20 hours (not measured).
 
@@ -176,9 +176,27 @@ Same machine, release build, `measure_a_build` (an ignored test in `solver/guess
 | `expected-all` | 199 (every 75th) | 8 | 12.9 s | 0.065 s |
 | `bits-answers-all` (version 2) | all 2,315 | 8 | 18.3 s | |
 | `expected-answers-all` (version 2) | all 2,315 | 8 | 9.2 s | |
+| `bits-answers-all`, into the real folder | all 2,315 | 8 | 14.7 s | 0.006 s |
+| `expected-answers-all`, into the real folder | all 2,315 | 8 | 9.4 s | 0.004 s |
 
-Extrapolated from those samples (not measured): a full `bits-all` takes about 14,855 × 0.103 s ≈ 26 minutes on 8 threads (about 3 hours on 1), and `expected-all` about 16 minutes on 8 threads, against an estimated 9 to 35 hours for the Python command. Ranking by Expected Candidates is cheaper because Σ n² is compared as an integer and the bits are worked out only to break a tie. The full Rust `bits-candidates` matrix equals the 6,442 rows the Python command had finished, and its top 5 are the ones under [Results](#results). The two `answers-all` rows were measured after version 2 (load average 8 to 15 from other work): an Answer List All words search scores only 2,315 words per step, so the whole matrix takes seconds, not minutes.
+Extrapolated from those samples (not measured): a full `bits-all` takes about 14,855 × 0.103 s ≈ 26 minutes on 8 threads (about 3 hours on 1), and `expected-all` about 16 minutes on 8 threads, against an estimated 9 to 35 hours for the Python command. Ranking by Expected Candidates is cheaper because Σ n² is compared as an integer and the bits are worked out only to break a tie. The full Rust `bits-candidates` matrix equals the 6,442 rows the Python command had finished, and its top 5 are the ones under [Results](#results). The two `answers-all` rows were measured after version 2 (load average 8 to 15 from other work): an Answer List All words search scores only 2,315 words per step, so the whole matrix takes seconds, not minutes. The last two rows filled the real `precompute-cache/guess-counts/` after `just migrate-guess-counts` (ticket 05 of the eight Strategies): `GUESS_COUNTS_OUT=<repo>/precompute-cache/guess-counts GUESS_COUNTS_STRATEGY=bits-answers-all cargo test --release -- --ignored --nocapture measure_a_build`, then the same for `expected-answers-all`, on the same Apple M1 Pro with a load average of 7 to 10 from other work; the time includes scoring the test's Feedback matrix. The migration itself copies rows and took 2.4 s.
 
 ## Results
 
-Top 5 for `bits-guesses-candidates` (then `bits-candidates`) over the whole Guess List: salet 3.528 (8 Losses), slate 3.529 (7), least 3.537 (9), reast 3.539 (10), trace 3.540 (7). With `bits-guesses-all` (then `bits-all`), tarse 3.429 and salet 3.432, both with no Losses (only those two Openers filled).
+From the real folder, every row of all eight Strategies filled (the six migrated from version 1 and the two `answers-all` matrices played by the gpui app). Top 5 by Average Guess Count over all 2,315 Answers, Losses (Games over 6 Guesses) in brackets:
+
+| Strategy | 1 | 2 | 3 | 4 | 5 |
+| --- | --- | --- | --- | --- | --- |
+| `bits-answers-candidates` | slate 3.529 (7) | least 3.537 (9) | trace 3.540 (7) | crate 3.547 (8) | slant 3.547 (8) |
+| `bits-answers-all` | slate 3.454 (0) | crate 3.457 (0) | trace 3.459 (0) | crane 3.461 (0) | slant 3.465 (0) |
+| `bits-guesses-candidates` | salet 3.528 (8) | slate 3.529 (7) | least 3.537 (9) | reast 3.539 (10) | trace 3.540 (7) |
+| `bits-guesses-all` | tarse 3.429 (0) | reast 3.430 (0) | salet 3.432 (0) | crate 3.432 (0) | trace 3.433 (0) |
+| `expected-answers-candidates` | least 3.544 (8) | slate 3.548 (8) | trace 3.550 (7) | crate 3.553 (7) | slant 3.557 (8) |
+| `expected-answers-all` | slate 3.465 (0) | crate 3.465 (0) | trace 3.469 (0) | slant 3.472 (0) | least 3.475 (0) |
+| `expected-guesses-candidates` | reast 3.543 (10) | least 3.544 (8) | tarse 3.547 (7) | clast 3.547 (6) | slate 3.548 (8) |
+| `expected-guesses-all` | tarse 3.440 (0) | trace 3.440 (0) | crate 3.442 (0) | reast 3.443 (0) | slate 3.445 (0) |
+
+- **`answers-all` against `guesses-all`.** Searching All words of the Answer List keeps nearly all of the gain of searching All words: its best Opener (slate, 3.454 by Expected Information and 3.465 by Expected Candidates) is only about 0.025 Guesses behind the Guess List's (tarse, 3.429 and 3.440), against about 0.075 to 0.08 behind for Candidates only. Opener for Opener over the 2,315 Answer List words, the Guess List costs on average 0.024 Guesses less after the same Opener (Expected Information: worse for 2,306 Openers, better for 9; Expected Candidates: worse for 2,267, better for 45, equal for 3). The best Answer List Openers of `guesses-all` are the same words: crate, trace and slate rank 4 to 6 by Expected Information and trace, crate and slate 2, 3 and 5 by Expected Candidates. Losses are rare in both: under Expected Information 18 `answers-all` Openers lose one Game each and 7 `guesses-all` Openers lose any; under Expected Candidates no Opener of either loses.
+- **Candidates only** costs about 0.09 Guesses per Opener against All words on the Answer List, and every top-5 Opener loses 6 to 10 Games. The Answer List rows of `guesses-candidates` are exactly `answers-candidates`, so the two differ only by the Guess List Openers that enter the ranking (salet, reast, tarse, clast).
+- **raise**, the Solver's own Opener (best by Expected Information as a first Guess), is far from the best by actual play: rank 34 in `bits-answers-all`, 119 in `bits-answers-candidates`, 95 in `bits-guesses-all` and 420 in `bits-guesses-candidates`.
+- The Benchmark's numbers for each Strategy's own Opener agree with its matrix row where the Strategy never loses (`bits-answers-all` with raise 3.495, `bits-guesses-all` with tarse 3.429, both Expected Candidates All words ones). For the Candidates only Strategies the Benchmark's Average Guess Count averages the won Games only, so it is lower than the matrix's (raise, `bits-answers-candidates`: 3.582 against 3.599, 11 Losses in both).
