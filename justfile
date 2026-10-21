@@ -71,3 +71,18 @@ web:
     (cd backend && exec uv run uvicorn wordle_backend.main:app) &
     (cd frontend && exec bun run dev) &
     wait
+
+# Run the website: backend on :8000 and frontend on :3000 together. Ctrl-C stops both
+[working-directory: 'app']
+[windows]
+[script("powershell.exe", "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File")]
+[extension: '.ps1']
+web:
+    $backend = Start-Process uv -ArgumentList 'run', 'uvicorn', 'wordle_backend.main:app' -WorkingDirectory backend -NoNewWindow -PassThru
+    try {
+        Set-Location frontend
+        bun run dev
+    } finally {
+        # Ctrl-C reaches both through the shared console; this catches the backend if the frontend exits alone
+        taskkill /T /F /PID $backend.Id 2>&1 | Out-Null
+    }
