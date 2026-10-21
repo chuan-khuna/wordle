@@ -6,24 +6,13 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import type { SplitResponse } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
-import { parseMarks } from "@/lib/wordle/feedback";
-import { type HeadSize, columnCount, headSize, orderSplitGroups } from "@/lib/widgets/split-groups";
-import { Tile } from "./Tile";
+import { columnCount, orderSplitGroups } from "@/lib/widgets/split-groups";
+import { WORD_GAP, WORD_W, SplitBlock } from "./SplitBlock";
 
-/** A word is five mono capitals at 11px (about 6.6px each), in a grid column of `WORD_W` pixels; columns are `WORD_GAP` apart. */
-const WORD_W = 38;
-const WORD_GAP = 8;
 /** What a block adds around its grid: 6px of padding each side, plus 3px each side for the highlight outline. */
 const BLOCK_EXTRA = 2 * 6 + 2 * 3;
 /** Columns assumed until the container has been measured. */
 const FALLBACK_COLUMNS = 12;
-
-const HEAD_TILE: Record<HeadSize, { small?: boolean; board?: boolean; tiny?: boolean }> = {
-  lg: {},
-  md: { small: true },
-  sm: { board: true },
-  xs: { tiny: true },
-};
 
 const columnsIn = (width: number) => Math.max(1, Math.floor((width - BLOCK_EXTRA + WORD_GAP) / (WORD_W + WORD_GAP)));
 
@@ -276,50 +265,24 @@ const Block = memo(function Block({
   /** The word that is the tab stop, when it is in this block. */
   tabWord: string | null;
 }) {
-  const marks = parseMarks(g.marks) ?? [];
-  const size = HEAD_TILE[headSize(g.count)];
   return (
     <li
       data-marks={g.marks}
       aria-current={outlined ? "true" : undefined}
       className={`max-w-full rounded-md p-1.5 ${outlined ? "outline-2 outline-offset-1 outline-accent" : ""}`}
     >
-      <div role="group" aria-label={`${text.feedbackLabel} ${g.marks}, ${text.words(g.count)}`}>
-        <div className="flex gap-0.5" aria-hidden="true">
-          {Array.from(guess, (letter, i) => (
-            <Tile key={i} letter={letter} mark={marks[i] ?? 0} {...size} />
-          ))}
-        </div>
-        <p className="mt-1 text-xs text-meta tabular-nums">{text.words(g.count)}</p>
-      </div>
-      <ul
-        data-cols={columns}
-        className="mt-2 grid"
-        style={{ gridTemplateColumns: `repeat(${columns}, ${WORD_W}px)`, gap: WORD_GAP }}
-      >
-        {g.words.map((w) => (
-          <li key={w}>
-            <WordText word={w} strong={w === highlightWord || w === picked} linked={linked} tabbable={w === tabWord} />
-          </li>
-        ))}
-      </ul>
+      <SplitBlock
+        marks={g.marks}
+        count={g.count}
+        words={g.words}
+        guess={guess}
+        columns={columns}
+        text={text}
+        highlightWord={highlightWord}
+        linked={linked}
+        picked={picked}
+        tabWord={tabWord}
+      />
     </li>
   );
 });
-
-/** One word as plain mono text (no Mark colours); `strong` is the highlighted word. Linked, it is a button (only the tab stop is in the Tab order). */
-function WordText({ word, strong, linked, tabbable }: { word: string; strong: boolean; linked: boolean; tabbable: boolean }) {
-  const look = `block font-mono text-[11px] leading-5 uppercase ${strong ? "font-bold text-text" : "text-meta"}`;
-  if (!linked) return <span className={look}>{word}</span>;
-  return (
-    <button
-      type="button"
-      data-word={word}
-      tabIndex={tabbable ? 0 : -1}
-      aria-haspopup="dialog"
-      className={`${look} w-full cursor-pointer rounded-xs text-left hover:text-text focus-visible:outline-2 focus-visible:outline-accent`}
-    >
-      {word}
-    </button>
-  );
-}

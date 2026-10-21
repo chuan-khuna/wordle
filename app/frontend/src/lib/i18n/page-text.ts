@@ -69,14 +69,18 @@ export type PageText = {
   notSolved: string;
   /** What a Follow an Answer row says while its split loads. */
   splittingCandidates: string;
-  /** The Rows / Graph switch, the graph (its accessible name), its first node, a node (a button) and its "+N more". */
+  /** The Full split / Answer's path switch, the path (its accessible name), its first node, a node (a button) and its "+N more". */
   viewLabel: string;
-  viewRows: string;
-  viewGraph: string;
-  graphLabel: (answer: string) => string;
-  graphStart: (total: number) => string;
-  graphNode: (number: number, guess: string, count: number) => string;
-  graphMore: (count: number) => string;
+  viewSplit: string;
+  viewPath: string;
+  pathLabel: (answer: string) => string;
+  pathStart: (total: number) => string;
+  pathNode: (number: number, guess: string, count: number) => string;
+  pathMore: (count: number) => string;
+  /** The Guess number above a node, the Win node's head label (the glossary term) and its accessible name. */
+  pathGuess: (number: number) => string;
+  winLabel: string;
+  pathWin: (number: number, guess: string) => string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
   /** "Watch from 4:10": a link into the Series video. */
@@ -151,8 +155,8 @@ export const EN: PageText = {
   feedbackLabel: "Feedback",
   words: (n) => `${n} word${n === 1 ? "" : "s"}`,
   follow: "Follow an Answer",
-  followIntro: "Pick an Answer and watch the Solver home in on it. Each row splits the words still possible after the Guesses before it; the Answer's block is outlined.",
-  followHelp: "Choose a Strategy, and an Opener if you do not want the Strategy's best. Step through the Guesses with Prev and Next, or click a Guess in the strip.",
+  followIntro: "Pick an Answer and watch the Solver home in on it. Each Guess splits the words still possible after the Guesses before it; the Answer's block is outlined.",
+  followHelp: "Choose a Strategy, and an Opener if you do not want the Strategy's best. Step through the Guesses with Prev and Next, or click a Guess in the strip. Switch to Answer's path to see the Answer's group after every Guess as one chain.",
   answerLabel: "Answer",
   typeAnswer: "Type a five-letter Answer.",
   solverPlaying: "The Solver is playing…",
@@ -170,12 +174,15 @@ export const EN: PageText = {
   notSolved: "The Solver did not find the Answer.",
   splittingCandidates: "Splitting the Candidates…",
   viewLabel: "View",
-  viewRows: "Rows",
-  viewGraph: "Graph",
-  graphLabel: (a) => `The Game for ${a.toUpperCase()}, from the Answer List to the Answer`,
-  graphStart: (t) => `Answer List · ${t} words`,
-  graphNode: (n, g, c) => `Guess ${n}: ${g.toUpperCase()}, ${c} ${c === 1 ? "Candidate" : "Candidates"} left`,
-  graphMore: (c) => `+${c} more`,
+  viewSplit: "Full split",
+  viewPath: "Answer's path",
+  pathLabel: (a) => `The Game for ${a.toUpperCase()}, from the Answer List to the Answer`,
+  pathStart: (t) => `Answer List · ${t} words`,
+  pathNode: (n, g, c) => `Guess ${n}: ${g.toUpperCase()}, ${c} ${c === 1 ? "Candidate" : "Candidates"} left`,
+  pathMore: (c) => `+${c} more`,
+  pathGuess: (n) => `Guess ${n}`,
+  winLabel: "Win",
+  pathWin: (n, g) => `Guess ${n}: ${g.toUpperCase()}, Win`,
   howItWorks: "How it works",
   watchFrom: (t) => `Watch from ${t}`,
   openersIntro: "Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.",
@@ -241,8 +248,8 @@ export const TH: PageText = {
   feedbackLabel: "Feedback",
   words: (n) => `${n} คำ`,
   follow: "Follow an Answer",
-  followIntro: "เลือก Answer แล้วดู Solver ค่อย ๆ จำกัดวงเข้าหาคำนั้น แต่ละแถวแบ่งคำที่ยังเป็นไปได้หลัง Guess ก่อนหน้า และบล็อกของ Answer จะมีกรอบ",
-  followHelp: "เลือก Strategy และเลือก Opener เองได้ถ้าไม่ต้องการ Opener ที่ดีที่สุดของ Strategy นั้น กด Prev และ Next เพื่อไล่ดู Guess หรือคลิก Guess ในแถบด้านบน",
+  followIntro: "เลือก Answer แล้วดู Solver ค่อย ๆ จำกัดวงเข้าหาคำนั้น แต่ละ Guess แบ่งคำที่ยังเป็นไปได้หลัง Guess ก่อนหน้า และบล็อกของ Answer จะมีกรอบ",
+  followHelp: "เลือก Strategy และเลือก Opener เองได้ถ้าไม่ต้องการ Opener ที่ดีที่สุดของ Strategy นั้น กด Prev และ Next เพื่อไล่ดู Guess หรือคลิก Guess ในแถบด้านบน หรือเลือกเส้นทางของ Answer เพื่อดูกลุ่มของ Answer หลังทุก Guess เป็นสายเดียว",
   answerLabel: "Answer",
   typeAnswer: "พิมพ์ Answer ห้าตัวอักษร",
   solverPlaying: "Solver กำลังเล่น…",
@@ -260,12 +267,15 @@ export const TH: PageText = {
   notSolved: "Solver หา Answer ไม่เจอ",
   splittingCandidates: "กำลังแบ่ง Candidates…",
   viewLabel: "มุมมอง",
-  viewRows: "Rows",
-  viewGraph: "Graph",
-  graphLabel: (a) => `Game ของ ${a.toUpperCase()} ตั้งแต่ Answer List ถึง Answer`,
-  graphStart: (t) => `Answer List · ${t} คำ`,
-  graphNode: (n, g, c) => `Guess ที่ ${n}: ${g.toUpperCase()} เหลือ ${c} Candidate`,
-  graphMore: (c) => `+อีก ${c}`,
+  viewSplit: "Split ทั้งหมด",
+  viewPath: "เส้นทางของ Answer",
+  pathLabel: (a) => `Game ของ ${a.toUpperCase()} ตั้งแต่ Answer List ถึง Answer`,
+  pathStart: (t) => `Answer List · ${t} คำ`,
+  pathNode: (n, g, c) => `Guess ที่ ${n}: ${g.toUpperCase()} เหลือ ${c} Candidate`,
+  pathMore: (c) => `+อีก ${c}`,
+  pathGuess: (n) => `Guess ที่ ${n}`,
+  winLabel: "Win",
+  pathWin: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} Win`,
   howItWorks: "ดูว่าทำงานอย่างไร",
   watchFrom: (t) => `ดูตั้งแต่ ${t}`,
   openersIntro: "ลองใช้ทุกคำใน Guess List เป็น Opener ให้ Solver เล่นแต่ละ Game จนจบ แล้วนับว่ามี Opener กี่คำที่ได้ Average Guess Count ในแต่ละช่วง",

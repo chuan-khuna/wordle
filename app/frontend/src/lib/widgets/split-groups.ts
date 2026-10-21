@@ -58,7 +58,7 @@ export function betterFigures(
   ];
 }
 
-/** One node of the Follow an Answer graph: the Answer's group after a Guess. `words` is what is drawn, `more` how many are left out. */
+/** One node of the Follow an Answer path: the Answer's group after a Guess. `words` is what is drawn, `more` how many are left out. */
 export interface ChainNode {
   number: number;
   guess: string;
@@ -71,7 +71,7 @@ export interface ChainNode {
 }
 
 /**
- * The nodes of the graph, one per Guess. Node k holds the Answer's group after Guess k (`groups[k]`, `undefined` while its
+ * The nodes of the path, one per Guess. Node k holds the Answer's group after Guess k (`groups[k]`, `undefined` while its
  * split is loading, which gives no words). A group of more than `limit` words shows its first `limit` alphabetically, the
  * Answer kept among them, and counts the rest in `more`.
  */
