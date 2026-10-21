@@ -23,6 +23,54 @@ export function lookupTerm(term: string): GlossaryEntry {
   return entry;
 }
 
+/** A piece of a definition: plain text, a bold run (`**…**`), or the text of another glossary term to link. */
+export type DefinitionPart = { kind: "text" | "bold"; text: string } | { kind: "term"; text: string; term: string };
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A term as it appears in prose: as written, or plural ("Guesses", "Strategies"), matched whole and case-sensitively. */
+function termPattern(term: string): string {
+  return term.endsWith("y") ? `${escapeRegExp(term.slice(0, -1))}(?:y|ies)` : `${escapeRegExp(term)}(?:es|s)?`;
+}
+
+/**
+ * Split a definition into parts, linking the first mention of each glossary term in it, so its card can open the
+ * term's own card. The longest term wins ("Candidate Set" over "Candidate"); terms in `skip` (the card's own term
+ * and the cards it is nested in) stay plain text, and so does a bold run.
+ */
+export function splitDefinition(definition: string, terms: readonly string[], skip: readonly string[] = []): DefinitionPart[] {
+  const skipped = new Set(skip.map((t) => t.toLowerCase()));
+  const sorted = [...terms].sort((a, b) => b.length - a.length);
+  const byPattern = sorted.map((term) => ({ term, re: new RegExp(`^(?:${termPattern(term)})$`) }));
+  const any = new RegExp(`\\b(?:${sorted.map(termPattern).join("|")})\\b`, "g");
+  const linked = new Set<string>();
+  const parts: DefinitionPart[] = [];
+  const text = (t: string) => {
+    if (!t) return;
+    const last = parts[parts.length - 1];
+    if (last?.kind === "text") last.text += t;
+    else parts.push({ kind: "text", text: t });
+  };
+  definition.split(/(\*\*[^*]+\*\*)/).forEach((chunk, i) => {
+    if (i % 2 === 1) {
+      parts.push({ kind: "bold", text: chunk.slice(2, -2) });
+      return;
+    }
+    let at = 0;
+    for (const m of chunk.matchAll(any)) {
+      const term = byPattern.find((p) => p.re.test(m[0]))!.term;
+      const key = term.toLowerCase();
+      if (skipped.has(key) || linked.has(key)) continue;
+      linked.add(key);
+      text(chunk.slice(at, m.index));
+      parts.push({ kind: "term", text: m[0], term });
+      at = m.index + m[0].length;
+    }
+    text(chunk.slice(at));
+  });
+  return parts;
+}
+
 export const MARK_KINDS = ["correct", "present", "absent"] as const;
 export type MarkKind = (typeof MARK_KINDS)[number];
 
