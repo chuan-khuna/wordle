@@ -1,4 +1,4 @@
-"""`just precompute`, `just precompute-guess-counts` and `just precompute-benchmark`: ask a few questions, then precompute."""
+"""`just precompute`, `just precompute-guess-counts`, `just migrate-guess-counts` and `just precompute-benchmark`: ask a few questions, then act."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ from pathlib import Path
 
 import questionary
 
-from wordle.solver import benchmark, guess_count_matrix
+from wordle.solver import benchmark, guess_count_matrix, guess_count_migration
 from wordle.solver.matrix import (
     ANSWERS_FILE,
     CACHE_DIR,
@@ -147,6 +147,34 @@ def precompute_guess_counts() -> None:
                 f" {opener['losses']} Losses, {opener['bits']:.3f} bits"
             )
     print(f"\nDone in {elapsed:.1f}s with {threads} thread{'s' if threads > 1 else ''}.")
+
+
+def migrate_guess_counts() -> None:
+    parser = argparse.ArgumentParser(description="Migrate a version 1 Guess Count Matrix folder to version 2.")
+    parser.add_argument("--out", type=Path, default=CACHE_DIR, help="the folder that holds guess-counts/")
+    parser.add_argument("--yes", action="store_true", help="migrate without asking")
+    args = parser.parse_args()
+
+    solver = Solver.load()
+    folder = args.out / guess_count_matrix.SUBDIR
+    try:
+        old_matrices = guess_count_migration.plan(args.out, solver)
+    except guess_count_migration.MigrationRefused as refused:
+        sys.exit(f"Can't migrate {folder}: {refused}.")
+    lines = "\n".join(
+        f"  {old.id}.npy -> {', '.join(how.path for how in (old.guesses, old.answers) if how is not None)}"
+        for old in old_matrices
+    )
+    question = (
+        f"Migrate {folder} to format version {guess_count_matrix.FORMAT_VERSION}?\n{lines}\n"
+        "manifest.json, summary.json and the ranking CSVs are overwritten, and the version 1 files removed."
+    )
+    if not args.yes and not questionary.confirm(question, default=False).ask():
+        return
+    started = time.perf_counter()
+    for path in guess_count_migration.migrate(args.out, solver):
+        print(f"{path} ({path.stat().st_size / 1_000_000:.1f} MB)")
+    print(f"Done in {time.perf_counter() - started:.1f}s.")
 
 
 def precompute_benchmark() -> None:

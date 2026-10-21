@@ -46,7 +46,7 @@ In a matrix, rows are Openers (the Strategy's whole Guess Pool, since the Opener
 
 `rows` maps each Guess Pool to its sorted words (the rows of every matrix with that `pool`) and `columns` is the Answer List, so anyone can map indices to words without the package. Each Strategy's `path` is relative to `guess-counts/`. `strategies` keeps the entries of Strategies not chosen in this run while the word lists stay the same, so running one Strategy does not orphan another's matrix. `mismatch(out, strategy, solver)` says why a matrix can't be resumed (no manifest; a manifest of another format version; different word lists or safety limit; or the Strategy defined differently), or `None`.
 
-A version 1 folder (flat `<old id>.npy` files such as `bits-candidates.npy`, every matrix 14,855 rows, `rows` a plain list) is never read as version 2. `folder_mismatch(out)` gives the reason for the whole folder, "manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`", and `mismatch` gives the same one for every Strategy. Without `fresh`, `build` refuses such a folder before writing anything, even for a Strategy with no rows yet, so the version 1 manifest is not overwritten before it is migrated. A matrix the manifest does not vouch for is also left out of `summary.json` and gets no ranking CSV.
+A version 1 folder (flat `<old id>.npy` files such as `bits-candidates.npy`, every matrix 14,855 rows, `rows` a plain list) is never read as version 2. `folder_mismatch(out)` gives the reason for the whole folder, "manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`", and `mismatch` gives the same one for every Strategy. Without `fresh`, `build` refuses such a folder before writing anything, even for a Strategy with no rows yet, so the version 1 manifest is not overwritten before it is migrated. A matrix the manifest does not vouch for is also left out of `summary.json` and gets no ranking CSV. To turn a version 1 folder into version 2 without playing again, see [Migrating a version 1 folder](#migrating-a-version-1-folder).
 
 ## Summary format
 
@@ -116,9 +116,27 @@ A stopped run picks up where it left off:
 
 Both commands share `add_threads_flag` and `ask_threads` in `wordle/solver/cli.py`.
 
+## Migrating a version 1 folder
+
+`just migrate-guess-counts` (`src/migrate_guess_counts.py` -> `wordle.solver.cli.migrate_guess_counts`, library code in `wordle/solver/guess_count_migration.py`) turns a version 1 folder into version 2 in place, copying rows rather than playing them again:
+
+| Version 1 file | Version 2 file(s) |
+| --- | --- |
+| `<ranking>-candidates.npy` (14,855 rows) | `<ranking>/guesses-candidates.npy` (every row, byte for byte), and `<ranking>/answers-candidates.npy` (its 2,315 Answer List rows, in Answer List order) |
+| `<ranking>-all.npy` (14,855 rows) | `<ranking>/guesses-all.npy` (every row) |
+
+`<ranking>/answers-all.npy` has no version 1 source; it is new to play with `just precompute-guess-counts`.
+
+- **What it checks first** (`plan(out, solver)`, which raises `MigrationRefused`): there is a `manifest.json`, it is format version 1 (an already version 2 folder is refused), its safety limit, `rows` (the Guess List) and `columns` (the Answer List) are the current ones, each version 1 matrix on disk has its entry in `strategies` with the version 1 `pool`, `scope` and `ranked_by`, and is `uint8` 14,855 x 2,315. Only the version 1 matrices that exist are migrated; there must be at least one. Nothing is written when a check fails.
+- **Zero rows stay zero.** Rows are copied as they are, so an unfinished row stays unfinished, the migrated manifest vouches for the matrix, and a plain `just precompute-guess-counts` resumes it.
+- **Order.** Each new matrix is written through a temporary file renamed into place; then the version 2 manifest (with an entry for each migrated Strategy only), then `summary.json` and the ranking CSVs (`write_summary`, so the Answer List matrices get their own rankings); only then are the version 1 `<old id>.npy` and `<old id>.ranking.csv` files removed. A stop before the manifest is written leaves a version 1 folder to migrate again.
+- **The command** prints which file becomes which and asks "Migrate <folder> to format version 2?" (manifest, summary and ranking CSVs are overwritten, the version 1 files removed), default no; `--yes` skips the question and `--out DIR` sets the folder holding `guess-counts/` (default `precompute-cache/`). A refused folder exits with "Can't migrate <folder>: <reason>." It prints each file written with its size.
+
+A version 1 backup in `data/precompute/` restores as it was (`just restore-cache`), and the migration then gives the version 2 folder (see [Precompute backup](precompute-backup.md)).
+
 ## In the gpui app
 
-The gpui app still writes the version 1 layout (four Strategies under the old ids, flat `<id>.npy` files of 14,855 rows) until [eight-strategies ticket 03](../../.scratch/eight-strategies/issues/03-gpui-eight-strategies.md); the Python command refuses such a folder until it is migrated. What follows describes the gpui build as it was written for version 1.
+The gpui app still writes the version 1 layout (four Strategies under the old ids, flat `<id>.npy` files of 14,855 rows) until [eight-strategies ticket 03](../../.scratch/eight-strategies/issues/03-gpui-eight-strategies.md); the Python command refuses such a folder until it is migrated (see [Migrating a version 1 folder](#migrating-a-version-1-folder)). What follows describes the gpui build as it was written for version 1.
 
 The gpui app builds the same files from Rust, into the same `precompute-cache/guess-counts/`, with **Precompute guess counts…** in its menu and palette (see [gpui desktop app](gpui-app.md#precompute-guess-counts)): a picker for the thread count (1, 2, 4, 8) and the Strategies, a precompute view in place of the board with progress (overall and per Strategy, rate, time left) and a log (each finished Opener, flushes, the end), and a stop that keeps finished rows. `solver/guess_counts.rs` is the tree play (a `Player` per thread, each with its own next-Guess cache) and `solver/guess_count_matrix.rs` the build, manifest, summary and CSV. It follows the [contract](npy-in-python-and-rust.md#contract-for-a-second-writer-of-the-guess-count-matrix): the same `.npy` header and rows, `manifest.json` that differs only in `tool` (`wordle-gpui Precompute guess counts (rust)`), and `summary.json` and the CSVs byte for byte as Python writes them from the same matrices (the tests compare rows of all four Strategies and the summary files with Python's). Since the format and the folder are the same, either tool picks up where the other stopped: it checks the manifest and fills only the rows still zero. Both directions are tested (`a_folder_copied_from_the_python_command_is_resumed` in Rust, `test_a_folder_copied_from_the_gpui_app_is_resumed` in Python), and were checked on the real files: three rows cleared in a copy of the Rust `bits-candidates.npy` were filled by Python with the same bytes, and the same rows cleared in that Python-resumed copy were filled by Rust, giving a file `cmp`-identical to the one before.
 

@@ -30,6 +30,10 @@ precompute *args:
 precompute-guess-counts *args:
     uv run src/precompute_guess_counts.py {{args}}
 
+# Turn a version 1 Guess Count Matrix folder (flat <id>.npy files) into version 2 without playing again. Takes --out DIR, --yes
+migrate-guess-counts *args:
+    uv run src/migrate_guess_counts.py {{args}}
+
 # Precompute the website's Benchmark and Opener leaderboard (asks for the thread count). Takes --threads N, --out DIR, --yes
 precompute-benchmark *args:
     uv run src/precompute_benchmark.py {{args}}

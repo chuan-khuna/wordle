@@ -2,7 +2,9 @@
 
 `precompute-cache/` is gitignored and is where every tool reads and writes. `backup` compresses each of its
 folders (except the Feedback matrices, which take about a second to build again) into `data/precompute/`, one
-`<file>.xz` per file, so the folder can be committed. `restore` puts them back into `precompute-cache/`.
+`<file>.xz` per file, subfolders kept (`guess-counts/bits/<file>.xz`), so the folder can be committed. `restore`
+puts them back into `precompute-cache/`. A backup of a version 1 Guess Count Matrix folder (flat files) restores
+as it was; `just migrate-guess-counts` then turns it into version 2.
 """
 
 import argparse
@@ -30,17 +32,32 @@ def folders(parent: Path) -> list[Path]:
 
 
 def unfinished(folder: Path) -> list[str]:
-    """Why a Guess Count Matrix folder is not finished, one line per Strategy; empty when it is (or has no summary)."""
+    """Why a Guess Count Matrix folder is not finished, one line per Strategy; empty when it is (or has no summary).
+
+    A Strategy's rows are its Guess Pool's words in a version 2 manifest (`rows` maps each Pool to them), or the
+    one list of a version 1 manifest.
+    """
     summary_path, manifest_path = folder / "summary.json", folder / "manifest.json"
     if not summary_path.exists() or not manifest_path.exists():
         return []
-    rows = len(json.loads(manifest_path.read_text(encoding="utf-8"))["rows"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
+
+    def rows(id: str) -> int:
+        if isinstance(manifest["rows"], list):  # version 1: every matrix has every Guess List row
+            return len(manifest["rows"])
+        return len(manifest["rows"][manifest["strategies"][id]["pool"]])
+
     return [
-        f"{id}: {entry['complete_rows']:,} of {rows:,} Openers complete"
+        f"{id}: {entry['complete_rows']:,} of {rows(id):,} Openers complete"
         for id, entry in summary.items()
-        if entry["complete_rows"] < rows
+        if entry["complete_rows"] < rows(id)
     ]
+
+
+def files(folder: Path, pattern: str = "*") -> list[Path]:
+    """The files under `folder` matching `pattern`, subfolders included, sorted."""
+    return sorted(p for p in folder.rglob(pattern) if p.is_file())
 
 
 def confirm(question: str, yes: bool) -> bool:
@@ -66,8 +83,9 @@ def backup(args: argparse.Namespace) -> None:
         target = BACKUP_DIR / source.name
         shutil.rmtree(target, ignore_errors=True)  # no stale files from an older backup
         target.mkdir(parents=True)
-        for file in sorted(p for p in source.iterdir() if p.is_file()):
-            packed = target / (file.name + SUFFIX)
+        for file in files(source):
+            packed = target / file.relative_to(source).with_name(file.name + SUFFIX)
+            packed.parent.mkdir(parents=True, exist_ok=True)
             with lzma.open(packed, "wb", preset=PRESET) as out, file.open("rb") as raw:
                 shutil.copyfileobj(raw, out)
             print(f"{packed.relative_to(ROOT)} ({size(file)} -> {size(packed)})")
@@ -85,8 +103,9 @@ def restore(args: argparse.Namespace) -> None:
         target = CACHE_DIR / source.name
         shutil.rmtree(target, ignore_errors=True)  # a half-built run there would not match the restored manifest
         target.mkdir(parents=True)
-        for packed in sorted(source.glob("*" + SUFFIX)):
-            file = target / packed.name.removesuffix(SUFFIX)
+        for packed in files(source, "*" + SUFFIX):
+            file = target / packed.relative_to(source).with_name(packed.name.removesuffix(SUFFIX))
+            file.parent.mkdir(parents=True, exist_ok=True)
             with lzma.open(packed, "rb") as raw, file.open("wb") as out:
                 shutil.copyfileobj(raw, out)
             print(f"{file.relative_to(ROOT)} ({size(file)})")
