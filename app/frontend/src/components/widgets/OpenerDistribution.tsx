@@ -10,6 +10,8 @@ import { OPENER_PRESETS, presetFor } from "@/lib/widgets/opener-presets";
 import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, strategyById, strategyFor } from "@/lib/wordle/strategies";
 import { Field } from "@/components/controls/Field";
 import { Button } from "@/components/ui/button";
+import { Term } from "@/components/prose/Term";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -121,16 +123,12 @@ function Distribution({
               />
             </Field>
             <div className="flex items-end">
-              <Label htmlFor={`${uid}-answers`} className="h-9 cursor-pointer gap-2 text-sm font-normal text-text">
-                <input
-                  id={`${uid}-answers`}
-                  type="checkbox"
-                  checked={answersOnly}
-                  onChange={(e) => setAnswersText(String(e.target.checked))}
-                  className="h-4 w-4 accent-accent"
-                />
-                Only Openers on the Answer List
-              </Label>
+              <div className="flex h-9 items-center gap-2">
+                <Checkbox id={`${uid}-answers`} checked={answersOnly} onCheckedChange={(c) => setAnswersText(String(c === true))} />
+                <Label htmlFor={`${uid}-answers`} className="cursor-pointer text-sm font-normal text-text">
+                  <span>Only Openers on the <Term>Answer List</Term></span>
+                </Label>
+              </div>
             </div>
           </div>
         </div>
