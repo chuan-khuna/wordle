@@ -83,6 +83,21 @@ export type PageText = {
   pathWin: (number: number, guess: string) => string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
+  /** The home page's Explore section: its intro, "Builds on" label, and for each Explore page its purpose and three points (see `lib/explore.ts`). */
+  exploreIntro: string;
+  exploreBuildsOn: string;
+  exploreOpenersPurpose: string;
+  exploreOpenersPoint1: string;
+  exploreOpenersPoint2: string;
+  exploreOpenersPoint3: string;
+  exploreOpenerSplitPurpose: string;
+  exploreOpenerSplitPoint1: string;
+  exploreOpenerSplitPoint2: string;
+  exploreOpenerSplitPoint3: string;
+  exploreFollowPurpose: string;
+  exploreFollowPoint1: string;
+  exploreFollowPoint2: string;
+  exploreFollowPoint3: string;
   /** "Watch from 4:10": a link into the Series video. */
   watchFrom: (timestamp: string) => string;
   /** The Opener Distribution page's intro, then its help text (which ends before the "How it works" link and `sentenceEnd`). */
@@ -184,6 +199,20 @@ export const EN: PageText = {
   winLabel: "Win",
   pathWin: (n, g) => `Guess ${n}: ${g.toUpperCase()}, Win`,
   howItWorks: "How it works",
+  exploreIntro: "Interactive pages that go beyond the Articles.",
+  exploreBuildsOn: "Builds on",
+  exploreOpenersPurpose: "See how the Solver does with every word on the Guess List as its Opener, not only the famous ones.",
+  exploreOpenersPoint1: "Every Opener placed by Average Guess Count: hover a block for its stats, click a bar to list the Openers in it.",
+  exploreOpenersPoint2: "Highlight tabs for the best Openers, the myths and the bad ones, or highlight words you type.",
+  exploreOpenersPoint3: "Switch the Strategy, or show only Answer List words.",
+  exploreOpenerSplitPurpose: "See how one Opener sorts the Answer List by the Feedback it can get.",
+  exploreOpenerSplitPoint1: "Every Answer List word placed in its Feedback group under the Opener you pick, biggest group first.",
+  exploreOpenerSplitPoint2: "Five figures for the split, and Compare to put a second Opener beside it.",
+  exploreOpenerSplitPoint3: "Full screen for a wider view, and Follow this Answer on any word to see how the Solver finds it.",
+  exploreFollowPurpose: "Watch the Solver find one Answer, Guess by Guess.",
+  exploreFollowPoint1: "Pick any Answer, a Strategy, and an Opener (the Strategy's best unless you choose another).",
+  exploreFollowPoint2: "Step through the Guesses with Prev and Next; each shows the words still possible, with the Answer's group outlined.",
+  exploreFollowPoint3: "Switch to Answer's path to see the Answer's group after every Guess as one chain.",
   watchFrom: (t) => `Watch from ${t}`,
   openersIntro: "Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.",
   openersHelp:
@@ -277,6 +306,20 @@ export const TH: PageText = {
   winLabel: "Win",
   pathWin: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} Win`,
   howItWorks: "ดูว่าทำงานอย่างไร",
+  exploreIntro: "หน้าแบบโต้ตอบที่ไปไกลกว่า Article",
+  exploreBuildsOn: "ต่อยอดจาก",
+  exploreOpenersPurpose: "ดูว่า Solver ทำได้ดีแค่ไหนเมื่อใช้ทุกคำใน Guess List เป็น Opener ไม่ใช่แค่คำที่คนรู้จัก",
+  exploreOpenersPoint1: "Opener ทุกคำจัดตาม Average Guess Count เลื่อนเมาส์เหนือบล็อกเพื่อดูสถิติ หรือคลิกแท่งเพื่อดูรายชื่อ Opener ในแท่งนั้น",
+  exploreOpenersPoint2: "แท็บไฮไลต์ Opener ที่ดีที่สุด คำที่เชื่อกันผิด ๆ และ Opener ที่แย่ หรือไฮไลต์คำที่คุณพิมพ์เอง",
+  exploreOpenersPoint3: "เปลี่ยน Strategy หรือแสดงเฉพาะคำใน Answer List",
+  exploreOpenerSplitPurpose: "ดูว่า Opener หนึ่งคำแบ่ง Answer List ตาม Feedback ที่เป็นไปได้อย่างไร",
+  exploreOpenerSplitPoint1: "ทุกคำใน Answer List อยู่ในกลุ่ม Feedback ของตัวเองภายใต้ Opener ที่คุณเลือก กลุ่มใหญ่ที่สุดมาก่อน",
+  exploreOpenerSplitPoint2: "ตัวเลขห้าค่าของการแบ่ง และ Compare เพื่อวาง Opener ที่สองไว้ข้างกัน",
+  exploreOpenerSplitPoint3: "Full screen เพื่อดูให้กว้างขึ้น และ Follow this Answer ที่คำใดก็ได้เพื่อดูว่า Solver หาคำนั้นเจออย่างไร",
+  exploreFollowPurpose: "ดู Solver ค่อย ๆ หา Answer หนึ่งคำ ทีละ Guess",
+  exploreFollowPoint1: "เลือก Answer ใดก็ได้ พร้อม Strategy และ Opener (Opener ที่ดีที่สุดของ Strategy นั้น ถ้าไม่เลือกเอง)",
+  exploreFollowPoint2: "ไล่ดู Guess ด้วย Prev และ Next แต่ละ Guess แสดงคำที่ยังเป็นไปได้ และกลุ่มของ Answer จะมีกรอบ",
+  exploreFollowPoint3: "เลือกเส้นทางของ Answer เพื่อดูกลุ่มของ Answer หลังทุก Guess เป็นสายเดียว",
   watchFrom: (t) => `ดูตั้งแต่ ${t}`,
   openersIntro: "ลองใช้ทุกคำใน Guess List เป็น Opener ให้ Solver เล่นแต่ละ Game จนจบ แล้วนับว่ามี Opener กี่คำที่ได้ Average Guess Count ในแต่ละช่วง",
   openersHelp:

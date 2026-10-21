@@ -11,7 +11,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatNumber } from "@/lib/content/parts";
-import { articleLink, followPath, homePath, openerSplitPath, openersPath } from "@/lib/i18n/paths";
+import { EXPLORE_PAGES } from "@/lib/explore";
+import { articleLink, homePath } from "@/lib/i18n/paths";
 
 type Item = { slug: string; title: string; number: number; translated: boolean };
 type Group = { id: string; number: number; title: string; articles: Item[] };
@@ -79,11 +80,7 @@ export function Sidebar({ title, parts, lang = DEFAULT_LANGUAGE, translatedSlugs
             <h2 id="nav-explore" className="eyebrow mb-2">
               {text.explore}
             </h2>
-            {[
-              { href: openersPath(lang), label: text.openerDistribution },
-              { href: openerSplitPath(lang), label: text.openerSplit },
-              { href: followPath(lang), label: text.follow },
-            ].map(({ href, label }) => (
+            {EXPLORE_PAGES.map((page) => ({ href: page.path(lang), label: text[page.name] })).map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
