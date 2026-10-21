@@ -98,6 +98,8 @@ pub struct SolverState {
     path_left: Vec<usize>,
     /// The step of the Path the panel shows (that many Guesses made), or `None` to follow the latest.
     step: Option<usize>,
+    /// Whether the Path is shown or folded down to its heading (folded at first).
+    path_open: bool,
 }
 
 impl Default for SolverState {
@@ -120,6 +122,7 @@ impl Default for SolverState {
             path: Vec::new(),
             path_left: Vec::new(),
             step: None,
+            path_open: false,
         }
     }
 }
@@ -499,11 +502,13 @@ impl WordleApp {
     }
 
     /// The Path: Start, then each Guess with its Feedback and the Candidates left after it. Clicking
-    /// a step shows the solver as it was there; the step shown is highlighted.
+    /// a step shows the solver as it was there; the step shown is highlighted. Folded by default;
+    /// clicking the heading opens it.
     fn render_path(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
         let path = &self.solver.path;
         let shown = self.solver.step.unwrap_or(path.len());
+        let open = self.solver.path_open;
         let rows = (0..=path.len()).map(|step| {
             let label = match step {
                 0 => div().h(px(24.)).flex().items_center().text_sm().text_color(rgb(t.text)).child("Start"),
@@ -535,21 +540,22 @@ impl WordleApp {
             .px_3()
             .child(
                 div()
+                    .id("solver-path-toggle")
                     .flex()
                     .items_center()
-                    .justify_between()
+                    .gap_1()
+                    .cursor_pointer()
                     .text_xs()
                     .font_weight(FontWeight::BOLD)
                     .text_color(rgb(t.muted))
-                    .child("PATH")
-                    .when(self.solver.step.is_some(), |heading| {
-                        heading.child(widgets::button(t, "solver-path-latest", "Back to latest").on_click(cx.listener(|this, _, _, cx| {
-                            let latest = this.solver.path.len();
-                            this.show_step(latest, cx);
-                        })))
-                    }),
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.solver.path_open = !this.solver.path_open;
+                        cx.notify();
+                    }))
+                    .child(widgets::icon(if open { widgets::IconName::ChevronDown } else { widgets::IconName::ChevronRight }, t.muted))
+                    .child("PATH"),
             )
-            .children(rows)
+            .when(open, |section| section.children(rows.collect::<Vec<_>>()))
     }
 
     /// Every current Candidate, in Answer List order, in a grid of cells that scrolls once it is
