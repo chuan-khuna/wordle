@@ -61,9 +61,9 @@ Tests: `packages/wordle/tests/test_strategy.py` checks the stats against a brute
 
 ## Where a Candidates-only search struggles
 
-Searching only the Candidates (`scope="candidates"`, or **Search: Candidates** in the gpui Solver panel) loses on word families: Answers that share four letters, such as _ATCH, _OWER/_OVER, GRA_E, _ASTE or _ILLY. Every Candidate it can guess rules out only itself, so it works through the family one word at a time. Searching all words (`scope="global"`, **All words**) gets out of this trap by guessing a word that isn't a Candidate but tests several of the missing letters at once.
+Searching only the Candidates (`scope="candidates"`, or **Search Scope: Candidates only** in the gpui Solver panel) loses on word families: Answers that share four letters, such as _ATCH, _OWER/_OVER, GRA_E, _ASTE or _ILLY. Every Candidate it can guess rules out only itself, so it works through the family one word at a time. Searching all words (`scope="global"`, **All words**) gets out of this trap by guessing a word that isn't a Candidate but tests several of the missing letters at once.
 
-These numbers come from playing every Answer with the panel's Candidates search: the highest Expected Information each turn, ties to the alphabetically first word, Opener RAISE. With the Answers set and the Valid guesses set the results are the same, because both try only Candidates. The Guess Distribution over the 2,315 Answers:
+These numbers come from playing every Answer with the panel's Candidates search: the highest Expected Information each turn, ties to the alphabetically first word, Opener RAISE. With the Answer List and the Guess List as the Guess Pool the results are the same after the Opener, because both try only Candidates (here both open with RAISE). The Guess Distribution over the 2,315 Answers:
 
 | Guess Count | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |

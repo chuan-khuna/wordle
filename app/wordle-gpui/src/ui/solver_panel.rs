@@ -330,10 +330,10 @@ impl WordleApp {
             .px_3()
             .child(setting_row(
                 t,
-                "Words",
+                "Guess Pool",
                 segmented(
                     t,
-                    [(MatrixSet::Answers, "Answers"), (MatrixSet::ValidGuesses, "Valid guesses")],
+                    [(MatrixSet::Answers, "Answer List"), (MatrixSet::ValidGuesses, "Guess List")],
                     self.solver.set,
                     |this: &mut WordleApp, set, cx: &mut Context<WordleApp>| this.set_matrix_set(set, cx),
                     cx,
@@ -341,10 +341,10 @@ impl WordleApp {
             ))
             .child(setting_row(
                 t,
-                "Search",
+                "Search Scope",
                 segmented(
                     t,
-                    [(SearchMode::Candidates, "Candidates"), (SearchMode::Everything, "All words")],
+                    [(SearchMode::Candidates, "Candidates only"), (SearchMode::Everything, "All words")],
                     self.solver.mode,
                     |this: &mut WordleApp, mode, cx: &mut Context<WordleApp>| this.set_search_mode(mode, cx),
                     cx,
@@ -352,10 +352,10 @@ impl WordleApp {
             ))
             .child(setting_row(
                 t,
-                "Rank by",
+                "Ranking",
                 segmented(
                     t,
-                    [(Rank::Bits, "Information"), (Rank::ExpectedCandidates, "Candidates")],
+                    [(Rank::Bits, "Expected Information"), (Rank::ExpectedCandidates, "Expected Candidates")],
                     self.solver.by,
                     |this: &mut WordleApp, by, cx: &mut Context<WordleApp>| this.set_rank(by, cx),
                     cx,
@@ -363,11 +363,11 @@ impl WordleApp {
             ))
             .child(div().text_xs().text_color(rgb(t.muted)).child(match (opener, self.solver.set, self.solver.mode) {
                 (true, MatrixSet::Answers, _) => "The Opener: tries every Answer List word.",
-                (true, MatrixSet::ValidGuesses, _) => "The Opener: tries every allowed word.",
+                (true, MatrixSet::ValidGuesses, _) => "The Opener: tries every Guess List word.",
                 (false, MatrixSet::Answers, SearchMode::Candidates) => "Tries Answer List words that could still be the Answer.",
                 (false, MatrixSet::Answers, SearchMode::Everything) => "Tries every Answer List word, even ruled-out ones.",
                 (false, MatrixSet::ValidGuesses, SearchMode::Candidates) => "Tries words that could still be the Answer.",
-                (false, MatrixSet::ValidGuesses, SearchMode::Everything) => "Tries every allowed word, even ones that can't win.",
+                (false, MatrixSet::ValidGuesses, SearchMode::Everything) => "Tries every Guess List word, even ones that can't win.",
             }))
             .child(div().text_xs().text_color(rgb(t.muted)).child(format!("Strategy: {}", strategy.name)));
 
@@ -656,9 +656,9 @@ impl WordleApp {
     }
 }
 
-/// A label on the left and its control on the right.
+/// A label above its control (the Ranking's two names don't fit beside a label in the panel's width).
 fn setting_row(t: &Theme, label: &'static str, control: impl IntoElement) -> Div {
-    div().flex().items_center().justify_between().child(div().text_xs().text_color(rgb(t.subtle)).child(label)).child(control)
+    div().flex().flex_col().items_start().gap_1().child(div().text_xs().text_color(rgb(t.subtle)).child(label)).child(control)
 }
 
 /// Two or more buttons joined together, one of them chosen.

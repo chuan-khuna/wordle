@@ -15,9 +15,10 @@ export const RANKING_NAMES: Record<Rank, string> = { bits: "Expected Information
 export const POOL_NAMES: Record<Pool, string> = { answers: "Answer List", guesses: "Guess List" };
 export const SCOPE_NAMES: Record<Scope, string> = { candidates: "Candidates only", global: "All words" };
 
-const RANKS: Rank[] = ["bits", "expected"];
-const POOLS: Pool[] = ["answers", "guesses"];
-const SCOPES: Scope[] = ["candidates", "global"];
+/** Each choice's options, in the order the pickers show them. */
+export const RANKS: readonly Rank[] = ["bits", "expected"];
+export const POOLS: readonly Pool[] = ["answers", "guesses"];
+export const SCOPES: readonly Scope[] = ["candidates", "global"];
 
 /** Every combination, ordered by Ranking, then Guess Pool, then Search Scope (the package's `STRATEGIES`). */
 export const STRATEGIES: readonly StrategyInfo[] = RANKS.flatMap((by) =>
@@ -44,3 +45,10 @@ export const STRATEGY_GROUPS: readonly { by: Rank; label: string; strategies: St
   label: RANKING_NAMES[by],
   strategies: STRATEGIES.filter((s) => s.by === by),
 }));
+
+/** The Strategy a Ranking, Guess Pool and Search Scope make up (every combination is one). */
+export const strategyFor = (by: Rank, pool: Pool, scope: Scope): StrategyInfo =>
+  STRATEGIES.find((s) => s.by === by && s.pool === pool && s.scope === scope)!;
+
+/** The Strategy with this id, or undefined. */
+export const strategyById = (id: string): StrategyInfo | undefined => STRATEGIES.find((s) => s.id === id);

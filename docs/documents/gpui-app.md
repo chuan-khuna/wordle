@@ -210,24 +210,24 @@ While **Precompute matrices…** or **Precompute guess counts…** runs, the boa
 
 **Show solver**, the panel button at the right end of the status bar, or ⌘⌥B (Ctrl+Alt+B, Zed's right dock) opens the solver on the right. Like the sidebar, the window widens by its width so the board keeps its size.
 
-It ranks Suggestions by Expected Information (how many bits a Guess is expected to tell us about the Answer, averaged over its Feedback Split: `-Σ p·log2 p`, with every Candidate equally likely) or by Expected Candidates (the expected size of the next Candidate Set, `Σ n²/N`, fewer is better). Before the first Guess the top one is the best Opener, ranked over the whole Guess Pool whatever **Search** says (`SearchMode::for_guess`, as the Python package's `benchmark.best_opener`): the Search Scope applies from the second Guess on. The scoring is in `solver/strategy.rs`; the panel is `ui/solver_panel.rs`.
+It ranks Suggestions by Expected Information (how many bits a Guess is expected to tell us about the Answer, averaged over its Feedback Split: `-Σ p·log2 p`, with every Candidate equally likely) or by Expected Candidates (the expected size of the next Candidate Set, `Σ n²/N`, fewer is better). Before the first Guess the top one is the best Opener, ranked over the whole Guess Pool whatever **Search Scope** says (`SearchMode::for_guess`, as the Python package's `benchmark.best_opener`): the Search Scope applies from the second Guess on. The scoring is in `solver/strategy.rs`; the panel is `ui/solver_panel.rs`.
 
-Three settings make up a Strategy:
+Three settings make up a Strategy, named as in the glossary and the website's Strategy picker. Each is a row of joined buttons with its label above it (beside it, the Ranking's two names would not fit in the panel's 340 px):
 
 | Setting | Choice | Guesses tried |
 | --- | --- | --- |
-| **Words** (the Guess Pool) | Answers | Answer List words, read from `answers_vs_answers.npy` |
-| | Valid guesses | Every Guess List word, read from `guesses_vs_answers.npy` |
-| **Search** (the Search Scope, from the second Guess on) | Candidates | Only words that could still be the Answer |
+| **Guess Pool** | Answer List | Answer List words, read from `answers_vs_answers.npy` |
+| | Guess List | Every Guess List word, read from `guesses_vs_answers.npy` |
+| **Search Scope** (from the second Guess on) | Candidates only | Only words that could still be the Answer |
 | | All words | Every word in the Guess Pool, even ruled-out ones, which can split the Candidates better |
-| **Rank by** (the Ranking) | Information | Most Expected Information first |
-| | Candidates | Fewest Expected Candidates first |
+| **Ranking** | Expected Information | Most Expected Information first |
+| | Expected Candidates | Fewest Expected Candidates first |
 
-Every combination is one of the Python package's eight Strategies (see [Solver Strategy](solver-strategy.md#the-eight-strategies)), and the panel names it under the settings ("Strategy: Expected Information, Answer List, All words"). The id is `<ranking>-<pool>-<scope>`, such as `bits-answers-candidates` or `expected-guesses-all`. With Candidates, Answers and Valid guesses differ only in the Opener (after it, every Candidate is on the Answer List). `STRATEGIES` (with each id, display name and Guess Count Matrix `path`) and `Strategy::named` in `solver/strategy.rs` list them; the note under the settings says the Opener tries the whole Guess Pool before the first Guess.
+Every combination is one of the Python package's eight Strategies (see [Solver Strategy](solver-strategy.md#the-eight-strategies)), and the panel names it under the settings ("Strategy: Expected Information, Answer List, All words"). The id is `<ranking>-<pool>-<scope>`, such as `bits-answers-candidates` or `expected-guesses-all`. With Candidates only, the Answer List and the Guess List differ only in the Opener (after it, every Candidate is on the Answer List). `STRATEGIES` (with each id, display name and Guess Count Matrix `path`) and `Strategy::named` in `solver/strategy.rs` list them; the note under the settings says the Opener tries the whole Guess Pool before the first Guess.
 
-The order is the Python Solver's (`Solver.rank`), tested against values it printed: compare the ranked measure rounded to nine decimals (as `np.round` does, ties to even), then a Candidate before a non-Candidate, then the other measure (also rounded), then alphabetical order. With two Candidates or fewer left, only Candidates are tried whatever **Search** says (`Solver.suggest`).
+The order is the Python Solver's (`Solver.rank`), tested against values it printed: compare the ranked measure rounded to nine decimals (as `np.round` does, ties to even), then a Candidate before a non-Candidate, then the other measure (also rounded), then alphabetical order. With two Candidates or fewer left, only Candidates are tried whatever **Search Scope** says (`Solver.suggest`).
 
-With **Candidates**, word families such as _ATCH or GRA_E can take seven or eight Guesses; [solver-strategy.md](solver-strategy.md
+With **Candidates only**, word families such as _ATCH or GRA_E can take seven or eight Guesses; [solver-strategy.md](solver-strategy.md
 
 From top to bottom the panel shows the settings, the Candidates, the best guess and then the search field with its chart.
 
@@ -237,7 +237,7 @@ From top to bottom the panel shows the settings, the Candidates, the best guess 
 - **Guess Distribution** (before the first Guess only): under the Feedback Split, the charted word's Average Guess Count (over every Answer, Losses at their real count, as `summary.json` has it), its Losses and its rank under the panel's Strategy, then one bar per Guess Count 1 to 6 and a last **Lost** bar, drawn like the Feedback Split's bars (won bars in the Correct colour, Lost in the error colour). It reads the entry of the Strategy the settings name, by its version 2 id. When there is nothing to show, a short note says why instead: no `summary.json` yet; a Strategy the summary doesn't cover yet (a version 1 summary, keyed by the old ids, covers none until it is migrated); a Guess List word under an Answer List Strategy, whose matrix has no row for it; an Opener whose row isn't finished; or an unreadable file. The first, second and fourth add a **Precompute guess counts…** button. After the first Guess none of this shows, not even the note, so it is never taken for a statement about the State.
 - **Search field:** a click sends the keys there instead of the board. Enter, Escape or a click on the board sends them back. ⌘V (Ctrl+V) pastes letters into it.
 
-The matrices are read from `precompute-cache/feedback/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Valid guesses × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
+The matrices are read from `precompute-cache/feedback/` (see [feedback-matrices.md](feedback-matrices.md)) the first time a set is used, on a background thread, and kept until the app closes. If they're missing or don't match the word lists, the panel says so and offers **Precompute matrices…**; when that finishes the panel reads them again. Ranking runs on a background thread, split across the cores: the full Guess List × All words search is 14,855 × 2,315 cells. The chart needs no matrix: it scores its word against the Candidates directly.
 
 The Guess Count results come from `precompute-cache/guess-counts/summary.json`, whichever tool wrote it (see [Summary format](guess-count-matrix.md#summary-format)), not the matrices. It is read on a background thread each time the panel opens and again when a [Precompute guess counts](#precompute-guess-counts) run ends (finished, stopped or failed, since each rewrites the summary). `solver/opener_results.rs` has the logic, with no window: `read_summary` reads the file into a lookup by Strategy id and word (`Missing`, `Unreadable` or `Read`), and `lookup(summary, strategy, word, guesses made)` decides what shows: `Hidden` after the first Guess, `Found`, or one of the reasons above (`NoSummary`, `NotComputed`, `NotInPool`, `Unfinished`, `Unreadable`), each with its `note()`. `opener_results_tests.rs` checks them on a small summary file, and that the real `precompute-cache/` summary (if any) reads.
 

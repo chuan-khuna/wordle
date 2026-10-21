@@ -3,11 +3,10 @@
 import { Suspense, useEffect, useId, useState } from "react";
 import { type Pool, type Rank, type Scope, type SolveResponse, getSolve } from "@/lib/api";
 import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
-import { POOL_NAMES, RANKING_NAMES, SCOPE_NAMES } from "@/lib/strategies";
+import { POOLS, RANKS, SCOPES } from "@/lib/strategies";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { StrategyPicker } from "./StrategyPicker";
 import { Tile } from "./Tile";
 import { WidgetFrame } from "./ui";
 import { WordRow, cleanWord } from "./WordRow";
@@ -15,9 +14,6 @@ import { useWidgetParam } from "./useWidgetParam";
 
 type Result = { key: string; data: SolveResponse | null; error: string | null };
 
-const POOLS: Pool[] = ["guesses", "answers"];
-const SCOPES: Scope[] = ["global", "candidates"];
-const RANKS: Rank[] = ["bits", "expected"];
 const oneOf = <T extends string>(value: string, allowed: readonly T[], fallback: T): T =>
   (allowed as readonly string[]).includes(value) ? (value as T) : fallback;
 
@@ -93,8 +89,8 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     const t = e.target as HTMLElement;
-    // Not while typing, nor inside a Select (its trigger or its open list, which is portalled but still bubbles here).
-    if (t.tagName === "INPUT" || t.closest("[role=combobox], [role=listbox]") || e.altKey || e.ctrlKey || e.metaKey) return;
+    // Not while typing, nor inside the Strategy picker, whose radio groups move with the arrow keys.
+    if (t.tagName === "INPUT" || t.closest("[role=radiogroup]") || e.altKey || e.ctrlKey || e.metaKey) return;
     if (e.key === "ArrowLeft") {
       e.preventDefault();
       go(step - 1);
@@ -109,10 +105,15 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
       <div onKeyDown={onKeyDown}>
         {/* The Answer's five tiles need their own line: in a quarter-width cell they ran under the first option. */}
         <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={current?.error} />
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SelectField id={`${uid}-p`} label="Guess Pool" value={pool} onChange={setPool} options={POOLS.map((p): [string, string] => [p, POOL_NAMES[p]])} />
-          <SelectField id={`${uid}-s`} label="Search Scope" value={scope} onChange={setScope} options={SCOPES.map((c): [string, string] => [c, SCOPE_NAMES[c]])} />
-          <SelectField id={`${uid}-b`} label="Ranking" value={by} onChange={setBy} options={RANKS.map((r): [string, string] => [r, RANKING_NAMES[r]])} />
+        <div className="mt-3">
+          <StrategyPicker
+            value={{ pool, scope, by }}
+            onChange={(next) => {
+              setPool(next.pool);
+              setScope(next.scope);
+              setBy(next.by);
+            }}
+          />
         </div>
 
         <div aria-live="polite" className="mt-3 min-h-6 text-sm">
@@ -185,39 +186,5 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
         )}
       </div>
     </WidgetFrame>
-  );
-}
-
-function SelectField({
-  id,
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: [string, string][];
-}) {
-  return (
-    <div>
-      <Label htmlFor={id} className="mb-1 block text-sm font-normal text-meta">
-        {label}
-      </Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent position="popper">
-          {options.map(([v, name]) => (
-            <SelectItem key={v} value={v}>
-              {name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   );
 }

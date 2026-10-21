@@ -7,13 +7,13 @@ import { type Bar, chartDomain, filterOpeners, groupOpeners, labelRows } from "@
 import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/opener-column";
 import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/opener-lookup";
 import { OPENER_PRESETS, presetFor } from "@/lib/opener-presets";
-import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, STRATEGY_GROUPS, shortName } from "@/lib/strategies";
+import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, strategyById, strategyFor } from "@/lib/strategies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseHighlight } from "./OpenerTable";
+import { StrategyPicker } from "./StrategyPicker";
 import { WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
@@ -94,60 +94,42 @@ function Distribution({
   const answersOnly = isOn(answersText);
   const controls = isOn(controlsText);
   const activePreset = presetFor([...parseHighlight(highlightText)]);
+  // The picker shows the Strategy the id names; an unknown id (from the URL) shows the default and is left to the API to refuse.
+  const picked = strategyById(strategy) ?? strategyById(DEFAULT_STRATEGY)!;
   const { data, error, loading } = useLoad(`guess-counts:${strategy}`, (signal) => getGuessCounts(strategy, signal));
 
   return (
     <WidgetFrame title="Opener Distribution">
       {controls && (
-        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)_auto]">
-          <div>
-            <Label htmlFor={`${uid}-strategy`} className="mb-1 block text-sm font-normal text-meta">
-              Strategy
-            </Label>
-            <Select value={strategy} onValueChange={setStrategy}>
-              <SelectTrigger id={`${uid}-strategy`} className="w-full">
-                {/* The trigger names the whole Strategy; the items leave out the Ranking, which is their group's label. */}
-                <SelectValue>{STRATEGIES.find((s) => s.id === strategy)?.name ?? strategy}</SelectValue>
-              </SelectTrigger>
-              <SelectContent position="popper">
-                {STRATEGY_GROUPS.map((g) => (
-                  <SelectGroup key={g.by}>
-                    <SelectLabel>{g.label}</SelectLabel>
-                    {g.strategies.map((s) => (
-                      <SelectItem key={s.id} value={s.id} textValue={s.name}>
-                        {shortName(s)}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor={`${uid}-highlight`} className="mb-1 block text-sm font-normal text-meta">
-              Highlight words, comma separated
-            </Label>
-            <Input
-              id={`${uid}-highlight`}
-              value={highlightText}
-              onChange={(e) => setHighlightText(e.target.value)}
-              placeholder="tarse, raise, crane"
-              autoComplete="off"
-              spellCheck={false}
-              className="font-mono"
-            />
-          </div>
-          <div className="flex items-end">
-            <Label htmlFor={`${uid}-answers`} className="h-9 cursor-pointer gap-2 text-sm font-normal text-text">
-              <input
-                id={`${uid}-answers`}
-                type="checkbox"
-                checked={answersOnly}
-                onChange={(e) => setAnswersText(String(e.target.checked))}
-                className="h-4 w-4 accent-accent"
+        <div className="mb-3 grid gap-3">
+          <StrategyPicker value={picked} onChange={(next) => setStrategy(strategyFor(next.by, next.pool, next.scope).id)} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <div>
+              <Label htmlFor={`${uid}-highlight`} className="mb-1 block text-sm font-normal text-meta">
+                Highlight words, comma separated
+              </Label>
+              <Input
+                id={`${uid}-highlight`}
+                value={highlightText}
+                onChange={(e) => setHighlightText(e.target.value)}
+                placeholder="tarse, raise, crane"
+                autoComplete="off"
+                spellCheck={false}
+                className="font-mono"
               />
-              Answer List only
-            </Label>
+            </div>
+            <div className="flex items-end">
+              <Label htmlFor={`${uid}-answers`} className="h-9 cursor-pointer gap-2 text-sm font-normal text-text">
+                <input
+                  id={`${uid}-answers`}
+                  type="checkbox"
+                  checked={answersOnly}
+                  onChange={(e) => setAnswersText(String(e.target.checked))}
+                  className="h-4 w-4 accent-accent"
+                />
+                Only Openers on the Answer List
+              </Label>
+            </div>
           </div>
         </div>
       )}
@@ -316,7 +298,7 @@ function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCoun
                   <td className="px-2 py-1 font-mono text-text">{l.opener.average_guess_count.toFixed(3)}</td>
                   <td className="whitespace-nowrap px-2 py-1 text-left text-meta">
                     {(l.hundredths / 100).toFixed(2)} ·{" "}
-                    {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden by Answer List only"}
+                    {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden: not on the Answer List"}
                   </td>
                 </tr>
               ))}
@@ -353,7 +335,7 @@ function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCoun
                   )}
                   <span>
                     Bar {bar} ·{" "}
-                    {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden by Answer List only"}
+                    {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden: not on the Answer List"}
                   </span>
                 </p>
               </li>

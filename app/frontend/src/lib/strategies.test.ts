@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { DEFAULT_STRATEGY, STRATEGIES, STRATEGY_GROUPS, shortName } from "@/lib/strategies";
+import { DEFAULT_STRATEGY, STRATEGIES, STRATEGY_GROUPS, shortName, strategyById, strategyFor } from "@/lib/strategies";
 
 test("the eight Strategies have the package's ids, names and order", () => {
   expect(STRATEGIES.map((s) => [s.id, s.name])).toEqual([
@@ -27,4 +27,10 @@ test("the groups are the two Rankings, four Strategies each, named without the R
     "Guess List, Candidates only",
     "Guess List, All words",
   ]);
+});
+
+test("strategyFor names every combination, and strategyById finds it back", () => {
+  expect(strategyFor("expected", "answers", "global").id).toBe("expected-answers-all");
+  for (const s of STRATEGIES) expect(strategyById(s.id)).toBe(strategyFor(s.by, s.pool, s.scope));
+  expect(strategyById("bits-all")).toBeUndefined();
 });
