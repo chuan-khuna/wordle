@@ -1,4 +1,4 @@
-import { SeriesPage } from "@/components/SeriesPage";
+import { SeriesPage } from "@/components/views/SeriesPage";
 
 /** The Thai home page. */
 export default function ThaiHome() {

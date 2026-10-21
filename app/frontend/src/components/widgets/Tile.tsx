@@ -1,4 +1,4 @@
-import { MARK_NAMES, type Mark } from "@/lib/feedback";
+import { MARK_NAMES, type Mark } from "@/lib/wordle/feedback";
 
 const PAINT = ["bg-absent text-on-absent", "bg-present text-on-present", "bg-correct text-on-correct"] as const;
 const BASE =

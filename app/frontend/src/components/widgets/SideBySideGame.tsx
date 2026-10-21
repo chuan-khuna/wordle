@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { type SolveResponse, getSolve } from "@/lib/api";
-import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
-import { MAX_BOARDS, MIN_BOARDS, beatsFor, nextStrategy, parseAnswers, parseBoards, revealed } from "@/lib/side-by-side";
-import { RANKING_NAMES, STRATEGY_GROUPS, shortName, strategyById } from "@/lib/strategies";
+import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
+import { MAX_BOARDS, MIN_BOARDS, beatsFor, nextStrategy, parseAnswers, parseBoards, revealed } from "@/lib/widgets/side-by-side";
+import { RANKING_NAMES, STRATEGY_GROUPS, shortName, strategyById } from "@/lib/wordle/strategies";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tile } from "./Tile";

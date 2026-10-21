@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { postCandidates } from "@/lib/api";
-import { marksToString } from "@/lib/feedback";
-import { rowsFromState } from "@/lib/state-board";
-import { type Row, formatState } from "@/lib/widget-state";
+import { marksToString } from "@/lib/wordle/feedback";
+import { rowsFromState } from "@/lib/widgets/state-board";
+import { type Row, formatState } from "@/lib/widgets/widget-state";
 import { StateBoard } from "./StateBoard";
 import { WidgetFrame } from "./ui";
 import { useParamInitial, useParamSync } from "./useWidgetParam";

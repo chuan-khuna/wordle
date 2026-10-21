@@ -1,8 +1,8 @@
 "use client";
 
 import type { SplitGroup } from "@/lib/api";
-import { parseMarks } from "@/lib/feedback";
-import { chanceSentence, wordsText } from "@/lib/split-chart";
+import { parseMarks } from "@/lib/wordle/feedback";
+import { chanceSentence, wordsText } from "@/lib/widgets/split-chart";
 import { Tile } from "./Tile";
 
 /**

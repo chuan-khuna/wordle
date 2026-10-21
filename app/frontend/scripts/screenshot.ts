@@ -19,9 +19,9 @@ import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { chromium, type Page } from "playwright";
-import { parseArticleFiles } from "../src/lib/parts";
-import { DEFAULT_THEME, STORAGE_KEY } from "../src/lib/theme-script";
-import { THEMES } from "../src/lib/themes";
+import { parseArticleFiles } from "../src/lib/content/parts";
+import { DEFAULT_THEME, STORAGE_KEY } from "../src/lib/theme/theme-script";
+import { THEMES } from "../src/lib/theme/themes";
 
 const root = path.resolve(import.meta.dir, "..");
 

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Label } from "@/components/ui/label";
-import { WORD_LENGTH } from "@/lib/feedback";
+import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { cn } from "@/lib/utils";
 
 /** Lowercase letters only, at most five. */

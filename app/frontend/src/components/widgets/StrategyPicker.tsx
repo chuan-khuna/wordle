@@ -3,7 +3,7 @@
 import { RadioGroup } from "radix-ui";
 import { useId } from "react";
 import type { Pool, Rank, Scope } from "@/lib/api";
-import { POOL_NAMES, POOLS, RANKING_NAMES, RANKS, SCOPE_NAMES, SCOPES, strategyFor } from "@/lib/strategies";
+import { POOL_NAMES, POOLS, RANKING_NAMES, RANKS, SCOPE_NAMES, SCOPES, strategyFor } from "@/lib/wordle/strategies";
 
 export interface StrategyChoice {
   pool: Pool;

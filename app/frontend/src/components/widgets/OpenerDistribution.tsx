@@ -3,11 +3,11 @@
 import { XIcon } from "lucide-react";
 import { type MouseEvent, type PointerEvent, Suspense, memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { type GuessCountOpener, type GuessCountsResponse, getGuessCounts } from "@/lib/api";
-import { type Bar, chartDomain, filterOpeners, groupOpeners, labelRows } from "@/lib/opener-bars";
-import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/opener-column";
-import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/opener-lookup";
-import { OPENER_PRESETS, presetFor } from "@/lib/opener-presets";
-import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, strategyById, strategyFor } from "@/lib/strategies";
+import { type Bar, chartDomain, filterOpeners, groupOpeners, labelRows } from "@/lib/widgets/opener-bars";
+import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/widgets/opener-column";
+import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/widgets/opener-lookup";
+import { OPENER_PRESETS, presetFor } from "@/lib/widgets/opener-presets";
+import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, strategyById, strategyFor } from "@/lib/wordle/strategies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

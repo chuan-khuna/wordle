@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Literata, Source_Code_Pro, Source_Sans_3, Source_Serif_4 } from "next/font/google";
-import { Board, Boards } from "@/components/Boards";
-import { Letter } from "@/components/Letter";
-import { MarginNote } from "@/components/MarginNote";
-import { Mark } from "@/components/Mark";
-import { Term } from "@/components/Term";
-import { Word } from "@/components/Word";
+import { Board, Boards } from "@/components/prose/Boards";
+import { Letter } from "@/components/prose/Letter";
+import { MarginNote } from "@/components/prose/MarginNote";
+import { Mark } from "@/components/prose/Mark";
+import { Term } from "@/components/prose/Term";
+import { Word } from "@/components/prose/Word";
 import { BenchmarkChart } from "@/components/widgets/BenchmarkChart";
 import { type Pairing, TypeLabSwitch } from "./TypeLabSwitch";
 

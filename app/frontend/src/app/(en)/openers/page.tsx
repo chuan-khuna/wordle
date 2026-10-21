@@ -1,4 +1,4 @@
-import { OpenersView } from "@/components/OpenersView";
+import { OpenersView } from "@/components/views/OpenersView";
 
 export const metadata = { title: "Opener Distribution" };
 

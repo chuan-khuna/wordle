@@ -2,10 +2,10 @@
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
 import { type SplitResponse, postSplit } from "@/lib/api";
-import { WORD_LENGTH } from "@/lib/feedback";
-import { rowsFromState } from "@/lib/state-board";
-import { orderGroups } from "@/lib/split-chart";
-import { formatState } from "@/lib/widget-state";
+import { WORD_LENGTH } from "@/lib/wordle/feedback";
+import { rowsFromState } from "@/lib/widgets/state-board";
+import { orderGroups } from "@/lib/widgets/split-chart";
+import { formatState } from "@/lib/widgets/widget-state";
 import { SplitChart } from "./SplitChart";
 import { SplitWords } from "./SplitWords";
 import { StateBoard } from "./StateBoard";

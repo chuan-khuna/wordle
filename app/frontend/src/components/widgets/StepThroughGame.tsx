@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useId, useState } from "react";
 import { type Pool, type Rank, type Scope, type SolveResponse, getSolve } from "@/lib/api";
-import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
-import { POOLS, RANKS, SCOPES } from "@/lib/strategies";
+import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
+import { POOLS, RANKS, SCOPES } from "@/lib/wordle/strategies";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StrategyPicker } from "./StrategyPicker";

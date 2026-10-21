@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useId, useState } from "react";
 import { getFeedback } from "@/lib/api";
-import { MARK_NAMES, WORD_LENGTH, marksToString, traceFeedback } from "@/lib/feedback";
+import { MARK_NAMES, WORD_LENGTH, marksToString, traceFeedback } from "@/lib/wordle/feedback";
 import { Tile } from "./Tile";
 import { WidgetFrame } from "./ui";
 import { WordRow, cleanWord } from "./WordRow";

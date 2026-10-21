@@ -7,7 +7,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
 import { type BenchmarkStrategy, getBenchmark, type Pool, type Scope } from "@/lib/api";
-import { POOL_NAMES, RANKING_NAMES, SCOPE_NAMES, STRATEGIES, STRATEGY_GROUPS, type StrategyInfo, shortName, strategyById } from "@/lib/strategies";
+import { POOL_NAMES, RANKING_NAMES, SCOPE_NAMES, STRATEGIES, STRATEGY_GROUPS, type StrategyInfo, shortName, strategyById } from "@/lib/wordle/strategies";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./ui";

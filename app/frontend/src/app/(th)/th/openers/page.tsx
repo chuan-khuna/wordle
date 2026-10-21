@@ -1,5 +1,5 @@
-import { OpenersView } from "@/components/OpenersView";
-import { pageText } from "@/lib/page-text";
+import { OpenersView } from "@/components/views/OpenersView";
+import { pageText } from "@/lib/i18n/page-text";
 
 export const metadata = { title: pageText("th").openerDistribution };
 

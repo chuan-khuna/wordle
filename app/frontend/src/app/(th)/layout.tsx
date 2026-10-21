@@ -1,5 +1,5 @@
-import { SiteDocument, siteMetadata } from "@/components/SiteDocument";
-import { thaiFonts } from "@/lib/fonts-thai";
+import { SiteDocument, siteMetadata } from "@/components/site/SiteDocument";
+import { thaiFonts } from "@/lib/theme/fonts-thai";
 
 // The Thai route group's root layout: `<html lang="th">` and the Thai font, which English pages never load.
 export const metadata = siteMetadata("th");

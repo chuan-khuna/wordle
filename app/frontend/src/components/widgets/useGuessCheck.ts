@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { checkGuess } from "@/lib/api";
-import { WORD_LENGTH } from "@/lib/feedback";
+import { WORD_LENGTH } from "@/lib/wordle/feedback";
 
 /**
  * Ask the API whether a five-letter word is on the Guess List, a moment after the fifth letter is typed.

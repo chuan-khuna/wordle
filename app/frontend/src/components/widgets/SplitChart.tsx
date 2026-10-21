@@ -1,8 +1,8 @@
 "use client";
 
 import type { SplitGroup } from "@/lib/api";
-import { parseMarks } from "@/lib/feedback";
-import { barPercent, chartTitle, orderGroups, percent, wordsText } from "@/lib/split-chart";
+import { parseMarks } from "@/lib/wordle/feedback";
+import { barPercent, chartTitle, orderGroups, percent, wordsText } from "@/lib/widgets/split-chart";
 import { Tile } from "./Tile";
 
 const WIN = "22222";

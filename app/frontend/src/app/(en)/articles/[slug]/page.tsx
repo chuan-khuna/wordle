@@ -1,5 +1,5 @@
-import { ArticleView } from "@/components/ArticleView";
-import { content } from "@/lib/content";
+import { ArticleView } from "@/components/views/ArticleView";
+import { content } from "@/lib/content/content";
 
 export const dynamicParams = false;
 

@@ -3,9 +3,9 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { checkGuess } from "@/lib/api";
-import { WORD_LENGTH } from "@/lib/feedback";
-import { backspace, canType, cycleMark, enterGuess, isWin, startOver, typeLetter } from "@/lib/state-board";
-import { type Row } from "@/lib/widget-state";
+import { WORD_LENGTH } from "@/lib/wordle/feedback";
+import { backspace, canType, cycleMark, enterGuess, isWin, startOver, typeLetter } from "@/lib/widgets/state-board";
+import { type Row } from "@/lib/widgets/widget-state";
 import { Tile } from "./Tile";
 import { WordRow } from "./WordRow";
 import { useGuessCheck } from "./useGuessCheck";
