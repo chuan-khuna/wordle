@@ -64,6 +64,22 @@ export type PageText = {
   thaiName: string;
   /** The short note beside the toggle when the page has no Thai version yet. */
   notInThai: string;
+  /** The Strategy picker: its rows' labels, the "Strategy:" label, and the accessible name of a row's info button ("About Guess Pool"). */
+  guessPoolLabel: string;
+  searchScopeLabel: string;
+  rankingLabel: string;
+  strategyLabel: string;
+  aboutChoice: (label: string) => string;
+  /** The info card of each row: one line on what the choice decides, then one line for each option in the order the row shows them. */
+  guessPoolTip: string;
+  guessPoolAnswers: string;
+  guessPoolGuesses: string;
+  searchScopeTip: string;
+  searchScopeCandidates: string;
+  searchScopeAll: string;
+  rankingTip: string;
+  rankingBits: string;
+  rankingExpected: string;
 };
 
 export const EN: PageText = {
@@ -111,6 +127,20 @@ export const EN: PageText = {
   englishName: "English",
   thaiName: "Thai (ไทย)",
   notInThai: "Not in Thai yet",
+  guessPoolLabel: "Guess Pool",
+  searchScopeLabel: "Search Scope",
+  rankingLabel: "Ranking",
+  strategyLabel: "Strategy",
+  aboutChoice: (label) => `About ${label}`,
+  guessPoolTip: "Which words the Solver may guess from, the Opener included.",
+  guessPoolAnswers: "Answer List: only words that can be the Answer.",
+  guessPoolGuesses: "Guess List: every word Wordle accepts.",
+  searchScopeTip: "Which of those words the Solver considers for each Guess after the Opener.",
+  searchScopeCandidates: "Candidates only: words that can still be the Answer.",
+  searchScopeAll: "All words: any word in the Guess Pool, even one that can't be the Answer, if it splits the Candidates best.",
+  rankingTip: "How the Solver picks the best Guess among those it considers.",
+  rankingBits: "Expected Information: the highest wins.",
+  rankingExpected: "Expected Candidates: the lowest wins.",
 };
 
 /** Glossary terms (Series, Part, Opener, ...) stay in English inside the Thai sentences. */
@@ -159,6 +189,20 @@ export const TH: PageText = {
   englishName: "อังกฤษ (English)",
   thaiName: "ไทย",
   notInThai: "หน้านี้ยังไม่มีภาษาไทย",
+  guessPoolLabel: "Guess Pool",
+  searchScopeLabel: "Search Scope",
+  rankingLabel: "Ranking",
+  strategyLabel: "Strategy",
+  aboutChoice: (label) => `เกี่ยวกับ ${label}`,
+  guessPoolTip: "คำที่ Solver เลือกทายได้ รวมถึง Opener",
+  guessPoolAnswers: "Answer List: เฉพาะคำที่เป็น Answer ได้",
+  guessPoolGuesses: "Guess List: ทุกคำที่ Wordle รับ",
+  searchScopeTip: "คำใน Guess Pool ที่ Solver พิจารณาในแต่ละ Guess หลัง Opener",
+  searchScopeCandidates: "Candidates only: เฉพาะคำที่ยังเป็น Answer ได้",
+  searchScopeAll: "All words: คำใดก็ได้ใน Guess Pool แม้เป็น Answer ไม่ได้ ถ้าแบ่ง Candidates ได้ดีที่สุด",
+  rankingTip: "วิธีที่ Solver เลือก Guess ที่ดีที่สุดจากคำที่พิจารณา",
+  rankingBits: "Expected Information: ค่าสูงสุดชนะ",
+  rankingExpected: "Expected Candidates: ค่าต่ำสุดชนะ",
 };
 
 const TABLES: Record<Language, PageText> = { en: EN, th: TH };
