@@ -36,3 +36,51 @@ export function statesPerRow(solve: Pick<SolveResponse, "steps">): { guess: stri
 export function answerGroup(split: Pick<SplitResponse, "split">, answer: string): SplitGroup | undefined {
   return split.split.find((g) => g.words.includes(answer));
 }
+
+/**
+ * Which of two splits has the better value of each of the five figures, in the page's order (Groups, Largest group,
+ * Single-word groups, Expected Information, Expected Candidates): `true` when `split` is better, `false` when it is
+ * worse, `null` on a tie. Better is more groups, a smaller largest group, more single-word groups, more Expected
+ * Information, fewer Expected Candidates.
+ */
+export function betterFigures(
+  split: Pick<SplitResponse, "groups" | "largest_group" | "split" | "bits" | "expected_candidates">,
+  other: Pick<SplitResponse, "groups" | "largest_group" | "split" | "bits" | "expected_candidates">,
+): (boolean | null)[] {
+  const verdict = (mine: number, theirs: number, higherIsBetter: boolean): boolean | null =>
+    mine === theirs ? null : mine > theirs === higherIsBetter;
+  return [
+    verdict(split.groups, other.groups, true),
+    verdict(split.largest_group, other.largest_group, false),
+    verdict(singleWordGroups(split.split), singleWordGroups(other.split), true),
+    verdict(split.bits, other.bits, true),
+    verdict(split.expected_candidates, other.expected_candidates, false),
+  ];
+}
+
+/** One node of the Follow an Answer graph: the Answer's group after a Guess. `words` is what is drawn, `more` how many are left out. */
+export interface ChainNode {
+  number: number;
+  guess: string;
+  marks: string;
+  count: number;
+  words: string[];
+  more: number;
+  /** The last node of a solved Game: just the Answer. */
+  win: boolean;
+}
+
+/**
+ * The nodes of the graph, one per Guess. Node k holds the Answer's group after Guess k (`groups[k]`, `undefined` while its
+ * split is loading, which gives no words). A group of more than `limit` words shows its first `limit` alphabetically, the
+ * Answer kept among them, and counts the rest in `more`.
+ */
+export function chainNodes(solve: SolveResponse, groups: readonly (SplitGroup | undefined)[], limit = 40): ChainNode[] {
+  return solve.steps.map((s, k) => {
+    const win = solve.solved && k === solve.steps.length - 1;
+    const all = win ? [solve.answer] : [...(groups[k]?.words ?? [])].sort();
+    let words = all.slice(0, limit);
+    if (all.length > limit && !words.includes(solve.answer) && all.includes(solve.answer)) words = [...words.slice(0, -1), solve.answer].sort();
+    return { number: s.number, guess: s.guess, marks: s.marks, count: win ? 1 : s.candidates_after, words, more: all.length - words.length, win };
+  });
+}

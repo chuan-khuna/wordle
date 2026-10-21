@@ -1,7 +1,8 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import { Suspense, useEffect, useId, useMemo, useState } from "react";
+import { RadioGroup } from "radix-ui";
+import { Suspense, useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { type SolveResponse, type SplitResponse, getSolve, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
@@ -9,6 +10,7 @@ import { pageText } from "@/lib/i18n/page-text";
 import { answerGroup, statesPerRow } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
 import { POOLS, RANKS, SCOPES } from "@/lib/wordle/strategies";
+import { FollowGraph } from "./FollowGraph";
 import { SplitGroups } from "./SplitGroups";
 import { StrategyPicker } from "./StrategyPicker";
 import { Tile } from "./Tile";
@@ -28,6 +30,7 @@ const oneOf = <T extends string>(value: string, allowed: readonly T[], fallback:
  * `by`, `opener`, `step`), one `GET /api/solve` for the Game, then `POST /api/split` for the row shown. Row k is
  * `SplitGroups` of Guess k over the Candidate Set before it, with the Answer's group outlined and the Answer in strong
  * text; the last row is the Win. A sticky strip lists the Guesses with their Feedback; Prev, Next and the Guesses change `step`.
+ * `view=graph` shows the whole Game as a chain instead (`FollowGraph`), from the splits of every row.
  */
 export function Follow({ lang = DEFAULT_LANGUAGE }: { lang?: Language }) {
   return (
@@ -46,6 +49,8 @@ function Game({ lang }: { lang: Language }) {
   const [byText, setBy] = useWidgetParam(undefined, "by", "bits");
   const [openerText, setOpener] = useWidgetParam(undefined, "opener", "");
   const [stepText, setStepText] = useWidgetParam(undefined, "step", "1");
+  const [viewText, setView] = useWidgetParam(undefined, "view", "rows");
+  const view = oneOf(viewText, ["rows", "graph"], "rows");
   const pool = oneOf(poolText, POOLS, "guesses");
   const scope = oneOf(scopeText, SCOPES, "global");
   const by = oneOf(byText, RANKS, "bits");
@@ -82,6 +87,7 @@ function Game({ lang }: { lang: Language }) {
   const step = total === 0 ? 1 : Math.min(Math.max(Number.isFinite(parsed) ? parsed : 1, 1), total);
   const go = (n: number) => setStepText(String(Math.min(Math.max(n, 1), Math.max(total, 1))));
   const shown = data?.steps[step - 1];
+  const rowSplits = useRowSplits(data, view === "graph" ? Array.from({ length: total }, (_, k) => k + 1) : [step]);
 
   // The API's message belongs to the input it is about.
   const openerError = current?.error?.startsWith("opener") ? current.error : null;
@@ -135,9 +141,22 @@ function Game({ lang }: { lang: Language }) {
 
       {data && shown && (
         <>
-          <GuessStrip data={data} step={step} go={go} lang={lang} />
+          <GuessStrip data={data} step={step} go={go} lang={lang} view={view} setView={setView} />
           {!data.solved && <p className="text-sm text-error">{text.notSolved}</p>}
-          <Row data={data} step={step} lang={lang} />
+          {view === "graph" ? (
+            <Graph
+              data={data}
+              step={step}
+              lang={lang}
+              rowSplits={rowSplits}
+              onPick={(n) => {
+                go(n);
+                setView("rows");
+              }}
+            />
+          ) : (
+            <Row data={data} step={step} lang={lang} rowSplits={rowSplits} />
+          )}
         </>
       )}
     </div>
@@ -148,7 +167,21 @@ function Game({ lang }: { lang: Language }) {
  * The sticky strip: Prev and Next, then each Guess with its Feedback Marks as small Tiles. The current Guess is marked
  * (`aria-current="step"`); a Guess is a button that jumps to its row.
  */
-function GuessStrip({ data, step, go, lang }: { data: SolveResponse; step: number; go: (n: number) => void; lang: Language }) {
+function GuessStrip({
+  data,
+  step,
+  go,
+  lang,
+  view,
+  setView,
+}: {
+  data: SolveResponse;
+  step: number;
+  go: (n: number) => void;
+  lang: Language;
+  view: string;
+  setView: (v: string) => void;
+}) {
   const text = pageText(lang);
   const total = data.guesses;
   return (
@@ -183,33 +216,87 @@ function GuessStrip({ data, step, go, lang }: { data: SolveResponse; step: numbe
         <span className="text-sm text-meta" aria-live="polite">
           {text.guessOf(step, total)}
         </span>
+        <RadioGroup.Root
+          aria-label={text.viewLabel}
+          orientation="horizontal"
+          value={view}
+          onValueChange={setView}
+          className="inline-flex gap-0.5 rounded-sm border border-rule p-0.5 sm:ml-auto"
+        >
+          {(["rows", "graph"] as const).map((v) => (
+            <RadioGroup.Item
+              key={v}
+              value={v}
+              className="cursor-pointer rounded-xs px-2.5 py-1 text-sm whitespace-nowrap text-meta hover:bg-highlight-low hover:text-text data-[state=checked]:bg-highlight-med data-[state=checked]:text-text"
+            >
+              {v === "rows" ? text.viewRows : text.viewGraph}
+            </RadioGroup.Item>
+          ))}
+        </RadioGroup.Root>
       </div>
     </div>
   );
 }
 
-/** The row for `step`: its heading and `SplitGroups` of the Guess over the Candidate Set before it (asked of the API once per row). */
-function Row({ data, step, lang }: { data: SolveResponse; step: number; lang: Language }) {
-  const text = pageText(lang);
-  const states = useMemo(() => statesPerRow(data), [data]);
-  const shown = data.steps[step - 1];
-  const rowKey = `${data.answer}|${data.steps[0].guess}|${step}|${data.steps.slice(0, step).map((s) => s.guess).join(",")}`;
-  const [splits, setSplits] = useState<Record<string, SplitResponse>>({});
-  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
-  const have = rowKey in splits;
-  useEffect(() => {
-    if (have) return;
-    const ctl = new AbortController();
-    postSplit(shown.guess, states[step - 1], ctl.signal).then(
-      (split) => setSplits((prev) => ({ ...prev, [rowKey]: split })),
-      (e: Error) => {
-        if (e.name !== "AbortError") setFailure({ key: rowKey, message: e.message });
-      },
-    );
-    return () => ctl.abort();
-  }, [have, rowKey, shown.guess, states, step]);
+type RowSplits = { splits: Record<string, SplitResponse>; failures: Record<string, string>; keyOf: (n: number) => string };
 
-  const split = splits[rowKey];
+/**
+ * The splits of the rows in `steps` (1-based), kept in a cache by row so that a row, or the graph, never asks twice.
+ * Row k is the split of Guess k over the State before it, so its key holds the Guesses up to k only. Missing rows are
+ * asked of `POST /api/split` in parallel.
+ */
+function useRowSplits(data: SolveResponse | null, steps: number[]): RowSplits {
+  const [splits, setSplits] = useState<Record<string, SplitResponse>>({});
+  const [failures, setFailures] = useState<Record<string, string>>({});
+  const keyOf = (n: number) => (data ? `${data.answer}|${data.steps.slice(0, n).map((s) => s.guess).join(",")}` : "");
+  const have = steps.filter((n) => keyOf(n) in splits).join(",");
+  const wanted = steps.join(",");
+  useEffect(() => {
+    if (!data) return;
+    const ctl = new AbortController();
+    const states = statesPerRow(data);
+    for (const n of wanted.split(",").filter(Boolean).map(Number)) {
+      const key = keyOf(n);
+      if (key in splits) continue;
+      postSplit(data.steps[n - 1].guess, states[n - 1], ctl.signal).then(
+        (split) => setSplits((prev) => ({ ...prev, [key]: split })),
+        (e: Error) => {
+          if (e.name !== "AbortError") setFailures((prev) => ({ ...prev, [key]: e.message }));
+        },
+      );
+    }
+    return () => ctl.abort();
+    // `splits` is read only through `have`, so a split arriving does not restart the others.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, wanted, have]);
+  return { splits, failures, keyOf };
+}
+
+/** The graph: the Answer's group of every row. */
+function Graph({ data, step, lang, rowSplits, onPick }: { data: SolveResponse; step: number; lang: Language; rowSplits: RowSplits; onPick: (n: number) => void }) {
+  const groups = data.steps.map((s) => {
+    const split = rowSplits.splits[rowSplits.keyOf(s.number)];
+    return split && answerGroup(split, data.answer);
+  });
+  const failure = data.steps.map((s) => rowSplits.failures[rowSplits.keyOf(s.number)]).find(Boolean);
+  return (
+    <div className="space-y-4">
+      <FollowGraph data={data} groups={groups} step={step} onPick={onPick} lang={lang} />
+      {failure && (
+        <p role="alert" className="text-sm text-error">
+          {failure}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** The row for `step`: its heading and `SplitGroups` of the Guess over the Candidate Set before it. */
+function Row({ data, step, lang, rowSplits }: { data: SolveResponse; step: number; lang: Language; rowSplits: RowSplits }) {
+  const text = pageText(lang);
+  const shown = data.steps[step - 1];
+  const rowKey = rowSplits.keyOf(step);
+  const split = rowSplits.splits[rowKey];
   const group = split && answerGroup(split, data.answer);
   const win = step === data.guesses && data.solved;
   return (
@@ -219,9 +306,9 @@ function Row({ data, step, lang }: { data: SolveResponse; step: number; lang: La
       </h2>
       {split ? (
         <SplitGroups split={split} lang={lang} highlightCode={group?.code} highlightWord={data.answer} />
-      ) : failure?.key === rowKey ? (
+      ) : rowSplits.failures[rowKey] ? (
         <p role="alert" className="text-sm text-error">
-          {failure.message}
+          {rowSplits.failures[rowKey]}
         </p>
       ) : (
         <p className="text-sm text-meta">{text.splittingCandidates}</p>

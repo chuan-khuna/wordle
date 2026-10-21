@@ -38,6 +38,7 @@ export type PageText = {
   expectedInformationFigure: string;
   expectedCandidatesFigure: string;
   bits: string;
+  betterFigure: string;
   /** The accessible name of the list of blocks (the Guess's name), of one block's Feedback, and a group's size in its head. */
   splitGroupsLabel: (guess: string) => string;
   feedbackLabel: string;
@@ -68,6 +69,14 @@ export type PageText = {
   notSolved: string;
   /** What a Follow an Answer row says while its split loads. */
   splittingCandidates: string;
+  /** The Rows / Graph switch, the graph (its accessible name), its first node, a node (a button) and its "+N more". */
+  viewLabel: string;
+  viewRows: string;
+  viewGraph: string;
+  graphLabel: (answer: string) => string;
+  graphStart: (total: number) => string;
+  graphNode: (number: number, guess: string, count: number) => string;
+  graphMore: (count: number) => string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
   /** "Watch from 4:10": a link into the Series video. */
@@ -138,6 +147,7 @@ export const EN: PageText = {
   expectedInformationFigure: "Expected Information",
   expectedCandidatesFigure: "Expected Candidates",
   bits: "bits",
+  betterFigure: "better",
   feedbackLabel: "Feedback",
   words: (n) => `${n} word${n === 1 ? "" : "s"}`,
   follow: "Follow an Answer",
@@ -159,6 +169,13 @@ export const EN: PageText = {
   winHeading: (n, g) => `Guess ${n}: ${g.toUpperCase()} is the Win`,
   notSolved: "The Solver did not find the Answer.",
   splittingCandidates: "Splitting the Candidates…",
+  viewLabel: "View",
+  viewRows: "Rows",
+  viewGraph: "Graph",
+  graphLabel: (a) => `The Game for ${a.toUpperCase()}, from the Answer List to the Answer`,
+  graphStart: (t) => `Answer List · ${t} words`,
+  graphNode: (n, g, c) => `Guess ${n}: ${g.toUpperCase()}, ${c} ${c === 1 ? "Candidate" : "Candidates"} left`,
+  graphMore: (c) => `+${c} more`,
   howItWorks: "How it works",
   watchFrom: (t) => `Watch from ${t}`,
   openersIntro: "Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.",
@@ -220,6 +237,7 @@ export const TH: PageText = {
   expectedInformationFigure: "Expected Information",
   expectedCandidatesFigure: "Expected Candidates",
   bits: "bits",
+  betterFigure: "ดีกว่า",
   feedbackLabel: "Feedback",
   words: (n) => `${n} คำ`,
   follow: "Follow an Answer",
@@ -241,6 +259,13 @@ export const TH: PageText = {
   winHeading: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} คือ Win`,
   notSolved: "Solver หา Answer ไม่เจอ",
   splittingCandidates: "กำลังแบ่ง Candidates…",
+  viewLabel: "มุมมอง",
+  viewRows: "Rows",
+  viewGraph: "Graph",
+  graphLabel: (a) => `Game ของ ${a.toUpperCase()} ตั้งแต่ Answer List ถึง Answer`,
+  graphStart: (t) => `Answer List · ${t} คำ`,
+  graphNode: (n, g, c) => `Guess ที่ ${n}: ${g.toUpperCase()} เหลือ ${c} Candidate`,
+  graphMore: (c) => `+อีก ${c}`,
   howItWorks: "ดูว่าทำงานอย่างไร",
   watchFrom: (t) => `ดูตั้งแต่ ${t}`,
   openersIntro: "ลองใช้ทุกคำใน Guess List เป็น Opener ให้ Solver เล่นแต่ละ Game จนจบ แล้วนับว่ามี Opener กี่คำที่ได้ Average Guess Count ในแต่ละช่วง",

@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import type { SolveResponse, SplitResponse } from "@/lib/api";
+import type { SolveResponse, SplitGroup, SplitResponse } from "@/lib/api";
 import solveFixture from "@/lib/widgets/fixtures/solve-watch-crane.json";
 import splitFixture from "@/lib/widgets/fixtures/split-moist-after-crane.json";
-import { answerGroup, columnCount, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
+import { answerGroup, betterFigures, chainNodes, columnCount, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
 
 const group = (code: number, count: number, words: string[] = []) => ({ marks: String(code), code, count, words });
 
@@ -81,4 +81,39 @@ test("answerGroup finds the group holding the Answer, and its Feedback is the Gu
 
 test("answerGroup is undefined when no group holds the word", () => {
   expect(answerGroup(row2, "zzzzz")).toBeUndefined();
+});
+
+test("betterFigures marks the better value of each pair, null on a tie", () => {
+  const split = (groups: number, largest: number, singles: number, bits: number, left: number) => ({
+    groups,
+    largest_group: largest,
+    split: Array.from({ length: singles }, () => group(1, 1)),
+    bits,
+    expected_candidates: left,
+  });
+  const a = split(100, 50, 20, 5.5, 60);
+  const b = split(80, 90, 20, 4.5, 90);
+  expect(betterFigures(a, b)).toEqual([true, true, null, true, true]);
+  expect(betterFigures(b, a)).toEqual([false, false, null, false, false]);
+});
+
+test("chainNodes: one node per Guess, the last a Win holding only the Answer", () => {
+  const groups = solve.steps.map((_, k) => (k === 1 ? answerGroup(row2, "watch") : undefined));
+  const nodes = chainNodes(solve, groups);
+  expect(nodes.map((n) => n.guess)).toEqual(solve.steps.map((s) => s.guess));
+  expect(nodes[1].count).toBe(solve.steps[1].candidates_after);
+  expect(nodes[1].words).toEqual([...(groups[1]?.words ?? [])].sort());
+  expect(nodes[0].words).toEqual([]);
+  const last = nodes[nodes.length - 1];
+  expect(last).toMatchObject({ win: true, count: 1, words: ["watch"], more: 0 });
+});
+
+test("chainNodes: a big group is cut to the limit, alphabetically, with the Answer kept and the rest counted", () => {
+  const words = Array.from({ length: 100 }, (_, i) => `a${String(i).padStart(4, "0")}`).concat("watch");
+  const big = { ...group(words.length, 1), words } as SplitGroup;
+  const [node] = chainNodes({ ...solve, solved: false, steps: [solve.steps[0]] }, [big], 10);
+  expect(node.words).toHaveLength(10);
+  expect(node.words).toContain("watch");
+  expect(node.words.slice(0, 9)).toEqual(words.slice(0, 9));
+  expect(node.more).toBe(words.length - 10);
 });

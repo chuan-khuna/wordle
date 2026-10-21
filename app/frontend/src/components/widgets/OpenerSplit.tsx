@@ -1,14 +1,17 @@
 "use client";
 
 import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Maximize2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { followPath } from "@/lib/i18n/paths";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatLeft } from "@/lib/widgets/split-chart";
-import { singleWordGroups } from "@/lib/widgets/split-groups";
+import { betterFigures, singleWordGroups } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
+import { cn } from "@/lib/utils";
 import { SplitGroups } from "./SplitGroups";
 import { WordRow, cleanWord } from "./WordRow";
 import { useGuessCheck } from "./useGuessCheck";
@@ -68,6 +71,9 @@ function useOpenerSplit(word: string, enabled = true) {
   return { g, check, data, failed, waiting: ready && !failed && data?.word !== g };
 }
 
+/** A toolbar cell beside the fields: as tall as the tiles and level with them (below the label row, `h-6`). */
+const ACTION_CELL = "mt-6 flex h-12 items-center sm:h-14";
+
 function Split({ lang }: { lang: Language }) {
   const text = pageText(lang);
   const uid = useId();
@@ -87,7 +93,8 @@ function Split({ lang }: { lang: Language }) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+      {/* One toolbar: the fields, then the actions, which line up with the middle of the tiles (with Compare on, Full screen drops to a row of its own below `xl`, where the fields fill the row). */}
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <OpenerInput uid={`${uid}-opener`} label={text.openerLabel} value={first.g} onChange={setOpener} state={first} lang={lang} />
         {comparing && (
           <OpenerInput
@@ -101,18 +108,24 @@ function Split({ lang }: { lang: Language }) {
           />
         )}
         {!comparing && (
-          <Button type="button" variant="default" onClick={() => setComparing(true)} className="self-end">
-            {text.compare}
-          </Button>
+          <div className={ACTION_CELL}>
+            <Button type="button" onClick={() => setComparing(true)}>
+              <Plus aria-hidden="true" />
+              {text.compare}
+            </Button>
+          </div>
         )}
-        <Button type="button" variant="default" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="hidden self-end lg:inline-flex aria-pressed:bg-highlight-med">
-          {text.fullScreen}
-        </Button>
+        <div className={cn(ACTION_CELL, "hidden lg:ml-auto lg:flex", comparing && "max-xl:mt-0 max-xl:h-9")}>
+          <Button type="button" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="aria-pressed:bg-highlight-med">
+            <Maximize2 aria-hidden="true" />
+            {text.fullScreen}
+          </Button>
+        </div>
       </div>
       {/* The two splits sit side by side from `xl`; each SplitGroups measures its own column. */}
       <div className={comparing ? "grid grid-cols-1 gap-x-10 gap-y-10 xl:grid-cols-2" : undefined}>
-        {first.data && <OpenerResult split={first.data} lang={lang} showSplit={!fitted} />}
-        {comparing && second.data && <OpenerResult split={second.data} lang={lang} showSplit={!fitted} />}
+        {first.data && <OpenerResult split={first.data} other={comparing ? second.data : null} lang={lang} showSplit={!fitted} />}
+        {comparing && second.data && <OpenerResult split={second.data} other={first.data} lang={lang} showSplit={!fitted} />}
       </div>
       {fitted && fittedSplits.length > 0 && <FitView splits={fittedSplits} lang={lang} onExit={() => setFit("")} />}
     </div>
@@ -140,13 +153,18 @@ function OpenerInput({
   const text = pageText(lang);
   const { g, check, failed, waiting } = state;
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-        <WordRow id={uid} label={label} value={value} onChange={onChange} error={check.error} />
+    <div className="space-y-1">
+      <Label htmlFor={uid} className="eyebrow flex h-6 items-center text-meta">
+        {label}
+      </Label>
+      <div className="flex items-start gap-2">
+        <WordRow id={uid} label={label} hideLabel value={value} onChange={onChange} error={check.error} />
         {onRemove && (
-          <Button type="button" variant="default" onClick={onRemove}>
-            {text.removeCompare}
-          </Button>
+          <div className="flex h-12 items-center sm:h-14">
+            <Button type="button" variant="ghost" size="icon-sm" aria-label={text.removeCompare} onClick={onRemove}>
+              <X aria-hidden="true" />
+            </Button>
+          </div>
         )}
       </div>
       <div aria-live="polite" className="min-h-6 text-sm">
@@ -162,35 +180,61 @@ function OpenerInput({
   );
 }
 
-/** One Opener's five figures and its `SplitGroups` (a column of the page when Compare is on). */
-function OpenerResult({ split, lang, showSplit }: { split: SplitResponse; lang: Language; showSplit: boolean }) {
+/** One Opener's stat card and its `SplitGroups` (a column of the page when Compare is on). */
+function OpenerResult({ split, other, lang, showSplit }: { split: SplitResponse; other: SplitResponse | null; lang: Language; showSplit: boolean }) {
   return (
     <section className="min-w-0 space-y-4">
-      <SplitFigures split={split} lang={lang} />
+      <SplitFigures split={split} other={other} lang={lang} />
       {showSplit && <SplitGroups split={split} lang={lang} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />}
     </section>
   );
 }
 
-/** The five figures of a split, formatted as the Feedback Split explorer's chart title does (`formatLeft`, bits to two decimals). */
-function SplitFigures({ split, lang }: { split: SplitResponse; lang: Language }) {
+/**
+ * A card for one split: the Opener in the tile font, then the five figures in equal cells (formatted as the Feedback
+ * Split explorer's chart title does: `formatLeft`, bits to two decimals). Labels have a two-line height so the values
+ * share a baseline. With `other` (Compare on), the better value of each pair gets a small marker and the worse one is quiet.
+ */
+function SplitFigures({ split, other, lang }: { split: SplitResponse; other: SplitResponse | null; lang: Language }) {
   const text = pageText(lang);
+  const better = other ? betterFigures(split, other) : null;
   const figures = [
-    [text.groupsFigure, String(split.groups)],
-    [text.largestGroupFigure, String(split.largest_group)],
-    [text.singleWordGroupsFigure, String(singleWordGroups(split.split))],
-    [text.expectedInformationFigure, `${split.bits.toFixed(2)} ${text.bits}`],
-    [text.expectedCandidatesFigure, formatLeft(split.expected_candidates)],
+    { name: text.groupsFigure, value: String(split.groups), unit: "" },
+    { name: text.largestGroupFigure, value: String(split.largest_group), unit: "" },
+    { name: text.singleWordGroupsFigure, value: String(singleWordGroups(split.split)), unit: "" },
+    { name: text.expectedInformationFigure, value: split.bits.toFixed(2), unit: text.bits },
+    { name: text.expectedCandidatesFigure, value: formatLeft(split.expected_candidates), unit: "" },
   ];
   return (
-    <dl aria-label={text.figuresLabel(split.word)} className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
-      {figures.map(([name, value]) => (
-        <div key={name}>
-          <dt className="text-xs text-meta">{name}</dt>
-          <dd className="text-lg tabular-nums text-text">{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="@container overflow-hidden rounded-md border border-rule bg-highlight-low">
+      <div className="border-b border-rule px-3 py-2">
+        <span className="font-tile text-base font-bold tracking-widest uppercase text-text">{split.word}</span>
+      </div>
+      <dl aria-label={text.figuresLabel(split.word)} className="-mt-px -ml-px grid grid-cols-2 @md:grid-cols-5">
+        {figures.map(({ name, value, unit }, i) => {
+          const verdict = better?.[i];
+          return (
+            <div key={name} className="relative flex flex-col justify-between gap-1 border-t last:col-span-2 @md:last:col-span-1 border-l border-rule px-2.5 py-2.5">
+              <dt className="min-h-8 pr-2 font-sans text-xs leading-4 text-meta">
+                {name}
+                {verdict === true && (
+                  <>
+                    <span aria-hidden="true" className="absolute top-2 right-1.5 text-[0.625rem] leading-none text-accent">
+                      ▲
+                    </span>
+                    <span className="sr-only">{text.betterFigure}</span>
+                  </>
+                )}
+              </dt>
+              <dd className={cn("font-sans text-lg leading-7 tabular-nums", verdict === false ? "text-meta" : "text-text")}>
+                {value}
+                {unit && <span className="ml-1 text-xs text-meta">{unit}</span>}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
   );
 }
 
