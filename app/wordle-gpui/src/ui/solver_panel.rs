@@ -1,6 +1,8 @@
-//! The solver on the right: the Suggestions with the highest Expected Information (the best Opener
-//! before the first Guess), and a chart of how the picked word would split the Candidates. The
-//! scoring is in `solver/strategy.rs`; this file holds the panel's state and draws it.
+//! The solver on the right: the Suggestions under the Strategy its **Words**, **Search** and **Rank
+//! by** settings name (one of the eight), and a chart of how the picked word would split the
+//! Candidates. Before the first Guess the Suggestions are the best Openers, ranked over the whole
+//! Guess Pool whatever **Search** says. The scoring is in `solver/strategy.rs`; this file holds the
+//! panel's state and draws it.
 //!
 //! In Solver mode it works from the State entered by hand instead of the Game's.
 //!
@@ -168,7 +170,8 @@ impl WordleApp {
         self.solver.suggestions = Suggestions::Computing;
         let serial = self.solver.serial;
         let candidates = self.solver.candidates.clone();
-        let mode = self.solver.mode;
+        // The Opener comes from the whole Guess Pool; Search applies from the second Guess on.
+        let mode = self.solver.mode.for_guess(self.shown_guesses().len());
         let by = self.solver.by;
         let ranking = cx.background_spawn(async move { strategy::suggest(&matrix, &candidates, mode, by, SUGGESTIONS) });
         cx.spawn(async move |this, cx| {
@@ -358,16 +361,15 @@ impl WordleApp {
                     cx,
                 ),
             ))
-            .child(div().text_xs().text_color(rgb(t.muted)).child(match (self.solver.set, self.solver.mode) {
-                (MatrixSet::Answers, SearchMode::Candidates) => "Tries Answer List words that could still be the Answer.",
-                (MatrixSet::Answers, SearchMode::Everything) => "Tries every Answer List word, even ruled-out ones.",
-                (MatrixSet::ValidGuesses, SearchMode::Candidates) => "Tries words that could still be the Answer.",
-                (MatrixSet::ValidGuesses, SearchMode::Everything) => "Tries every allowed word, even ones that can't win.",
+            .child(div().text_xs().text_color(rgb(t.muted)).child(match (opener, self.solver.set, self.solver.mode) {
+                (true, MatrixSet::Answers, _) => "The Opener: tries every Answer List word.",
+                (true, MatrixSet::ValidGuesses, _) => "The Opener: tries every allowed word.",
+                (false, MatrixSet::Answers, SearchMode::Candidates) => "Tries Answer List words that could still be the Answer.",
+                (false, MatrixSet::Answers, SearchMode::Everything) => "Tries every Answer List word, even ruled-out ones.",
+                (false, MatrixSet::ValidGuesses, SearchMode::Candidates) => "Tries words that could still be the Answer.",
+                (false, MatrixSet::ValidGuesses, SearchMode::Everything) => "Tries every allowed word, even ones that can't win.",
             }))
-            .child(div().text_xs().text_color(rgb(t.muted)).child(match strategy {
-                Some(strategy) => format!("Strategy: {}", strategy.name),
-                None => "No named Strategy, but it still ranks.".to_string(),
-            }));
+            .child(div().text_xs().text_color(rgb(t.muted)).child(format!("Strategy: {}", strategy.name)));
 
         let status = div()
             .px_3()
@@ -606,7 +608,7 @@ impl WordleApp {
         let lookup = self.opener_lookup(word);
         let section = div().flex().flex_col().gap_2().px_3().pt_3();
         if let Some(result) = lookup.result() {
-            let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by).map_or("", |strategy| strategy.id);
+            let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by).id;
             return Some(self.render_guess_distribution(section, result, strategy));
         }
         let text = lookup.note()?;

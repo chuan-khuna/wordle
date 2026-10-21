@@ -6,7 +6,7 @@
 //!
 //! The library reports what happens as events (`matrix::Event`, `guess_count_matrix::Event`); the app
 //! applies them here, with the time since the run started. The log keeps the last `MAX_LOG_LINES`
-//! lines (a full Guess Count run writes one per Opener, 14,855 × 4) and counts the ones it dropped.
+//! lines (a full Guess Count run writes one per Opener, 2 × (2 × 2,315 + 2 × 14,855)) and counts the ones it dropped.
 
 use std::collections::VecDeque;
 use std::io;
@@ -90,9 +90,9 @@ pub enum Tone {
 /// A part of a log line drawn in a colour of its own, over the colour of its `Tone`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Span {
-    /// A Strategy id, such as `bits-candidates`.
+    /// A Strategy id, such as `bits-answers-candidates`.
     Strategy,
-    /// The Opener after a Strategy id, such as `salet` in `bits-candidates salet:`.
+    /// The Opener after a Strategy id, such as `salet` in `bits-guesses-candidates salet:`.
     Opener,
     /// A number: a count (`14,855`), an average (`3.528`) or a size (`34.4`).
     Number,
@@ -186,9 +186,11 @@ impl RunState {
         state
     }
 
-    /// A Precompute guess counts run of `strategies` on `threads` threads, `rows` Openers each.
-    pub fn guess_counts(threads: usize, strategies: &[&'static Strategy], rows: usize) -> Self {
-        let items = strategies.iter().map(|strategy| Item { id: strategy.id.into(), detail: strategy.name.into(), done: 0, total: rows, phase: Phase::Waiting, base: 0 }).collect();
+    /// A Precompute guess counts run of `strategies` on `threads` threads, one row per word of each
+    /// Strategy's Guess Pool.
+    pub fn guess_counts(threads: usize, strategies: &[&'static Strategy]) -> Self {
+        let item = |strategy: &&'static Strategy| Item { id: strategy.id.into(), detail: strategy.name.into(), done: 0, total: strategy.set.size(), phase: Phase::Waiting, base: 0 };
+        let items = strategies.iter().map(item).collect();
         let mut state = Self::new(Kind::GuessCounts, threads, items);
         let ids: Vec<&str> = strategies.iter().map(|strategy| strategy.id).collect();
         state.push(Duration::ZERO, Tone::Info, format!("Precompute guess counts on {} into {GUESS_COUNTS_FOLDER}: {}", threads_label(threads), ids.join(", ")));

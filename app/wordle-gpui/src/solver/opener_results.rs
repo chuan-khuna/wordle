@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 
 use super::guess_count_matrix::{self, SUMMARY_FILE};
-use super::strategy::{STRATEGIES, Strategy};
+use super::strategy::{MatrixSet, Strategy};
+use crate::engine::words::word_lists;
 use crate::engine::game::MAX_GUESSES as GUESS_LIMIT;
 
 /// The command that fills the Guess Count Matrices, as the menu names it.
@@ -142,29 +143,30 @@ pub enum Lookup<'a> {
     /// No `summary.json`.
     NoSummary,
     Unreadable(&'a str),
-    /// The settings make no named Strategy, so no Guess Count Matrix exists for them.
-    NoMatrix,
     /// The summary has nothing for this Strategy.
     NotComputed(&'static Strategy),
+    /// The word is not in the Strategy's Guess Pool (a Guess List word under an Answer List
+    /// Strategy), so its matrix has no row for it.
+    NotInPool { strategy: &'static Strategy, word: &'a str },
     /// The Strategy is there, but this Opener's row is not finished.
     Unfinished { strategy: &'static Strategy, word: &'a str, complete_rows: usize },
 }
 
-/// What to show for `word` under `strategy` (None for settings with no named Strategy), with
+/// What to show for `word` under `strategy` (the one the panel's settings name), with
 /// `guesses_made` Guesses on the board. `summary` is None until it has been read.
-pub fn lookup<'a>(summary: Option<&'a SummaryFile>, strategy: Option<&'static Strategy>, word: &'a str, guesses_made: usize) -> Lookup<'a> {
+pub fn lookup<'a>(summary: Option<&'a SummaryFile>, strategy: &'static Strategy, word: &'a str, guesses_made: usize) -> Lookup<'a> {
     if guesses_made > 0 {
         return Lookup::Hidden;
     }
-    let Some(strategy) = strategy else {
-        return Lookup::NoMatrix;
-    };
     let summary = match summary {
         None => return Lookup::Reading,
         Some(SummaryFile::Missing) => return Lookup::NoSummary,
         Some(SummaryFile::Unreadable(error)) => return Lookup::Unreadable(error),
         Some(SummaryFile::Read(summary)) => summary,
     };
+    if strategy.set == MatrixSet::Answers && word_lists().answers.binary_search(&word).is_err() {
+        return Lookup::NotInPool { strategy, word };
+    }
     match (summary.get(strategy.id, word), summary.complete_rows(strategy.id)) {
         (Some(result), _) => Lookup::Found(result),
         (None, None) => Lookup::NotComputed(strategy),
@@ -173,7 +175,7 @@ pub fn lookup<'a>(summary: Option<&'a SummaryFile>, strategy: Option<&'static St
 }
 
 /// The Average Guess Count of `word` for the Suggestions list, when it is known and may show.
-pub fn average_guess_count(summary: Option<&SummaryFile>, strategy: Option<&'static Strategy>, word: &str, guesses_made: usize) -> Option<f64> {
+pub fn average_guess_count(summary: Option<&SummaryFile>, strategy: &'static Strategy, word: &str, guesses_made: usize) -> Option<f64> {
     lookup(summary, strategy, word, guesses_made).result().map(|result| result.average_guess_count)
 }
 
@@ -191,11 +193,8 @@ impl Lookup<'_> {
             Lookup::Hidden | Lookup::Reading | Lookup::Found(_) => return None,
             Lookup::NoSummary => format!("No guess counts yet. Run {COMMAND} to fill them."),
             Lookup::Unreadable(error) => format!("Couldn't read the guess counts' summary.json: {error}"),
-            Lookup::NoMatrix => {
-                let named: Vec<&str> = STRATEGIES.iter().map(|strategy| strategy.id).collect();
-                format!("These settings have no Guess Count Matrix; only the named Strategies do ({}).", named.join(", "))
-            }
             Lookup::NotComputed(strategy) => format!("No guess counts for {} yet. Run {COMMAND} to fill them.", strategy.id),
+            Lookup::NotInPool { strategy, word } => format!("{} isn't on the Answer List, so {} has no row for it.", word.to_uppercase(), strategy.id),
             Lookup::Unfinished { strategy, word, complete_rows } => {
                 format!("{}'s row in {} isn't finished ({complete_rows} Openers are). Run {COMMAND} to fill the rest.", word.to_uppercase(), strategy.id)
             }

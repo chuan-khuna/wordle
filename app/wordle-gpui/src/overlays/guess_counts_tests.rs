@@ -15,7 +15,19 @@ fn every_strategy_is_on_at_first_and_enter_runs_them() {
     match picker().press("enter") {
         Outcome::Run { threads, strategies } => {
             assert_eq!(threads, 8);
-            assert_eq!(ids(&strategies), ["bits-candidates", "expected-candidates", "bits-all", "expected-all"]);
+            assert_eq!(
+                ids(&strategies),
+                [
+                    "bits-answers-candidates",
+                    "bits-answers-all",
+                    "bits-guesses-candidates",
+                    "bits-guesses-all",
+                    "expected-answers-candidates",
+                    "expected-answers-all",
+                    "expected-guesses-candidates",
+                    "expected-guesses-all"
+                ]
+            );
         }
         other => panic!("{other:?}"),
     }
@@ -27,16 +39,17 @@ fn space_turns_the_highlighted_strategy_off_and_on() {
     picker.press("down");
     picker.press("down");
     picker.press("space");
-    assert_eq!(ids(&picker.strategies()), ["bits-candidates", "expected-candidates", "expected-all"]);
+    assert_eq!(picker.strategies().len(), 7);
+    assert!(!ids(&picker.strategies()).contains(&"bits-guesses-candidates"));
     picker.press("space");
-    assert_eq!(picker.strategies().len(), 4);
+    assert_eq!(picker.strategies().len(), 8);
 }
 
 #[test]
 fn up_and_down_wrap_around() {
     let mut picker = picker();
     picker.press("up");
-    assert_eq!(picker.cursor, 3);
+    assert_eq!(picker.cursor, 7);
     picker.press("down");
     assert_eq!(picker.cursor, 0);
 }
@@ -44,7 +57,7 @@ fn up_and_down_wrap_around() {
 #[test]
 fn with_no_strategy_chosen_enter_does_nothing() {
     let mut picker = picker();
-    for index in 0..4 {
+    for index in 0..STRATEGIES.len() {
         picker.toggle(index);
     }
     assert_eq!(picker.press("enter"), Outcome::None);
@@ -78,8 +91,10 @@ fn the_end_note_says_where_the_files_went_and_how_long_it_took() {
     let built = |stopped| Ok(Built { paths: vec![PathBuf::from("summary.json")], stopped, filled: 14855 });
     assert_eq!(end_note(&built(false), Duration::from_secs(185), 8), "Saved guess counts to precompute-cache/guess-counts/ in 3 min 05s (14,855 rows, 8 threads)");
     assert_eq!(end_note(&built(true), Duration::from_millis(4200), 1), "Stopped guess counts after 4.2s: 14,855 rows kept in precompute-cache/guess-counts/. Run it again to resume");
-    let mismatch = Err(BuildError::Mismatch { strategy: "bits-all", reason: "there is no manifest.json".into() });
-    assert_eq!(end_note(&mismatch, Duration::ZERO, 8), "Can't resume bits-all: there is no manifest.json. Delete precompute-cache/guess-counts/ to start it over");
+    let mismatch = Err(BuildError::Mismatch { strategy: "bits-guesses-all", reason: "there is no manifest.json".into() });
+    assert_eq!(end_note(&mismatch, Duration::ZERO, 8), "Can't resume bits-guesses-all: there is no manifest.json. Delete precompute-cache/guess-counts/ to start it over");
+    let version_1 = Err(BuildError::Folder("manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`".into()));
+    assert_eq!(end_note(&version_1, Duration::ZERO, 8), "Can't use precompute-cache/guess-counts/: manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`");
 }
 
 #[test]

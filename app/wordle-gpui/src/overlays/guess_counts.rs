@@ -120,14 +120,17 @@ pub fn end_note(result: &Result<Built, BuildError>, elapsed: Duration, threads: 
             format!("Stopped guess counts after {time}: {} rows kept in precompute-cache/guess-counts/. Run it again to resume", with_commas(built.filled))
         }
         Ok(built) => format!("Saved guess counts to precompute-cache/guess-counts/ in {time} ({} rows, {})", with_commas(built.filled), threads_label(threads)),
-        Err(error @ BuildError::Mismatch { .. }) => {
-            let error = error.to_string();
-            let mut letters = error.chars();
-            let error = letters.next().map(|first| first.to_uppercase().chain(letters).collect::<String>()).unwrap_or_default();
-            format!("{error}. Delete precompute-cache/guess-counts/ to start it over")
-        }
+        Err(error @ BuildError::Mismatch { .. }) => format!("{}. Delete precompute-cache/guess-counts/ to start it over", capitalized(&error.to_string())),
+        // A version 1 folder: the reason names the migration.
+        Err(BuildError::Folder(reason)) => format!("Can't use precompute-cache/guess-counts/: {reason}"),
         Err(error) => format!("Couldn't precompute guess counts: {error}"),
     }
+}
+
+/// `text` with its first letter in upper case.
+fn capitalized(text: &str) -> String {
+    let mut letters = text.chars();
+    letters.next().map(|first| first.to_uppercase().chain(letters).collect()).unwrap_or_default()
 }
 
 #[cfg(test)]

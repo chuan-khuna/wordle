@@ -376,7 +376,7 @@ impl WordleApp {
     fn start_guess_counts(&mut self, threads: usize, strategies: Vec<&'static Strategy>, cx: &mut Context<Self>) {
         self.overlay = None;
         let stop = Arc::new(AtomicBool::new(false));
-        let run = PrecomputeRun::new(RunState::guess_counts(threads, &strategies, word_lists().guesses.len()), Some(stop.clone()));
+        let run = PrecomputeRun::new(RunState::guess_counts(threads, &strategies), Some(stop.clone()));
         let (state, started) = (run.state.clone(), run.started);
         self.precompute = Some(run);
         let events = state.clone();

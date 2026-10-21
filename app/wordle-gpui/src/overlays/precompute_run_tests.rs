@@ -21,13 +21,20 @@ fn last(state: &RunState) -> &LogLine {
     state.log().back().unwrap()
 }
 
-/// A run of bits-candidates and bits-all, resumed: bits-candidates had 14,000 rows, bits-all 100.
+/// A run of bits-guesses-candidates and bits-guesses-all, resumed: bits-guesses-candidates had 14,000 rows, bits-guesses-all 100.
 fn resumed_run() -> RunState {
-    let (candidates, all) = (&STRATEGIES[0], &STRATEGIES[2]);
-    let mut state = RunState::guess_counts(8, &[candidates, all], ROWS);
+    let (candidates, all) = (&STRATEGIES[2], &STRATEGIES[3]);
+    let mut state = RunState::guess_counts(8, &[candidates, all]);
     state.apply_guess_counts(Row::Planned { strategy: candidates, finished: 14_000, to_fill: 855 }, secs(1));
     state.apply_guess_counts(Row::Planned { strategy: all, finished: 100, to_fill: 14_755 }, secs(1));
     state
+}
+
+#[test]
+fn each_strategy_has_a_row_per_word_of_its_guess_pool() {
+    let state = RunState::guess_counts(1, &[&STRATEGIES[0], &STRATEGIES[3]]);
+    assert_eq!(state.items.iter().map(|item| (item.id.as_str(), item.total)).collect::<Vec<_>>(), [("bits-answers-candidates", 2315), ("bits-guesses-all", ROWS)]);
+    assert_eq!(state.progress_line(secs(0)), "0 of 17,170 rows");
 }
 
 #[test]
@@ -40,42 +47,42 @@ fn a_resumed_run_starts_its_bar_at_the_rows_already_done() {
     assert_eq!(state.progress_line(secs(1)), "14,100 of 29,710 rows");
     assert_eq!(
         texts(&state),
-        ["Precompute guess counts on 8 threads into precompute-cache/guess-counts/: bits-candidates, bits-all", "Reading the Feedback matrices and the rows already done"]
+        ["Precompute guess counts on 8 threads into precompute-cache/guess-counts/: bits-guesses-candidates, bits-guesses-all", "Reading the Feedback matrices and the rows already done"]
     );
 }
 
 #[test]
 fn rows_move_their_strategy_and_the_rate_gives_the_time_left() {
     let mut state = resumed_run();
-    let candidates = &STRATEGIES[0];
+    let candidates = &STRATEGIES[2];
     state.apply_guess_counts(Row::PassStarted { strategy: candidates, finished: 14_000, to_fill: 855 }, secs(10));
     assert_eq!(state.items[0].phase, Phase::Running);
-    assert_eq!(last(&state).text, "bits-candidates started: 14,000 rows already done, 855 to fill");
+    assert_eq!(last(&state).text, "bits-guesses-candidates started: 14,000 rows already done, 855 to fill");
     // Threads report out of order: the furthest counts.
     for done in [2, 1, 3] {
         state.apply_guess_counts(Row::RowDone { strategy: candidates, word: "salet", done, total: 855, average_guess_count: 3.4212, losses: 0 }, secs(11));
     }
     assert_eq!(state.items[0].done, 14_003);
-    assert_eq!(last(&state).text, "bits-candidates salet: 3.421 Guesses on average, no Losses");
+    assert_eq!(last(&state).text, "bits-guesses-candidates salet: 3.421 Guesses on average, no Losses");
     assert_eq!(last(&state).tone, Tone::Row);
     // 3 rows in 2 s: 1.5 rows/s, and 15,607 rows left take about 2 h 53 min.
     assert_eq!(state.rate(secs(12)), Some(1.5));
     assert_eq!(state.progress_line(secs(12)), "14,103 of 29,710 rows · 1.5 rows/s · about 2 h 53 min left");
     state.apply_guess_counts(Row::RowDone { strategy: candidates, word: "zymic", done: 4, total: 855, average_guess_count: 5.0, losses: 2 }, secs(12));
-    assert_eq!(last(&state).text, "bits-candidates zymic: 5.000 Guesses on average, 2 Losses");
+    assert_eq!(last(&state).text, "bits-guesses-candidates zymic: 5.000 Guesses on average, 2 Losses");
     state.apply_guess_counts(Row::Flushed { strategy: candidates, done: 4 }, secs(12));
-    assert_eq!(last(&state).text, "Saved the finished rows to disk (bits-candidates: 4 this pass)");
+    assert_eq!(last(&state).text, "Saved the finished rows to disk (bits-guesses-candidates: 4 this pass)");
 }
 
 #[test]
 fn a_finished_pass_and_a_finished_run() {
     let mut state = resumed_run();
-    let (candidates, all) = (&STRATEGIES[0], &STRATEGIES[2]);
+    let (candidates, all) = (&STRATEGIES[2], &STRATEGIES[3]);
     state.apply_guess_counts(Row::PassStarted { strategy: candidates, finished: 14_855, to_fill: 0 }, secs(2));
-    assert_eq!(last(&state).text, "bits-candidates started: 14,855 rows already done, nothing to fill");
+    assert_eq!(last(&state).text, "bits-guesses-candidates started: 14,855 rows already done, nothing to fill");
     state.apply_guess_counts(Row::PassEnded { strategy: candidates, filled: 0, stopped: false }, secs(2));
     assert_eq!(state.items[0].phase, Phase::Finished);
-    assert_eq!(last(&state).text, "bits-candidates finished: 0 rows filled");
+    assert_eq!(last(&state).text, "bits-guesses-candidates finished: 0 rows filled");
     assert_eq!(state.items[1].phase, Phase::Waiting);
     state.apply_guess_counts(Row::PassStarted { strategy: all, finished: 100, to_fill: 14_755 }, secs(3));
     state.apply_guess_counts(Row::RowDone { strategy: all, word: "zymic", done: 14_755, total: 14_755, average_guess_count: 4.0, losses: 1 }, secs(1000));
@@ -94,14 +101,14 @@ fn a_finished_pass_and_a_finished_run() {
 #[test]
 fn a_stopped_run_keeps_its_rows_and_says_so() {
     let mut state = resumed_run();
-    let candidates = &STRATEGIES[0];
+    let candidates = &STRATEGIES[2];
     state.apply_guess_counts(Row::PassStarted { strategy: candidates, finished: 14_000, to_fill: 855 }, secs(2));
     assert!(state.can_stop());
     state.ask_stop(secs(3));
     assert!(!state.can_stop());
     assert_eq!(last(&state).text, "Stop asked for: each thread drops the Opener it is playing; finished rows are kept");
     state.apply_guess_counts(Row::PassEnded { strategy: candidates, filled: 12, stopped: true }, secs(4));
-    assert_eq!(last(&state).text, "bits-candidates stopped: 12 rows filled and kept");
+    assert_eq!(last(&state).text, "bits-guesses-candidates stopped: 12 rows filled and kept");
     let built = Ok(Built { paths: vec![], stopped: true, filled: 12 });
     state.finish_guess_counts(&built, secs(4));
     assert_eq!(state.end, Some((End::Stopped, secs(4))));
@@ -113,11 +120,11 @@ fn a_stopped_run_keeps_its_rows_and_says_so() {
 #[test]
 fn a_manifest_mismatch_ends_the_run_with_what_to_do() {
     let mut state = resumed_run();
-    let mismatch = Err(BuildError::Mismatch { strategy: "bits-all", reason: "there is no manifest.json".into() });
+    let mismatch = Err(BuildError::Mismatch { strategy: "bits-guesses-all", reason: "there is no manifest.json".into() });
     state.finish_guess_counts(&mismatch, secs(1));
     assert_eq!(state.end, Some((End::Failed, secs(1))));
     assert!(state.items.iter().all(|item| item.phase == Phase::NotStarted));
-    assert_eq!(last(&state).text, "Can't resume bits-all: there is no manifest.json. Delete precompute-cache/guess-counts/ to start it over");
+    assert_eq!(last(&state).text, "Can't resume bits-guesses-all: there is no manifest.json. Delete precompute-cache/guess-counts/ to start it over");
     assert_eq!(last(&state).tone, Tone::Error);
 }
 
@@ -153,7 +160,7 @@ fn a_failed_matrices_run_says_why() {
 #[test]
 fn the_log_keeps_the_last_lines_and_counts_the_rest() {
     let mut state = resumed_run();
-    let candidates = &STRATEGIES[0];
+    let candidates = &STRATEGIES[2];
     for done in 1..=MAX_LOG_LINES + 10 {
         state.apply_guess_counts(Row::RowDone { strategy: candidates, word: "salet", done, total: ROWS, average_guess_count: 3.0, losses: 0 }, secs(5));
     }
@@ -200,8 +207,8 @@ fn log_times_read_as_hours_minutes_seconds() {
 fn log_lines_colour_strategies_openers_numbers_and_paths() {
     let spans = |text: &str| highlights(text).into_iter().map(|(range, span)| (text[range].to_string(), span)).collect::<Vec<_>>();
     assert_eq!(
-        spans("bits-candidates salet: 3.528 Guesses on average, 8 Losses"),
-        [("bits-candidates".into(), Span::Strategy), ("salet".into(), Span::Opener), ("3.528".into(), Span::Number), ("8".into(), Span::Number)]
+        spans("bits-guesses-candidates salet: 3.528 Guesses on average, 8 Losses"),
+        [("bits-guesses-candidates".into(), Span::Strategy), ("salet".into(), Span::Opener), ("3.528".into(), Span::Number), ("8".into(), Span::Number)]
     );
     assert_eq!(
         spans("Saved guesses_vs_answers.npy: 14,855 × 2,315, 34.4 MB (precompute-cache/feedback/guesses_vs_answers.npy)"),
@@ -214,5 +221,5 @@ fn log_lines_colour_strategies_openers_numbers_and_paths() {
         ]
     );
     // Only a five-letter word right after a Strategy id is an Opener.
-    assert_eq!(spans("bits-all started: 864 rows already done"), [("bits-all".into(), Span::Strategy), ("864".into(), Span::Number)]);
+    assert_eq!(spans("bits-guesses-all started: 864 rows already done"), [("bits-guesses-all".into(), Span::Strategy), ("864".into(), Span::Number)]);
 }

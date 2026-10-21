@@ -13,12 +13,14 @@
 //!
 //! Every Candidate is taken to be equally likely to be the Answer.
 //!
-//! Three choices make up a Strategy:
-//! - the **matrix set** picks the Guesses that exist: `Answers` (only Answer List words) or
-//!   `ValidGuesses` (every word on the Guess List);
-//! - the **search mode** picks which of those are tried: `Candidates` (only words that could still be
-//!   the Answer) or `Everything` (every word in the set, even ones already ruled out);
-//! - the **measure** to rank by: `Rank::Bits` or `Rank::ExpectedCandidates`.
+//! Three choices make up a Strategy, and all eight combinations are named in `STRATEGIES`:
+//! - the **Guess Pool** (`MatrixSet`, the panel's **Words**) picks the Guesses that exist: `Answers`
+//!   (only Answer List words) or `ValidGuesses` (every word on the Guess List);
+//! - the **Search Scope** (`SearchMode`, the panel's **Search**) picks which of those are tried for
+//!   each Guess after the Opener: `Candidates` (only words that could still be the Answer) or
+//!   `Everything` (every word in the Guess Pool, even ones already ruled out). The Opener is ranked
+//!   over the whole Guess Pool under either (`SearchMode::for_guess`);
+//! - the **Ranking** (`Rank`, the panel's **Rank by**): `Rank::Bits` or `Rank::ExpectedCandidates`.
 
 use std::collections::HashSet;
 use std::io;
@@ -49,6 +51,16 @@ impl MatrixSet {
             MatrixSet::ValidGuesses => GUESSES_FILE,
         }
     }
+
+    /// How many words the Guess Pool has: the rows of its Feedback matrix and of its Strategies'
+    /// Guess Count Matrices (2,315 or 14,855).
+    pub fn size(self) -> usize {
+        let lists = word_lists();
+        match self {
+            MatrixSet::Answers => lists.answers.len(),
+            MatrixSet::ValidGuesses => lists.guesses.len(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -57,6 +69,15 @@ pub enum SearchMode {
     Candidates,
     /// Every word in the matrix set.
     Everything,
+}
+
+impl SearchMode {
+    /// The Search Scope that picks the next Guess with `guesses_made` Guesses on the board: the
+    /// Opener is ranked over the whole Guess Pool whatever the setting (as the Python package's
+    /// `benchmark.best_opener` does), and the setting applies from the second Guess on.
+    pub fn for_guess(self, guesses_made: usize) -> SearchMode {
+        if guesses_made == 0 { SearchMode::Everything } else { self }
+    }
 }
 
 /// The measure the Suggestions are ranked by.
@@ -68,28 +89,36 @@ pub enum Rank {
     ExpectedCandidates,
 }
 
-/// A named way of choosing Guesses, as in `STRATEGIES` of the Python package.
+/// A named way of choosing Guesses, as in `STRATEGIES` of the Python package: a Guess Pool, a
+/// Search Scope and a Ranking. The id is `<ranking>-<pool>-<scope>`, with `Everything` written `all`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Strategy {
     pub id: &'static str,
     pub name: &'static str,
+    /// Its Guess Count Matrix, relative to the `guess-counts/` folder: `<ranking>/<pool>-<scope>.npy`.
+    pub path: &'static str,
     pub set: MatrixSet,
     pub mode: SearchMode,
     pub by: Rank,
 }
 
-pub const STRATEGIES: [Strategy; 4] = [
-    Strategy { id: "bits-candidates", name: "Expected Information, Candidates only", set: MatrixSet::Answers, mode: SearchMode::Candidates, by: Rank::Bits },
-    Strategy { id: "expected-candidates", name: "Expected Candidates, Candidates only", set: MatrixSet::Answers, mode: SearchMode::Candidates, by: Rank::ExpectedCandidates },
-    Strategy { id: "bits-all", name: "Expected Information, all words", set: MatrixSet::ValidGuesses, mode: SearchMode::Everything, by: Rank::Bits },
-    Strategy { id: "expected-all", name: "Expected Candidates, all words", set: MatrixSet::ValidGuesses, mode: SearchMode::Everything, by: Rank::ExpectedCandidates },
+/// Every combination, ordered by Ranking, then Guess Pool, then Search Scope, as in the Python package.
+pub const STRATEGIES: [Strategy; 8] = [
+    Strategy { id: "bits-answers-candidates", name: "Expected Information, Answer List, Candidates only", path: "bits/answers-candidates.npy", set: MatrixSet::Answers, mode: SearchMode::Candidates, by: Rank::Bits },
+    Strategy { id: "bits-answers-all", name: "Expected Information, Answer List, All words", path: "bits/answers-all.npy", set: MatrixSet::Answers, mode: SearchMode::Everything, by: Rank::Bits },
+    Strategy { id: "bits-guesses-candidates", name: "Expected Information, Guess List, Candidates only", path: "bits/guesses-candidates.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Candidates, by: Rank::Bits },
+    Strategy { id: "bits-guesses-all", name: "Expected Information, Guess List, All words", path: "bits/guesses-all.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Everything, by: Rank::Bits },
+    Strategy { id: "expected-answers-candidates", name: "Expected Candidates, Answer List, Candidates only", path: "expected/answers-candidates.npy", set: MatrixSet::Answers, mode: SearchMode::Candidates, by: Rank::ExpectedCandidates },
+    Strategy { id: "expected-answers-all", name: "Expected Candidates, Answer List, All words", path: "expected/answers-all.npy", set: MatrixSet::Answers, mode: SearchMode::Everything, by: Rank::ExpectedCandidates },
+    Strategy { id: "expected-guesses-candidates", name: "Expected Candidates, Guess List, Candidates only", path: "expected/guesses-candidates.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Candidates, by: Rank::ExpectedCandidates },
+    Strategy { id: "expected-guesses-all", name: "Expected Candidates, Guess List, All words", path: "expected/guesses-all.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Everything, by: Rank::ExpectedCandidates },
 ];
 
 impl Strategy {
-    /// The named Strategy that settings amount to, or None for a mix with no name (Answers with
-    /// everything searched). Searching Candidates only picks the same Guesses from either set of words.
-    pub fn named(set: MatrixSet, mode: SearchMode, by: Rank) -> Option<&'static Strategy> {
-        STRATEGIES.iter().find(|strategy| strategy.by == by && strategy.mode == mode && (mode == SearchMode::Candidates || strategy.set == set))
+    /// The Strategy the panel's **Words**, **Search** and **Rank by** settings name: every
+    /// combination is one of the eight.
+    pub fn named(set: MatrixSet, mode: SearchMode, by: Rank) -> &'static Strategy {
+        STRATEGIES.iter().find(|strategy| strategy.set == set && strategy.mode == mode && strategy.by == by).expect("STRATEGIES holds every combination")
     }
 }
 

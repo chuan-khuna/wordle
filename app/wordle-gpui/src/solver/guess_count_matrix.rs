@@ -3,15 +3,19 @@
 //! `docs/documents/guess-count-matrix.md` and ADR 0001), in the same folder, so either tool resumes
 //! the other's rows.
 //!
-//! In `precompute-cache/guess-counts/`:
+//! In `precompute-cache/guess-counts/` (format version 2):
 //!
-//! - `<strategy id>.npy`: 14,855 × 2,315 `u8`, rows are Openers (the sorted Guess List), columns are
-//!   Answers; a cell is the Guess Count (13 when the safety limit was hit), and a row of zeros is not
-//!   filled yet. Rows are written in place, whole, once their Opener is fully played.
-//! - `manifest.json`: the word lists and each Strategy's definition; a matrix with rows is resumed
-//!   only if it matches.
-//! - `summary.json` and `<strategy id>.ranking.csv`: every complete Opener ranked by Average Guess
-//!   Count, then Expected Information as a first Guess, then alphabetically.
+//! - `<ranking>/<pool>-<scope>.npy` (`Strategy::path`, such as `bits/answers-candidates.npy`): `u8`,
+//!   rows are Openers (the Strategy's sorted Guess Pool: 2,315 or 14,855), columns are Answers; a
+//!   cell is the Guess Count (13 when the safety limit was hit), and a row of zeros is not filled
+//!   yet. Rows are written in place, whole, once their Opener is fully played.
+//! - `manifest.json`: the word lists (`rows` per Guess Pool, `columns`) and each Strategy's
+//!   definition and path; a matrix with rows is resumed only if it matches. A folder of format
+//!   version 1 (flat `<old id>.npy` files) is refused: `just migrate-guess-counts` turns it into
+//!   version 2.
+//! - `summary.json` and `<ranking>/<pool>-<scope>.ranking.csv`: every complete Opener of a Strategy's
+//!   rows ranked by Average Guess Count, then Expected Information as a first Guess, then
+//!   alphabetically.
 
 use std::collections::HashMap;
 use std::fmt;
@@ -33,7 +37,9 @@ use crate::engine::game::MAX_GUESSES as GUESS_LIMIT;
 pub const SUBDIR: &str = "guess-counts";
 pub const MANIFEST_FILE: &str = "manifest.json";
 pub const SUMMARY_FILE: &str = "summary.json";
-pub const FORMAT_VERSION: u64 = 1;
+pub const FORMAT_VERSION: u64 = 2;
+/// The command that turns a version 1 folder into version 2 (in the Python package).
+pub const MIGRATE_COMMAND: &str = "just migrate-guess-counts";
 /// Who wrote the manifest: the one field that differs from the Python command's.
 pub const TOOL: &str = "wordle-gpui Precompute guess counts (rust)";
 /// How often finished rows are flushed to disk during a run.
@@ -48,11 +54,20 @@ pub fn default_dir() -> PathBuf {
 }
 
 pub fn matrix_path(dir: &Path, strategy: &Strategy) -> PathBuf {
-    dir.join(format!("{}.npy", strategy.id))
+    dir.join(strategy.path)
 }
 
 pub fn ranking_path(dir: &Path, strategy: &Strategy) -> PathBuf {
-    dir.join(format!("{}.ranking.csv", strategy.id))
+    matrix_path(dir, strategy).with_extension("ranking.csv")
+}
+
+/// The words of a Strategy's Guess Pool, sorted: the rows of its matrix. `feedback` is the Guess ×
+/// Answer Feedback matrix, whose columns are the Answer List.
+pub fn pool_words(feedback: &Matrix, set: MatrixSet) -> &[&'static str] {
+    match set {
+        MatrixSet::Answers => &feedback.columns,
+        MatrixSet::ValidGuesses => &feedback.rows,
+    }
 }
 
 /// A Strategy as `manifest.json` records it, in the Python package's words.
@@ -69,7 +84,12 @@ fn definition(strategy: &Strategy) -> Value {
         Rank::Bits => "bits",
         Rank::ExpectedCandidates => "expected",
     };
-    json!({"name": strategy.name, "pool": pool, "scope": scope, "ranked_by": ranked_by})
+    json!({"name": strategy.name, "pool": pool, "scope": scope, "ranked_by": ranked_by, "path": strategy.path})
+}
+
+/// The rows of each Guess Pool's matrices, as the manifest records them.
+fn rows(feedback: &Matrix) -> Value {
+    json!({"answers": pool_words(feedback, MatrixSet::Answers), "guesses": pool_words(feedback, MatrixSet::ValidGuesses)})
 }
 
 fn read_manifest(dir: &Path) -> Option<Value> {
@@ -79,8 +99,17 @@ fn read_manifest(dir: &Path) -> Option<Value> {
 fn same_lists(manifest: &Value, feedback: &Matrix) -> bool {
     manifest.get("format_version") == Some(&json!(FORMAT_VERSION))
         && manifest.get("safety_limit") == Some(&json!(SAFETY_LIMIT))
-        && manifest.get("rows") == Some(&json!(feedback.rows))
+        && manifest.get("rows") == Some(&rows(feedback))
         && manifest.get("columns") == Some(&json!(feedback.columns))
+}
+
+/// Why the folder `dir` can't be used at all (its manifest is another format version), or None.
+pub fn folder_mismatch(dir: &Path) -> Option<String> {
+    match read_manifest(dir)?.get("format_version") {
+        Some(version) if version == &json!(FORMAT_VERSION) => None,
+        Some(version) if version == &json!(1) => Some(format!("{MANIFEST_FILE} was written by format version 1; migrate it with `{MIGRATE_COMMAND}`")),
+        version => Some(format!("{MANIFEST_FILE} was written by format version {}, not {FORMAT_VERSION}", version.map_or("None".into(), Value::to_string))),
+    }
 }
 
 /// Why the matrix of `strategy` in `dir` can't be resumed or summarized, or None if the manifest
@@ -89,6 +118,9 @@ pub fn mismatch(dir: &Path, strategy: &Strategy, feedback: &Matrix) -> Option<St
     let Some(manifest) = read_manifest(dir) else {
         return Some(format!("there is no {MANIFEST_FILE}"));
     };
+    if let Some(reason) = folder_mismatch(dir) {
+        return Some(reason);
+    }
     if !same_lists(&manifest, feedback) {
         return Some(format!("the word lists, format or safety limit in {MANIFEST_FILE} differ from the current ones"));
     }
@@ -113,7 +145,7 @@ fn write_manifest(dir: &Path, strategies: &[&Strategy], feedback: &Matrix) -> io
         "tool": TOOL,
         "safety_limit": SAFETY_LIMIT,
         "strategies": kept,
-        "rows": feedback.rows,
+        "rows": rows(feedback),
         "columns": feedback.columns,
     });
     std::fs::create_dir_all(dir)?;
@@ -143,17 +175,25 @@ fn finished(row: &[u8]) -> bool {
     !row.contains(&0)
 }
 
+/// The cells of the matrix of `strategy` in `dir`, if it is the right shape (its Guess Pool × the Answer List).
+fn read_matrix(dir: &Path, strategy: &Strategy, feedback: &Matrix) -> io::Result<Option<Vec<u8>>> {
+    read_cells(&matrix_path(dir, strategy), pool_words(feedback, strategy.set).len(), feedback.columns.len())
+}
+
 /// How many rows of the matrix of `strategy` in `dir` hold any Guess Count (0 if there is no file).
 pub fn filled_rows(dir: &Path, strategy: &Strategy, feedback: &Matrix) -> io::Result<usize> {
     let columns = feedback.columns.len();
-    Ok(read_cells(&matrix_path(dir, strategy), feedback.rows.len(), columns)?.map_or(0, |cells| cells.chunks(columns).filter(|row| row.iter().any(|&cell| cell != 0)).count()))
+    Ok(read_matrix(dir, strategy, feedback)?.map_or(0, |cells| cells.chunks(columns).filter(|row| row.iter().any(|&cell| cell != 0)).count()))
 }
 
-/// The matrix at `path` opened for writing rows in place, with its cells; created full of zeros if
-/// it is missing or not the right shape.
+/// The matrix at `path` opened for writing rows in place, with its cells; created full of zeros (and
+/// its Ranking's folder with it) if it is missing or not the right shape.
 fn open_matrix(path: &Path, rows: usize, columns: usize) -> io::Result<(File, Vec<u8>)> {
     if let Some(cells) = read_cells(path, rows, columns)? {
         return Ok((OpenOptions::new().write(true).open(path)?, cells));
+    }
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
     }
     let mut file = File::create(path)?;
     let header = npy_header(rows, columns);
@@ -190,24 +230,24 @@ pub fn opener_bits(cells: &[u8]) -> f64 {
     total.log2() - numpy_sum(&n_log_n) / total
 }
 
-/// The ranked entries for every finished row of `cells` (rows of `feedback.rows`, columns of
-/// `feedback.columns`): by total Guess Count, then by Expected Information as a first Guess
-/// (higher first), then alphabetically. `bits` gives a row's Expected Information.
-pub fn summarize(cells: &[u8], feedback: &Matrix, bits: &mut impl FnMut(usize) -> f64) -> Vec<Entry> {
-    let columns = feedback.columns.len();
+/// The ranked entries for every finished row of `cells`, whose rows are `words` (a Guess Pool) and
+/// columns `answers` (the Answer List): by total Guess Count, then by Expected Information as a
+/// first Guess (higher first), then alphabetically. `bits` gives a word's Expected Information.
+pub fn summarize(cells: &[u8], words: &[&'static str], answers: &[&'static str], bits: &mut impl FnMut(&'static str) -> f64) -> Vec<Entry> {
+    let columns = answers.len();
     let mut finished_rows: Vec<(usize, u64, f64)> = cells
         .chunks(columns)
         .enumerate()
         .filter(|(_, row)| finished(row))
-        .map(|(index, row)| (index, row.iter().map(|&cell| u64::from(cell)).sum(), bits(index)))
+        .map(|(index, row)| (index, row.iter().map(|&cell| u64::from(cell)).sum(), bits(words[index])))
         .collect();
-    finished_rows.sort_by(|a, b| a.1.cmp(&b.1).then(b.2.total_cmp(&a.2)).then(feedback.rows[a.0].cmp(feedback.rows[b.0])));
+    finished_rows.sort_by(|a, b| a.1.cmp(&b.1).then(b.2.total_cmp(&a.2)).then(words[a.0].cmp(words[b.0])));
     finished_rows
         .into_iter()
         .enumerate()
         .map(|(position, (index, total, bits))| {
             let row = &cells[index * columns..(index + 1) * columns];
-            let word = feedback.rows[index];
+            let word = words[index];
             Entry {
                 rank: position + 1,
                 word,
@@ -215,7 +255,7 @@ pub fn summarize(cells: &[u8], feedback: &Matrix, bits: &mut impl FnMut(usize) -
                 losses: row.iter().filter(|&&cell| usize::from(cell) > GUESS_LIMIT).count(),
                 distribution: std::array::from_fn(|n| row.iter().filter(|&&cell| usize::from(cell) == n + 1).count()),
                 bits,
-                is_answer: feedback.columns.binary_search(&word).is_ok(),
+                is_answer: answers.binary_search(&word).is_ok(),
             }
         })
         .collect()
@@ -263,19 +303,21 @@ fn entry_json(entry: &Entry) -> Value {
 
 /// Rewrite `summary.json` and the ranking CSVs from the matrices saved in `dir`, rows from any
 /// earlier run (by either tool) included. Covers every Strategy that has a file the manifest vouches
-/// for. Returns the CSVs, then the summary last.
+/// for, each ranking the Openers of its own rows. Returns the CSVs, then the summary last.
 pub fn write_summary(dir: &Path, feedback: &Matrix) -> io::Result<Vec<PathBuf>> {
-    let mut bits_of: HashMap<usize, f64> = HashMap::new();
+    let mut bits_of: HashMap<&'static str, f64> = HashMap::new();
     let mut summary = Map::new();
     let mut paths = Vec::new();
     for strategy in &STRATEGIES {
         if mismatch(dir, strategy, feedback).is_some() {
             continue;
         }
-        let Some(cells) = read_cells(&matrix_path(dir, strategy), feedback.rows.len(), feedback.columns.len())? else {
+        let Some(cells) = read_matrix(dir, strategy, feedback)? else {
             continue;
         };
-        let openers = summarize(&cells, feedback, &mut |row| *bits_of.entry(row).or_insert_with(|| opener_bits(feedback.row(row))));
+        let guess_row = |word: &str| feedback.rows.binary_search(&word).expect("every Guess Pool word is on the Guess List");
+        let mut bits = |word| *bits_of.entry(word).or_insert_with(|| opener_bits(feedback.row(guess_row(word))));
+        let openers = summarize(&cells, pool_words(feedback, strategy.set), &feedback.columns, &mut bits);
         std::fs::write(ranking_path(dir, strategy), ranking_csv(&openers))?;
         paths.push(ranking_path(dir, strategy));
         let openers_json: Vec<Value> = openers.iter().map(entry_json).collect();
@@ -333,6 +375,8 @@ pub struct Built {
 #[derive(Debug)]
 pub enum BuildError {
     Io(io::Error),
+    /// The folder's manifest is another format version (a version 1 folder, to migrate first).
+    Folder(String),
     /// A matrix with rows that the manifest does not vouch for: resuming it would mix two kinds of rows.
     Mismatch { strategy: &'static str, reason: String },
     UnknownOpener(String),
@@ -342,6 +386,7 @@ impl fmt::Display for BuildError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             BuildError::Io(error) => write!(f, "{error}"),
+            BuildError::Folder(reason) => write!(f, "can't use {SUBDIR}/: {reason}"),
             BuildError::Mismatch { strategy, reason } => write!(f, "can't resume {strategy}: {reason}"),
             BuildError::UnknownOpener(word) => write!(f, "{word} is not on the Guess List"),
         }
@@ -367,26 +412,39 @@ struct Output {
 }
 
 /// Fill the Guess Count Matrix of each chosen Strategy in `dir`, then rewrite `summary.json` and the
-/// ranking CSVs. Only rows that are not finished are played (a resume, whichever tool left them),
-/// on `options.threads` threads, each with its own next-Guess cache, in chunks of consecutive rows.
-/// A row is written once its Opener is fully played, zeroed first. `feedback` is the Guess × Answer
-/// Feedback matrix. A matrix with rows that the manifest does not vouch for stops the build before
-/// anything is written.
+/// ranking CSVs. Each matrix has one row per word of the Strategy's Guess Pool. Only rows that are
+/// not finished are played (a resume, whichever tool left them), on `options.threads` threads, each
+/// with its own next-Guess cache, in chunks of consecutive rows. A row is written once its Opener is
+/// fully played, zeroed first. `feedback` is the Guess × Answer Feedback matrix. An Opener asked for
+/// that is not in a Strategy's Guess Pool is skipped for that Strategy (one on no list is an error).
+/// A folder of another format version, or a matrix with rows that the manifest does not vouch for,
+/// stops the build before anything is written.
 pub fn build(dir: &Path, feedback: &Matrix, options: Options) -> Result<Built, BuildError> {
-    let (rows, columns) = (feedback.rows.len(), feedback.columns.len());
-    let asked: Option<Vec<usize>> = match &options.openers {
-        None => None,
-        Some(words) => Some(words.iter().map(|word| feedback.rows.binary_search(&word.as_str()).map_err(|_| BuildError::UnknownOpener(word.clone()))).collect::<Result<_, _>>()?),
+    let columns = feedback.columns.len();
+    if let Some(word) = options.openers.iter().flatten().find(|word| feedback.rows.binary_search(&word.as_str()).is_err()) {
+        return Err(BuildError::UnknownOpener(word.clone()));
+    }
+    if let Some(reason) = folder_mismatch(dir) {
+        return Err(BuildError::Folder(reason));
+    }
+    // The rows asked for in each Strategy's Guess Pool, ascending.
+    let asked = |strategy: &Strategy| -> Option<Vec<usize>> {
+        let words = pool_words(feedback, strategy.set);
+        let mut rows: Vec<usize> = options.openers.as_ref()?.iter().filter_map(|word| words.binary_search(&word.as_str()).ok()).collect();
+        rows.sort_unstable();
+        rows.dedup();
+        Some(rows)
     };
     let mut plan = Vec::new();
     for &strategy in &options.strategies {
-        let cells = read_cells(&matrix_path(dir, strategy), rows, columns)?.unwrap_or_default();
+        let rows = pool_words(feedback, strategy.set).len();
+        let cells = read_matrix(dir, strategy, feedback)?.unwrap_or_default();
         if cells.iter().any(|&cell| cell != 0)
             && let Some(reason) = mismatch(dir, strategy, feedback)
         {
             return Err(BuildError::Mismatch { strategy: strategy.id, reason });
         }
-        let (finished_rows, todo) = rows_to_fill(&cells, rows, columns, asked.as_deref());
+        let (finished_rows, todo) = rows_to_fill(&cells, rows, columns, asked(strategy).as_deref());
         plan.push(Event::Planned { strategy, finished: finished_rows, to_fill: todo.len() });
     }
     write_manifest(dir, &options.strategies, feedback)?;
@@ -400,10 +458,11 @@ pub fn build(dir: &Path, feedback: &Matrix, options: Options) -> Result<Built, B
         if options.stop.load(Ordering::Relaxed) {
             break;
         }
+        let rows = pool_words(feedback, strategy.set).len();
         let path = matrix_path(dir, strategy);
         let (file, cells) = open_matrix(&path, rows, columns)?;
         paths.push(path);
-        let (finished_rows, todo) = rows_to_fill(&cells, rows, columns, asked.as_deref());
+        let (finished_rows, todo) = rows_to_fill(&cells, rows, columns, asked(strategy).as_deref());
         drop(cells);
         (options.events)(Event::PassStarted { strategy, finished: finished_rows, to_fill: todo.len() });
         let filled_now = fill(strategy, &todo, file, feedback, &options)?;
@@ -429,10 +488,12 @@ fn rows_to_fill(cells: &[u8], rows: usize, columns: usize, asked: Option<&[usize
     (cells.chunks(columns).filter(|row| finished(row)).count(), todo)
 }
 
-/// Play the Openers in `todo` (rows) and write each row into `file`. Returns how many it wrote.
+/// Play the Openers in `todo` (rows of the Strategy's Guess Pool) and write each row into `file`.
+/// Returns how many it wrote.
 fn fill(strategy: &'static Strategy, todo: &[usize], file: File, feedback: &Matrix, options: &Options) -> io::Result<usize> {
     let columns = feedback.columns.len();
-    let header = npy_header(feedback.rows.len(), columns).len() as u64;
+    let words = pool_words(feedback, strategy.set);
+    let header = npy_header(words.len(), columns).len() as u64;
     let total = todo.len();
     let output = Mutex::new(Output { file, flushed: Instant::now() });
     let next_chunk = AtomicUsize::new(0);
@@ -448,7 +509,8 @@ fn fill(strategy: &'static Strategy, todo: &[usize], file: File, feedback: &Matr
                     let zeros = vec![0u8; columns];
                     while let Some(chunk) = chunks.get(next_chunk.fetch_add(1, Ordering::Relaxed)) {
                         for &row in *chunk {
-                            let Some(counts) = player.guess_counts(strategy, row, Some(options.stop)) else {
+                            let opener = player.row_of(words[row]).expect("every Guess Pool word is on the Guess List");
+                            let Some(counts) = player.guess_counts(strategy, opener, Some(options.stop)) else {
                                 return Ok(());
                             };
                             let flushed = {
@@ -469,7 +531,7 @@ fn fill(strategy: &'static Strategy, todo: &[usize], file: File, feedback: &Matr
                             let done = done.fetch_add(1, Ordering::Relaxed) + 1;
                             let (sum, losses) = counts.iter().fold((0u64, 0), |(sum, losses), &cell| (sum + u64::from(cell), losses + usize::from(usize::from(cell) > GUESS_LIMIT)));
                             let average_guess_count = sum as f64 / columns as f64;
-                            (options.events)(Event::RowDone { strategy, word: feedback.rows[row], done, total, average_guess_count, losses });
+                            (options.events)(Event::RowDone { strategy, word: words[row], done, total, average_guess_count, losses });
                             if flushed {
                                 (options.events)(Event::Flushed { strategy, done });
                             }
