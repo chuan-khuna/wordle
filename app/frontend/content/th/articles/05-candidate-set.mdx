@@ -1,0 +1,49 @@
+---
+title: "Candidate Set"
+summary: "Feedback แต่ละครั้งตัดคำออกไป คำที่เหลือคือ Candidate Set"
+source: f60e2264d90af7a917d9d3ac32535d6c81d1b1d2
+---
+
+<Term>Feedback</Term> แต่ละครั้งตัดบางคำออกไป คำที่รอดคือ <Term>Candidate</Term> และทั้งหมดรวมกันคือ <Term>Candidate Set</Term>
+
+คำหนึ่งเป็น Candidate ถ้ามันยังเป็น Answer ได้ วิธีทดสอบง่ายมาก สมมติว่าคำนั้น*เป็น* Answer แล้วหาว่าทุก Guess ใน <Term>State</Term> จะได้ Feedback อะไร ถ้าทุกอันตรงกับที่เกมบอกจริง คำนั้นก็ยังเป็น Candidate ถ้ามีแม้แต่อันเดียวต่างไป คำนั้นก็ตกรอบ
+
+มีเพียงคำจาก <Term>Answer List</Term> เท่านั้นที่เป็น Candidate ได้ แม้ Guess นั้นจะเป็นคำแปลก ๆ ที่ไม่มีทางเป็น Answer ก็ตาม ตอนเริ่ม Game ก่อนมี Guess ใด Candidate Set คือ Answer List ทั้งหมด: 2,315 คำ
+
+## ดูมันเล็กลง
+
+สมมติ Answer คือ <Word>abide</Word> Guess แรกคือ <Word answer="abide">crane</Word> และ Feedback คือ <Mark kind="absent" /> สำหรับ <Letter>c</Letter>, <Letter>r</Letter> และ <Letter>n</Letter> คือ <Mark kind="present" /> สำหรับ <Letter>a</Letter> และ <Mark kind="correct" /> สำหรับ <Letter>e</Letter> เหลือ Candidate 49 คำ Guess ที่สองคือ <Word answer="abide">pilot</Word> มีเพียง <Letter>i</Letter> ที่อยู่ใน <Word>abide</Word> และไม่ได้อยู่ตำแหน่งที่สอง <Letter>i</Letter> จึงเป็น <Mark kind="present" /> และตัวอักษรอีกสี่ตัวเป็น <Mark kind="absent" /> ตอนนี้เหลือ Candidate เพียง 4 คำ: <Word>abide</Word>, <Word>aside</Word>, <Word>maize</Word> และ <Word>waive</Word>
+
+นี่คือ State นั้นใน Widget คลิกที่กระเบื้องเพื่อเปลี่ยน Mark หรือพิมพ์ Guess ใหม่ แล้วดูตัวเลขทางขวาของแต่ละแถว:
+
+<CandidateFilter id="cs" state="crane:00102,pilot:01000" />
+
+แต่ละแถวแสดงขนาดของ Candidate Set ก่อนและหลัง Guess นั้น การลดจาก 2,315 เป็น 49 เป็น 4 คือแนวคิดทั้งหมดของการแก้ Wordle Guess ดีเมื่อมันลดได้มาก
+
+## การทดสอบเดียวกันใน Python
+
+นิยามนั้นก็คือโค้ดอยู่แล้ว เก็บคำใน Answer List ที่จะให้ทุก Feedback ใน State โดยใช้ฟังก์ชันจาก Article เรื่อง Feedback:
+
+```python
+def candidates(state, answers):
+    return [
+        answer
+        for answer in answers
+        if all(feedback(guess.word, answer) == guess.feedback for guess in state)
+    ]
+```
+
+แพ็กเกจทำงานเดียวกัน แต่เร็วกว่ามาก การคำนวณ Feedback ใหม่ทุกคำในทุกขั้นจะช้า มันจึงค้นแต่ละอันจาก <Term>Feedback Matrix</Term> ซึ่งเป็นตารางของทุก Guess เทียบกับทุก Answer ที่ให้คะแนนไว้ครั้งเดียวก่อน Game ใด ๆ:
+
+```python title="Narrowing the Candidates" {4-5}
+def narrow(self, candidates: np.ndarray, guess: str, code: int) -> np.ndarray:
+    """The Candidates that would have given Feedback Code `code` for `guess`."""
+    row = self.guesses_vs_answers[self._guess_row[guess]]
+    return candidates[row[candidates] == code]
+```
+
+บรรทัดที่สำคัญคือบรรทัดสุดท้าย เก็บ Candidate ที่ช่องในแถวของ Guess เท่ากับ Feedback ที่ตอบกลับมา
+
+## การแบ่งที่เท่ากัน
+
+ถ้า Guess แบ่ง Candidate $N$ คำเป็น $k$ กลุ่มที่ขนาดเท่ากัน Candidate Set ถัดไปจะมี $N/k$ คำ การแบ่งจริงไม่เคยเท่ากันขนาดนั้น และนั่นคือปัญหาที่ Article ถัดไปจะดู: Guess แบ่ง Candidate Set เป็นกลุ่มอย่างไร

@@ -148,7 +148,7 @@ The look is a minimal editorial one: the text leads and chrome recedes. All non-
 
 ## Languages
 
-The site has a Thai Translation of the Series under way (`.scratch/thai-translation/spec.md`). English is the original. So far Thai has the home page `/th` (Series title and intro, Part titles and intros, a Thai sidebar and page text) and `/th/openers`; every other Article is listed in Thai with its English title and an "EN" tag and links to its English page. The pieces:
+The site has a Thai Translation of the Series under way (`.scratch/thai-translation/spec.md`). English is the original. Thai has the home page `/th`, `/th/openers` and a Translation of every Article (`/th/articles/<slug>`), each with a Thai sidebar and page text. The "EN" tag and the English fallback link stay in the code for any Article that has no Translation (none today). The pieces:
 
 - **The language argument.** `Language` (`en` | `th`, `lib/language.ts`) is an argument that defaults to `DEFAULT_LANGUAGE` (`en`) on every language-aware function, so existing callers are unchanged: `content(lang)`, `glossary(lang)`, `lookupTerm(term, lang)`, `lookupMark(kind, lang)`, `pageText(lang)`, and the views `SeriesPage`, `ArticleView` and `OpenersView` (each takes `lang`). 
 - **`content(lang)`** returns the same shape as before. Reading the files (`read()`) is separate from the pure `buildContent(raw)`, which validates and assembles the Series, Parts, Articles and backlinks from already-parsed frontmatter (tested on inline data in `content.test.ts`).

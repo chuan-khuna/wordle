@@ -1,0 +1,39 @@
+---
+title: "Opener"
+summary: "จัดอันดับ Guess แรกทุกคำด้วย Expected Information แล้วดูว่าคำไหนได้ที่หนึ่ง"
+source: 9bd0cad0bd1233441e0ec556f5ebea0aec87d2c5
+---
+
+Guess แรกของ <Term>Game</Term> คือ <Term>Opener</Term> ของมัน ทุก Opener เริ่มจากจุดเดียวกัน คือ <Term>Candidate Set</Term> เต็ม 2,315 คำ เราจึงวัด Opener ที่เป็นไปได้แต่ละคำเพียงครั้งเดียว แล้วเก็บตารางไว้
+
+มี 14,855 คำใน <Term>Guess List</Term> สำหรับแต่ละคำ เราหา <Term>Feedback Split</Term> และ <Term>Expected Information</Term> ของมัน แล้วเรียงลำดับ ตารางนี้แสดงสิบอันดับแรก <Word>crane</Word> และ <Word>slate</Word> ถูกเน้นไว้ เพราะเป็นคำที่คนมักเลือก:
+
+<OpenerTable id="op" top={10} highlight="crane,slate" />
+
+## ตารางบอกอะไร
+
+Opener ที่ดีที่สุดคือ <Word>tarse</Word> ที่ 5.947 บิต มันเป็นคำจริง แต่ไม่อยู่ใน <Term>Answer List</Term> มันชนะตั้งแต่ครั้งแรกไม่ได้เลย และก็ยังเป็นวิธีเริ่มที่ดีที่สุด
+
+Opener ที่ดีที่สุดที่เป็น Answer ได้ด้วยคือ <Word>raise</Word> อยู่อันดับที่ห้า ที่ 5.878 บิต <Word>slate</Word> อยู่อันดับที่แปด ที่ 5.856 สามในสิบอันดับแรกเป็น Answer ส่วนที่เหลือเป็นคำที่ทำได้แค่ถามคำถาม
+
+<Word>crane</Word> คำที่รู้สึกว่าเป็นตัวเลือกที่ชัดเจน อยู่อันดับที่สามสิบห้าเท่านั้น ที่ 5.743 บิต มันไม่ใช่ Opener ที่แย่ แต่กลุ่มใหญ่สุดของมันมี 263 คำ ขณะที่ของ <Word>raise</Word> มี 168
+
+อันดับเปลี่ยนไปตามเกณฑ์ที่ใช้วัด ถ้าเรียงตาม <Term>Expected Candidates</Term> <Word>roate</Word> ต่ำที่สุด เหลือ 60.4 คำ ขณะที่ <Word>tarse</Word> เหลือ 66.0 นี่คือความไม่ตรงกันจากบทนำ
+
+## จัดอันดับทุกคำ
+
+การจัดอันดับ Opener ทุกคำฟังดูเป็นงานหนัก: Guess 14,855 คำเทียบกับ Answer 2,315 คำ ซึ่งเป็น Feedback กว่า 34 ล้านอัน แต่มันเร็ว เพราะ Feedback เหล่านั้นถูกค้นจาก <Term>Feedback Matrix</Term> ไม่ได้คำนวณใหม่ แล้วการจัดอันดับก็ใช้การเรียกครั้งเดียว:
+
+```python
+solver = Solver.load()
+candidates = solver.all_candidates()      # the whole Answer List
+for stats in solver.rank(candidates, top=5):
+    print(stats.word, round(stats.bits, 3), round(stats.expected_candidates, 1))
+# tarse 5.947 66.0
+# tiare 5.931 60.9
+# soare 5.886 62.3
+# roate 5.883 60.4
+# raise 5.878 61.0
+```
+
+`rank` รับ Candidate Set และคืน Guess ที่ดีที่สุดพร้อมตัวเลขของมัน มันทำงานเดียวกันได้กับ State ใดก็ได้ ไม่ใช่แค่ State แรก และนั่นคือ Article ถัดไป

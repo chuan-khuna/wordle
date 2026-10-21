@@ -1,0 +1,51 @@
+---
+title: "Opener Distribution"
+summary: "เล่นทุก Opener ใน Guess List จนจบ แล้วดูว่าตัวที่ดีที่สุดกับแย่ที่สุดห่างกันจริง ๆ แค่ไหน"
+source: b1337866b853e9a740b291f66a2120f4bbea0e0a
+---
+
+<Term>Benchmark</Term> เล่นหนึ่ง <Term>Opener</Term> ต่อหนึ่ง <Term>Strategy</Term> แต่ Solver เริ่มด้วยคำไหนก็ได้ใน 14,855 คำของ <Term>Guess List</Term> เรามาเล่นให้ครบทุกคำกัน
+
+สำหรับแต่ละ Strategy ทุกคำใน <Term>Guess Pool</Term> ของมันคือ Opener ของ 2,315 Game หนึ่ง Game ต่อหนึ่ง Answer และ Solver เล่นแต่ละ Game จนจบเอง สำหรับ Guess List นั่นคือ 14,855 × 2,315 Game และเราเก็บไว้หนึ่งตัวเลขต่อหนึ่ง Game: <Term>Guess Count</Term> ตารางของทั้งหมดนี้คือ <Term>Guess Count Matrix</Term> เฉลี่ยแต่ละแถวแล้วคุณจะได้ <Term>Average Guess Count</Term> ของทุก Opener: โดยเฉลี่ยมันใช้กี่ Guess จึงจะ Win
+
+ทีนี้นับว่ามีกี่ Opener ที่มีแต่ละค่า Average Guess Count นี่คือ <Term>Opener Distribution</Term> แต่ละบล็อกคือหนึ่ง Opener และเรียงซ้อนกันเป็นแท่งกว้าง 0.01 โดยตัวที่ดีที่สุดอยู่ล่างสุด Strategy ที่นี่คือ Expected Information, Guess List, All words ทั้ง 14,855 คำถูกวาดไว้: สีหนึ่งสำหรับคำใน <Term>Answer List</Term> อีกสีสำหรับคำที่เหลือ แท็บด้านล่างทำเครื่องหมายรายการคำ (คำที่ดีที่สุด ความเชื่อบางอย่าง และ Opener ที่แย่) และแต่ละคำที่ทำเครื่องหมายมีตัวเลขของมันอยู่ด้านบน คลิกแท่งเพื่อดูรายการ Opener ในแท่งนั้น:
+
+<OpenerDistribution id="od" strategy="bits-guesses-all" controls={false} tabs />
+
+## มันแสดงอะไร
+
+Opener ที่ดีที่สุดคือ <Word>tarse</Word> ที่ Average Guess Count **3.429** ส่วนที่แย่ที่สุดคือ <Word>qajaq</Word> ที่ **4.117** นั่นต่างกันไม่ถึงหนึ่ง Guess ระหว่างการเริ่มที่ดีที่สุดกับแย่ที่สุด การเลือก Opener สำคัญ แต่ไม่มากเท่าการเล่นส่วนที่เหลือของ Game ให้ดี
+
+<Word>tarse</Word> ไม่ใช่ Answer และ <Word>salet</Word> ก็ไม่ใช่เช่นกัน ทั้งสองอยู่ใน <Term>Guess List</Term> จึงอยู่ในแผนภูมิทั้งคู่ และ <Word>tarse</Word> คือบล็อกที่ดีที่สุดของทั้งหมด ในหน้าเต็ม คุณติ๊ก Only Openers on the Answer List เพื่อดูเฉพาะคำที่เป็นคำตอบได้
+
+<Word>crane</Word> อยู่อันดับที่เจ็ด ที่ 3.437 ตามหลัง <Word>tarse</Word> ไม่ถึงหนึ่งในร้อยของ Guess <Word>raise</Word> อยู่อันดับที่ 95 ที่ 3.471 ทั้งคู่เป็น Opener ที่ดี และช่องว่างระหว่างสองคำนี้ราวสามในร้อยของ Guess
+
+Strategy สำคัญ ด้วย Expected Information, Guess List, Candidates only Opener ที่ดีที่สุดคือ <Word>salet</Word> ที่ **3.528** และ <Word>raise</Word> ตกไปอยู่อันดับที่ 420 Opener ที่ดีที่สุดขึ้นอยู่กับว่า Solver เล่นส่วนที่เหลือของ Game อย่างไร
+
+## สองอันดับที่ไม่ตรงกัน
+
+Article 7 จัดอันดับ Opener ด้วย Expected Information ก่อนเล่น Game ใด ๆ การเล่นพวกมันจนจบให้อันดับที่สอง และสองอันดับนี้ไม่ตรงกัน
+
+<Word>raise</Word> อยู่อันดับที่ห้าตาม Expected Information ที่ 5.878 บิต แต่เป็นอันดับที่ 95 เมื่อเล่นจริง <Word>crane</Word> อยู่อันดับที่ 35 ตาม Expected Information ที่ 5.743 บิต และเป็นอันดับที่เจ็ดเมื่อเล่นจริง มีแค่ <Word>tarse</Word> ที่ได้อันดับหนึ่งในทั้งสอง
+
+Expected Information วัดแค่ขั้นเดียว: Guess แรกบอกคุณได้มากแค่ไหน แต่ Game มีหลายขั้น คะแนนสูงในขั้นแรกไม่ได้รับประกันว่าจะจบได้ดี
+
+## Opener ยอดนิยม เมื่อเล่นจนจบ
+
+Opener บางคำมีชื่อเสียง นี่คือผลของพวกมันภายใต้ Expected Information, Guess List, All words
+
+การเริ่มด้วยสระเยอะคือแบบที่อ่อนที่สุด <Word>adieu</Word> อยู่อันดับที่ 7,062 ที่ 3.624 ดังนั้นราวครึ่งหนึ่งของ Guess List เปิดเกมได้ดีกว่า <Word>audio</Word> อยู่อันดับที่ 8,241 ที่ 3.644 และ <Word>ouija</Word> อยู่ใกล้ท้ายตาราง อันดับที่ 14,197 ที่ 3.822 สระสี่ตัวบอกคุณได้มากเรื่องสระ และน้อยมากเรื่องอย่างอื่น
+
+คำโปรดตาม Expected Information ดีแต่ไม่ใช่ที่สุด <Word>soare</Word> อยู่อันดับที่สามตาม Expected Information และอันดับที่ 71 เมื่อเล่นจริง ส่วน <Word>roate</Word> อยู่อันดับที่สี่ และอันดับที่ 58
+
+คำที่ใช้ตัวอักษรที่พบบ่อยสมกับชื่อ <Word>crate</Word> อยู่อันดับที่ 4, <Word>trace</Word> อันดับที่ 5, <Word>slate</Word> อันดับที่ 6 และ <Word>crane</Word> อันดับที่ 7
+
+ท้ายตารางคือตัวอักษรหายากและตัวอักษรซ้ำ: <Word>qajaq</Word>, <Word>xviii</Word>, <Word>zhuzh</Word> ในหมู่ Answer <Word>jazzy</Word> แย่ที่สุด ที่ 4.029 แม้แต่คำเหล่านี้ก็ไม่เคยแพ้สักครั้ง
+
+### salet หรือ slate?
+
+ภายใต้ Strategy นี้ <Word>salet</Word> อยู่อันดับที่ 3 ที่ 3.432 และ <Word>slate</Word> อันดับที่ 6 ที่ 3.437 ใน 2,315 Game นั่นคือ 7,944 Guess เทียบกับ 7,957 ต่างกัน 13 ด้วย Guess List และ Candidates only พวกมันอยู่อันดับหนึ่งและสอง ห่างกันหนึ่ง Guess ภายใต้สอง Strategy ของ Guess List ที่ให้คะแนนด้วย Expected Candidates <Word>slate</Word> เป็นฝ่ายนำ
+
+ดังนั้นมันเสมอกัน <Word>slate</Word> มีข้อได้เปรียบอย่างหนึ่ง: มันเป็น Answer ดังนั้นหนึ่งครั้งใน 2,315 Game มันจะ Win ภายในหนึ่ง Guess ส่วน <Word>salet</Word> ทำไม่ได้เลย
+
+[ดู Opener Distribution ฉบับเต็ม →](/th/openers)

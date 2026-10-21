@@ -40,3 +40,5 @@ Built; the user-review box is open, so the Status is unchanged.
 
 **Deviations.** Prop order is ignored by the check (props compare by name). The check also treats fenced-code info strings (title, highlights) as part of the code block. The ticket's "stale vs current hash" test is on `staleWarning` with a fixed hash and `blobHash` is pinned to git's hash of "hello\n".
 
+
+- 2026-10-21: User said "continue implement" without wording changes. Tickets 05–08 proceed using the pilot wording above as-is; the Thai text stays open for the user's later review.
