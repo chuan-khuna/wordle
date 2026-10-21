@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { SplitResponse } from "@/lib/api";
 import { pageText } from "@/lib/i18n/page-text";
 import { orderGroups } from "@/lib/widgets/split-chart";
+import { ControlPanel } from "@/components/controls/ControlPanel";
 import { SplitChart } from "./SplitChart";
 import { SplitWords } from "./SplitWords";
 
@@ -11,7 +12,8 @@ import { SplitWords } from "./SplitWords";
  * A Feedback Split as the explorer shows it: the bar chart (one bar per Feedback, biggest first) beside the words of the
  * selected Feedback, stacked when the container is narrower than `@2xl` (672px of its own width, a container query). The biggest group is selected
  * to begin with and again whenever `data` is a new response. Shared by the Feedback Split explorer and the Opener Split
- * page's Bars view; `text` is the page text (English by default) and `wordLink` turns the words into links.
+ * page's Bars view, so it owns its type (the UI sans at `text-sm` through `ControlPanel plain`) and looks the same in a
+ * `WidgetFrame` or on a page; `text` is the page text (English by default) and `wordLink` turns the words into links.
  */
 export function SplitBars({
   data,
@@ -27,7 +29,7 @@ export function SplitBars({
   const picked = pick?.data === data ? pick.marks : (orderGroups(data.split)[0]?.marks ?? null);
   const group = data.split.find((s) => s.marks === picked) ?? null;
   return (
-    <div className="@container">
+    <ControlPanel plain className="@container">
       <div className="grid gap-x-8 gap-y-6 @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <SplitChart
           word={data.word}
@@ -45,6 +47,6 @@ export function SplitBars({
           </div>
         </div>
       </div>
-    </div>
+    </ControlPanel>
   );
 }

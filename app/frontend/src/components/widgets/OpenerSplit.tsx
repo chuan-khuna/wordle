@@ -217,7 +217,7 @@ function OpenerResult({
 }) {
   const wordLink = (answer: string) => followPath(lang, { answer, opener: split.word });
   return (
-    <section className="min-w-0 space-y-4">
+    <section className="min-w-0 space-y-4 font-sans">
       <SplitFigures split={split} other={other} lang={lang} />
       {showSplit && view === "blocks" && <SplitGroups split={split} lang={lang} wordLink={wordLink} />}
       {view === "bars" && <SplitBars data={split} text={pageText(lang)} wordLink={wordLink} />}

@@ -47,7 +47,7 @@ export function FollowPath({
         onPointerOut={onPointerOut}
         onFocus={onFocus}
         onBlur={onBlur}
-        className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-y-4"
+        className="flex flex-col items-center gap-2 font-sans sm:flex-row sm:flex-wrap sm:items-start sm:gap-y-4"
       >
         <li className="rounded-sm border border-rule px-3 py-2 text-sm text-meta sm:mt-2">
           {text.pathStart(data.steps[0].candidates_before)}

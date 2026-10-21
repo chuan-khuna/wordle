@@ -100,7 +100,7 @@ function Game({ lang }: { lang: Language }) {
   const best = !custom && data ? data.steps[0].guess : "";
 
   return (
-    <div className="space-y-6">
+    <ControlPanel plain className="space-y-6">
       <ControlPanel plain className="space-y-4">
         <Field layout="inline" label={text.answerLabel} htmlFor={`${uid}-answer`} labelClassName={WORD_LABEL}>
           <WordRow id={`${uid}-answer`} label={text.answerLabel} hideLabel value={a} onChange={setAnswer} error={answerError} />
@@ -169,7 +169,7 @@ function Game({ lang }: { lang: Language }) {
           )}
         </>
       )}
-    </div>
+    </ControlPanel>
   );
 }
 
@@ -301,7 +301,7 @@ function Row({ data, step, lang, rowSplits }: { data: SolveResponse; step: numbe
   const group = split && answerGroup(split, data.answer);
   const win = step === data.guesses && data.solved;
   return (
-    <section aria-label={text.guessOf(step, data.guesses)} className="space-y-4">
+    <section aria-label={text.guessOf(step, data.guesses)} className="space-y-4 font-sans">
       <h2 className="text-lg font-medium text-text">
         {win ? text.winHeading(step, shown.guess) : text.rowHeading(step, shown.guess, shown.candidates_before)}
       </h2>
