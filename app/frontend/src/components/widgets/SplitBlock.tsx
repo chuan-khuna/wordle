@@ -1,6 +1,7 @@
 import type { pageText } from "@/lib/i18n/page-text";
 import { type HeadSize, headSize } from "@/lib/widgets/split-groups";
 import { parseMarks } from "@/lib/wordle/feedback";
+import { headLabel } from "./HeadCard";
 import { Tile } from "./Tile";
 
 /** A word is five mono capitals at 11px (about 6.6px each), in a grid column of `WORD_W` pixels; columns are `WORD_GAP` apart. */
@@ -18,6 +19,8 @@ const HEAD_TILE: Record<HeadSize, { small?: boolean; board?: boolean; tiny?: boo
  * The inside of one Feedback's block, shared by `SplitGroups` and the Follow an Answer path: the head (the Guess in that
  * Feedback's Marks, smaller Tiles for a smaller group, and the word count, or `label` in its place) and the group's words as
  * plain text in `columns` columns. `more` words left out are counted after them. `strong` marks the highlighted word.
+ * Given `total` (the size of the Candidate Set the split was over), the head is a target of the shared stats card (`HEAD`,
+ * with its figures in `data-*`; see `useHeadCard`), and `headTab` (0 or -1) makes it focusable, as a roving tab stop.
  */
 export function SplitBlock({
   marks: code,
@@ -32,6 +35,8 @@ export function SplitBlock({
   linked = false,
   picked = null,
   tabWord = null,
+  total,
+  headTab,
 }: {
   marks: string;
   count: number;
@@ -47,12 +52,20 @@ export function SplitBlock({
   picked?: string | null;
   /** The word that is the tab stop, when it is in this block. */
   tabWord?: string | null;
+  total?: number;
+  headTab?: 0 | -1;
 }) {
   const marks = parseMarks(code) ?? [];
   const size = HEAD_TILE[headSize(count)];
   return (
     <>
-      <div role="group" aria-label={`${text.feedbackLabel} ${code}, ${text.words(count)}`}>
+      <div
+        role="group"
+        aria-label={total === undefined ? `${text.feedbackLabel} ${code}, ${text.words(count)}` : headLabel(text, code, count, total)}
+        {...(total !== undefined && { "data-head": code, "data-guess": guess, "data-count": count, "data-total": total })}
+        tabIndex={headTab}
+        className="w-fit rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
         <div className="flex gap-0.5" aria-hidden="true">
           {Array.from(guess, (letter, i) => (
             <Tile key={i} letter={letter} mark={marks[i] ?? 0} {...size} />

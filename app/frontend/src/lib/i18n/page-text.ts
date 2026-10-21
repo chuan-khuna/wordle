@@ -43,6 +43,24 @@ export type PageText = {
   splitGroupsLabel: (guess: string) => string;
   feedbackLabel: string;
   words: (count: number) => string;
+  /** The Blocks / Bars switch of the Opener Split page: its label and its two options. */
+  splitViewLabel: string;
+  blocksView: string;
+  barsView: string;
+  /** The Bars view's chart and word list (the Feedback Split explorer's, in the page's language). `left` and `bits` are already formatted. */
+  chartTitle: (left: string, bits: string) => string;
+  chartSummary: (groups: number, candidates: number) => string;
+  chartListLabel: (guess: string) => string;
+  chartHint: string;
+  chartPick: string;
+  /** "word" / "words" beside a bar, "127 words left" over the word list, and "5.5% chance of this Feedback, leaving 127 words". */
+  wordUnit: (count: number) => string;
+  chartLeft: (count: number) => string;
+  chartChance: (percent: string, count: number) => string;
+  /** The stats card of a block's head: its rows (Words, Chance, Information). */
+  headWords: string;
+  headChance: string;
+  headInformation: string;
   /** The Follow an Answer page: its link under Explore, title, intro and help text. */
   follow: string;
   followIntro: string;
@@ -169,6 +187,20 @@ export const EN: PageText = {
   betterFigure: "better",
   feedbackLabel: "Feedback",
   words: (n) => `${n} word${n === 1 ? "" : "s"}`,
+  splitViewLabel: "View",
+  blocksView: "Blocks",
+  barsView: "Bars",
+  chartTitle: (left, bits) => `Expected ${left} words left · ${bits} bits`,
+  chartSummary: (g, c) => `${g} Feedbacks over ${c} Candidates`,
+  chartListLabel: (g) => `Feedback Split of ${g}: words left per Feedback`,
+  chartHint: "Each bar is a Feedback (0 Absent, 1 Present, 2 Correct), as long as the words that would remain. Select one to see them.",
+  chartPick: "Select a bar to see the words that would remain.",
+  wordUnit: (n) => (n === 1 ? "word" : "words"),
+  chartLeft: (n) => `${n} word${n === 1 ? "" : "s"} left`,
+  chartChance: (p, n) => `${p} chance of this Feedback, leaving ${n} word${n === 1 ? "" : "s"}`,
+  headWords: "Words",
+  headChance: "Chance",
+  headInformation: "Information",
   follow: "Follow an Answer",
   followIntro: "Pick an Answer and watch the Solver home in on it. Each Guess splits the words still possible after the Guesses before it; the Answer's block is outlined.",
   followHelp: "Choose a Strategy, and an Opener if you do not want the Strategy's best. Step through the Guesses with Prev and Next, or click a Guess in the strip. Switch to Answer's path to see the Answer's group after every Guess as one chain.",
@@ -276,6 +308,20 @@ export const TH: PageText = {
   betterFigure: "ดีกว่า",
   feedbackLabel: "Feedback",
   words: (n) => `${n} คำ`,
+  splitViewLabel: "มุมมอง",
+  blocksView: "บล็อก",
+  barsView: "แท่ง",
+  chartTitle: (left, bits) => `คาดว่าจะเหลือ ${left} คำ · ${bits} bits`,
+  chartSummary: (g, c) => `${g} Feedback จาก ${c} Candidates`,
+  chartListLabel: (g) => `Feedback Split ของ ${g}: จำนวนคำที่เหลือต่อ Feedback`,
+  chartHint: "แต่ละแท่งคือ Feedback (0 Absent, 1 Present, 2 Correct) ยาวตามจำนวนคำที่จะเหลือ เลือกแท่งเพื่อดูคำเหล่านั้น",
+  chartPick: "เลือกแท่งเพื่อดูคำที่จะเหลือ",
+  wordUnit: () => "คำ",
+  chartLeft: (n) => `เหลือ ${n} คำ`,
+  chartChance: (p, n) => `โอกาส ${p} ที่จะได้ Feedback นี้ เหลือ ${n} คำ`,
+  headWords: "จำนวนคำ",
+  headChance: "โอกาส",
+  headInformation: "ข้อมูล",
   follow: "Follow an Answer",
   followIntro: "เลือก Answer แล้วดู Solver ค่อย ๆ จำกัดวงเข้าหาคำนั้น แต่ละ Guess แบ่งคำที่ยังเป็นไปได้หลัง Guess ก่อนหน้า และบล็อกของ Answer จะมีกรอบ",
   followHelp: "เลือก Strategy และเลือก Opener เองได้ถ้าไม่ต้องการ Opener ที่ดีที่สุดของ Strategy นั้น กด Prev และ Next เพื่อไล่ดู Guess หรือคลิก Guess ในแถบด้านบน หรือเลือกเส้นทางของ Answer เพื่อดูกลุ่มของ Answer หลังทุก Guess เป็นสายเดียว",

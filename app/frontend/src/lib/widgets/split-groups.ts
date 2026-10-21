@@ -27,6 +27,22 @@ export function singleWordGroups(groups: readonly Pick<SplitGroup, "count">[]): 
   return groups.filter((g) => g.count === 1).length;
 }
 
+/** What a block's head says about its Feedback: how many words it leaves, the chance of getting it, and the information it gives, in bits. */
+export interface HeadStats {
+  words: number;
+  /** The group's size over the Candidate Set's size, 0 to 1 (0 for an empty set). */
+  chance: number;
+  /** -log2(chance): 0 for a group that is the whole set; `Infinity` for a group with no words or a set with none. */
+  bits: number;
+}
+
+/** The stats of a group of `count` words in a Candidate Set of `total`: words, chance `count / total` and information `-log2(chance)`. */
+export function headStats(count: number, total: number): HeadStats {
+  const chance = total > 0 ? count / total : 0;
+  // `+ 0` turns -0 (a chance of 1) into 0.
+  return { words: count, chance, bits: chance > 0 ? -Math.log2(chance) + 0 : Infinity };
+}
+
 /** The State before each row of a Game: row k holds the Guesses before Guess k, as the API's `state` (Feedback as digit strings). */
 export function statesPerRow(solve: Pick<SolveResponse, "steps">): { guess: string; feedback: string }[][] {
   return solve.steps.map((_, k) => solve.steps.slice(0, k).map((s) => ({ guess: s.guess, feedback: s.marks })));
@@ -64,6 +80,8 @@ export interface ChainNode {
   guess: string;
   marks: string;
   count: number;
+  /** The size of the Candidate Set before the Guess (the Candidate Set the split was over). */
+  total: number;
   words: string[];
   more: number;
   /** The last node of a solved Game: just the Answer. */
@@ -81,6 +99,6 @@ export function chainNodes(solve: SolveResponse, groups: readonly (SplitGroup | 
     const all = win ? [solve.answer] : [...(groups[k]?.words ?? [])].sort();
     let words = all.slice(0, limit);
     if (all.length > limit && !words.includes(solve.answer) && all.includes(solve.answer)) words = [...words.slice(0, -1), solve.answer].sort();
-    return { number: s.number, guess: s.guess, marks: s.marks, count: win ? 1 : s.candidates_after, words, more: all.length - words.length, win };
+    return { number: s.number, guess: s.guess, marks: s.marks, count: win ? 1 : s.candidates_after, total: s.candidates_before, words, more: all.length - words.length, win };
   });
 }

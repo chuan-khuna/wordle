@@ -4,10 +4,8 @@ import { Suspense, useEffect, useId, useMemo, useState } from "react";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { rowsFromState } from "@/lib/widgets/state-board";
-import { orderGroups } from "@/lib/widgets/split-chart";
 import { formatState } from "@/lib/widgets/widget-state";
-import { SplitChart } from "./SplitChart";
-import { SplitWords } from "./SplitWords";
+import { SplitBars } from "./SplitBars";
 import { StateBoard } from "./StateBoard";
 import { WidgetFrame } from "./ui";
 import { WordRow, cleanWord } from "./WordRow";
@@ -44,7 +42,6 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", id }: { guess?
   const ready = g.length === WORD_LENGTH && !check.checking && !check.error;
 
   const [result, setResult] = useState<Result | null>(null);
-  const [picked, setPicked] = useState<string | null>(null);
   useEffect(() => {
     if (!ready) return;
     const ctl = new AbortController();
@@ -52,7 +49,6 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", id }: { guess?
       postSplit(g, turns, ctl.signal).then(
         (data) => {
           setResult({ key, data, error: null });
-          setPicked(orderGroups(data.split)[0]?.marks ?? null);
         },
         (e: Error) => {
           if (e.name !== "AbortError") setResult({ key, data: null, error: e.message });
@@ -69,8 +65,6 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", id }: { guess?
 
   const current = ready && result?.key === key ? result : null;
   const data = current?.data ?? null;
-  const group = data?.split.find((s) => s.marks === picked) ?? null;
-  const letters = data?.word ?? g;
 
   return (
     <WidgetFrame title="Feedback Split explorer">
@@ -92,26 +86,7 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", id }: { guess?
         )}
       </div>
 
-      {data && (
-        <div className="@container">
-          <div className="grid gap-x-8 gap-y-6 @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <SplitChart
-              word={letters}
-              groups={data.split}
-              candidates={data.candidates}
-              expectedCandidates={data.expected_candidates}
-              bits={data.bits}
-              selected={picked}
-              onSelect={setPicked}
-            />
-            <div className="flex min-w-0 flex-col @2xl:relative">
-              <div className="flex min-h-0 flex-1 flex-col @2xl:absolute @2xl:inset-0">
-                <SplitWords key={group?.marks ?? ""} word={letters} group={group} candidates={data.candidates} />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {data && <SplitBars data={data} />}
     </WidgetFrame>
   );
 }

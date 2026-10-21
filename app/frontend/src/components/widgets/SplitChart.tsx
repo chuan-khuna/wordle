@@ -2,7 +2,8 @@
 
 import type { SplitGroup } from "@/lib/api";
 import { parseMarks } from "@/lib/wordle/feedback";
-import { barPercent, chartTitle, orderGroups, percent, wordsText } from "@/lib/widgets/split-chart";
+import { pageText } from "@/lib/i18n/page-text";
+import { barPercent, formatLeft, orderGroups, percent } from "@/lib/widgets/split-chart";
 import { Tile } from "./Tile";
 
 const WIN = "22222";
@@ -12,6 +13,7 @@ const WIN = "22222";
  * biggest first, every group drawn, in a box that scrolls past about 320px (the explorer's right column matches its height). Plain elements and tokens,
  * no chart library. Each row is the Feedback as five small Mark tiles, a bar as long as the group
  * (relative to the largest), and the figures: words left and the chance of the Feedback.
+ * Its words are `text`'s (the page text table; English by default, as in the Feedback Split explorer).
  */
 export function SplitChart({
   word,
@@ -21,6 +23,7 @@ export function SplitChart({
   bits,
   selected,
   onSelect,
+  text = pageText("en"),
 }: {
   word: string;
   groups: readonly SplitGroup[];
@@ -29,21 +32,24 @@ export function SplitChart({
   bits: number;
   selected: string | null;
   onSelect: (marks: string) => void;
+  text?: ReturnType<typeof pageText>;
 }) {
   const ordered = orderGroups(groups);
   const largest = ordered[0]?.count ?? 0;
-  const title = chartTitle(expectedCandidates, bits);
+  // The count column is as wide as the largest count (at least three digits), so a four-digit group does not run into "words".
+  const countDigits = Math.max(3, String(largest).length);
+  const title = text.chartTitle(formatLeft(expectedCandidates), bits.toFixed(2));
 
   return (
     <figure className="min-w-0">
       <figcaption>
         <p className="text-base text-text">{title}</p>
         <p className="mt-0.5 text-xs text-meta">
-          {ordered.length} Feedbacks over {candidates} Candidates
+          {text.chartSummary(ordered.length, candidates)}
         </p>
       </figcaption>
       <ul
-        aria-label={`Feedback Split of ${word}: words left per Feedback`}
+        aria-label={text.chartListLabel(word)}
         className="mt-3 flex max-h-80 flex-col gap-px overflow-y-auto overscroll-contain border-y border-rule py-1"
       >
         {ordered.map((g) => {
@@ -56,7 +62,7 @@ export function SplitChart({
                 type="button"
                 data-marks={g.marks}
                 aria-pressed={on}
-                aria-label={`Feedback ${g.marks}, ${wordsText(g.count)}`}
+                aria-label={`${text.feedbackLabel} ${g.marks}, ${text.words(g.count)}`}
                 onClick={() => onSelect(g.marks)}
                 className={`grid w-full cursor-pointer grid-cols-[auto_1fr_auto] items-center gap-2 rounded-sm px-1.5 py-0.5 text-left hover:bg-highlight-low focus-visible:-outline-offset-2 sm:gap-3 ${on ? "bg-highlight-med" : ""}`}
               >
@@ -72,8 +78,10 @@ export function SplitChart({
                   />
                 </span>
                 <span className="flex items-baseline justify-end gap-2 text-xs tabular-nums" aria-hidden>
-                  <span className="w-[3ch] text-right text-text">{g.count}</span>
-                  <span className="w-[5ch] text-meta max-sm:hidden">{g.count === 1 ? "word" : "words"}</span>
+                  <span className="text-right text-text" style={{ minWidth: `${countDigits}ch` }}>
+                    {g.count}
+                  </span>
+                  <span className="w-[5ch] text-meta max-sm:hidden">{text.wordUnit(g.count)}</span>
                   <span className="text-meta max-sm:hidden">·</span>
                   <span className="w-[5ch] text-right text-meta">{percent(g.count, candidates)}</span>
                 </span>
@@ -82,9 +90,7 @@ export function SplitChart({
           );
         })}
       </ul>
-      <p className="mt-2 text-xs text-meta">
-        Each bar is a Feedback (0 Absent, 1 Present, 2 Correct), as long as the words that would remain. Select one to see them.
-      </p>
+      <p className="mt-2 text-xs text-meta">{text.chartHint}</p>
     </figure>
   );
 }

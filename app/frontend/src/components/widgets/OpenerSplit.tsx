@@ -4,6 +4,7 @@ import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState, useSyncE
 import { Maximize2, Plus, X } from "lucide-react";
 import { ControlPanel } from "@/components/controls/ControlPanel";
 import { Field } from "@/components/controls/Field";
+import { SegmentedControl } from "@/components/controls/SegmentedControl";
 import { Button } from "@/components/ui/button";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
@@ -13,12 +14,16 @@ import { formatLeft } from "@/lib/widgets/split-chart";
 import { betterFigures, singleWordGroups } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { cn } from "@/lib/utils";
+import { SplitBars } from "./SplitBars";
 import { SplitGroups } from "./SplitGroups";
 import { WordRow, cleanWord } from "./WordRow";
 import { useGuessCheck } from "./useGuessCheck";
 import { useParamInitial, useParamSync, useWidgetParam } from "./useWidgetParam";
 
 const DEFAULT_OPENER = "salet";
+
+/** How a split is drawn: `SplitGroups` blocks, or the Feedback Split explorer's bars and word list. */
+type SplitView = "blocks" | "bars";
 
 /**
  * The Opener Split page's content: an Opener input (URL param `opener`, default `salet`) and `SplitGroups` of that
@@ -80,6 +85,9 @@ function Split({ lang }: { lang: Language }) {
   const uid = useId();
   const [opener, setOpener] = useWidgetParam(undefined, "opener", DEFAULT_OPENER);
   const [fit, setFit] = useWidgetParam(undefined, "fit", "");
+  // Blocks (the default, left out of the URL) or Bars (`view=bars`: the Feedback Split explorer's chart and word list).
+  const [viewParam, setView] = useWidgetParam(undefined, "view", "blocks");
+  const view: SplitView = viewParam === "bars" ? "bars" : "blocks";
   // Compare is on while `compare` is in the URL; it stays on if the word is cleared to be retyped.
   const initialCompare = useParamInitial(undefined, "compare", "");
   const [comparing, setComparing] = useState(initialCompare !== "");
@@ -89,7 +97,7 @@ function Split({ lang }: { lang: Language }) {
   const first = useOpenerSplit(opener);
   const second = useOpenerSplit(compare, comparing);
   const lg = useLg();
-  const fitted = fit === "1" && lg;
+  const fitted = fit === "1" && lg && view === "blocks";
   const fittedSplits = [first.data, comparing ? second.data : null].filter((d) => d !== null);
 
   return (
@@ -116,17 +124,30 @@ function Split({ lang }: { lang: Language }) {
             </Button>
           </div>
         )}
-        <div className={cn(ACTION_CELL, "hidden lg:ml-auto lg:flex", comparing && "max-xl:mt-0 max-xl:h-9")}>
-          <Button type="button" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="aria-pressed:bg-highlight-med">
-            <Maximize2 aria-hidden="true" />
-            {text.fullScreen}
-          </Button>
-        </div>
+        <Field label={text.splitViewLabel} labelId={`${uid}-view`} className="gap-1" labelClassName="flex h-6 items-center">
+          <div className="flex h-12 items-center sm:h-14">
+            <SegmentedControl<SplitView>
+              labelledBy={`${uid}-view`}
+              options={["blocks", "bars"]}
+              names={{ blocks: text.blocksView, bars: text.barsView }}
+              value={view}
+              onChange={(next) => setView(next === "bars" ? "bars" : "")}
+            />
+          </div>
+        </Field>
+        {view === "blocks" && (
+          <div className={cn(ACTION_CELL, "hidden lg:ml-auto lg:flex", comparing && "max-xl:mt-0 max-xl:h-9")}>
+            <Button type="button" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="aria-pressed:bg-highlight-med">
+              <Maximize2 aria-hidden="true" />
+              {text.fullScreen}
+            </Button>
+          </div>
+        )}
       </ControlPanel>
       {/* The two splits sit side by side from `xl`; each SplitGroups measures its own column. */}
       <div className={comparing ? "grid grid-cols-1 gap-x-10 gap-y-10 xl:grid-cols-2" : undefined}>
-        {first.data && <OpenerResult split={first.data} other={comparing ? second.data : null} lang={lang} showSplit={!fitted} />}
-        {comparing && second.data && <OpenerResult split={second.data} other={first.data} lang={lang} showSplit={!fitted} />}
+        {first.data && <OpenerResult split={first.data} other={comparing ? second.data : null} lang={lang} view={view} showSplit={!fitted} />}
+        {comparing && second.data && <OpenerResult split={second.data} other={first.data} lang={lang} view={view} showSplit={!fitted} />}
       </div>
       {fitted && fittedSplits.length > 0 && <FitView splits={fittedSplits} lang={lang} onExit={() => setFit("")} />}
     </div>
@@ -180,12 +201,26 @@ function OpenerInput({
   );
 }
 
-/** One Opener's stat card and its `SplitGroups` (a column of the page when Compare is on). */
-function OpenerResult({ split, other, lang, showSplit }: { split: SplitResponse; other: SplitResponse | null; lang: Language; showSplit: boolean }) {
+/** One Opener's stat card and its split, as `SplitGroups` blocks or the explorer's bars and word list (a column of the page when Compare is on). */
+function OpenerResult({
+  split,
+  other,
+  lang,
+  view,
+  showSplit,
+}: {
+  split: SplitResponse;
+  other: SplitResponse | null;
+  lang: Language;
+  view: SplitView;
+  showSplit: boolean;
+}) {
+  const wordLink = (answer: string) => followPath(lang, { answer, opener: split.word });
   return (
     <section className="min-w-0 space-y-4">
       <SplitFigures split={split} other={other} lang={lang} />
-      {showSplit && <SplitGroups split={split} lang={lang} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />}
+      {showSplit && view === "blocks" && <SplitGroups split={split} lang={lang} wordLink={wordLink} />}
+      {view === "bars" && <SplitBars data={split} text={pageText(lang)} wordLink={wordLink} />}
     </section>
   );
 }

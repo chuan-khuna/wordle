@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { SolveResponse, SplitGroup, SplitResponse } from "@/lib/api";
 import solveFixture from "@/lib/widgets/fixtures/solve-watch-crane.json";
 import splitFixture from "@/lib/widgets/fixtures/split-moist-after-crane.json";
-import { answerGroup, betterFigures, chainNodes, columnCount, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
+import { answerGroup, betterFigures, chainNodes, columnCount, headStats, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
 
 const group = (code: number, count: number, words: string[] = []) => ({ marks: String(code), code, count, words });
 
@@ -116,4 +116,23 @@ test("chainNodes: a big group is cut to the limit, alphabetically, with the Answ
   expect(node.words).toContain("watch");
   expect(node.words.slice(0, 9)).toEqual(words.slice(0, 9));
   expect(node.more).toBe(words.length - 10);
+});
+
+test("headStats: words, chance = count / total, information = -log2(chance)", () => {
+  expect(headStats(263, 2315)).toEqual({ words: 263, chance: 263 / 2315, bits: -Math.log2(263 / 2315) });
+  expect(headStats(1157, 2314).bits).toBeCloseTo(1, 10);
+  expect(headStats(1, 2315).bits).toBeCloseTo(11.1768, 3);
+});
+
+test("headStats: the whole set is certain (0 bits, not -0); an empty group or set has no finite information", () => {
+  const whole = headStats(2315, 2315);
+  expect(whole.chance).toBe(1);
+  expect(Object.is(whole.bits, 0)).toBe(true);
+  expect(headStats(0, 2315)).toEqual({ words: 0, chance: 0, bits: Infinity });
+  expect(headStats(5, 0)).toEqual({ words: 5, chance: 0, bits: Infinity });
+});
+
+test("chainNodes: each node carries the size of the Candidate Set before its Guess", () => {
+  const nodes = chainNodes(solve, solve.steps.map(() => undefined));
+  expect(nodes.map((n) => n.total)).toEqual(solve.steps.map((s) => s.candidates_before));
 });
