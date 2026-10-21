@@ -186,7 +186,7 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
             </dl>
           )}
           <p className="mt-2 text-xs text-meta">
-            Average Guess Count is over the won Games; each Strategy played {shown[0]?.games ?? 0} Games.
+            Average Guess Count is over every Game, a Loss at the Guess Count it needed; each Strategy played {shown[0]?.games ?? 0} Games.
           </p>
         </>
       )}

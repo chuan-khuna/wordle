@@ -5,6 +5,7 @@ import pytest
 from wordle.engine.feedback import feedback
 from wordle.engine.words import load_word_lists
 from wordle.solver import benchmark
+from wordle.solver.guess_counts import guess_counts
 from wordle.solver.matrix import CACHE_DIR
 from wordle.solver.strategy import STRATEGIES, Solver, pack
 
@@ -43,6 +44,8 @@ def test_tree_play_matches_playing_each_game(solver, results, how):
     assert result["games"] == len(SUBSET)
     assert result["distribution"] == [alone.count(k) for k in range(1, 7)]
     assert result["losses"] == sum(n > 6 for n in alone)
+    # Every Game counts, a Loss at the Guess Count it needed.
+    assert result["average_guess_count"] == pytest.approx(sum(alone) / len(alone))
     # The Opener is ranked over the whole Guess Pool, whatever the Search Scope.
     assert result["opener"] == solver.rank(solver.all_candidates(), pool=how.pool, scope="global", by=how.by, top=1)[0].word
 
@@ -57,11 +60,13 @@ def test_eight_benchmarks_and_openers_from_each_guess_pool(solver, results):
     assert results["bits-guesses-candidates"]["opener"] not in solver.answers
 
 
-def test_average_is_over_won_games(results):
-    result = results["bits-guesses-all"]
-    won = sum(result["distribution"])
-    assert won + result["losses"] == len(SUBSET)
-    assert result["average_guess_count"] == pytest.approx(sum(k * n for k, n in enumerate(result["distribution"], 1)) / won)
+def test_average_counts_losses_as_the_guess_count_matrix_does(solver, results):
+    # A Candidates-only Strategy, which can lose: the average is the mean of its Guess Count Matrix row over these Answers.
+    how = next(how for how in STRATEGIES if how.id == "bits-answers-candidates")
+    result = results[how.id]
+    row = guess_counts(solver, how, result["opener"])
+    games = [row[solver.answers.index(answer)] for answer in SUBSET]
+    assert result["average_guess_count"] == sum(games) / len(games)
 
 
 def test_openers_ranked_by_bits(solver):

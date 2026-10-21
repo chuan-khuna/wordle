@@ -52,22 +52,22 @@ The package's `wordle.solver.benchmark` (`packages/wordle/src/wordle/solver/benc
 | `expected-guesses-candidates` | Expected Candidates, Guess List, Candidates only | `guesses`, `candidates`, `expected` | roate |
 | `expected-guesses-all` | Expected Candidates, Guess List, All words | `guesses`, `global`, `expected` | roate |
 
-Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree (`guess_counts` in `packages/wordle/src/wordle/solver/guess_counts.py`, described in [Solver Strategy](solver-strategy.md); `benchmark.py` calls it) with one search per node instead of one per Game; the Guess Counts are the same as playing each Game alone (`packages/wordle/tests/test_benchmark.py` checks this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over the won Games only.
+Answers that have had the same Feedback so far share a Candidate Set and so the next Guess, so they are played together as a tree (`guess_counts` in `packages/wordle/src/wordle/solver/guess_counts.py`, described in [Solver Strategy](solver-strategy.md); `benchmark.py` calls it) with one search per node instead of one per Game; the Guess Counts are the same as playing each Game alone (`packages/wordle/tests/test_benchmark.py` checks this). A Game that needs more than six Guesses is a Loss and lands in `losses`, not in `distribution`; the Average Guess Count is over every Game, a Loss at the Guess Count it needed (as in the [Guess Count Matrix](guess-count-matrix.md), so the two agree for the same Opener).
 
 Results on all 2,315 Answers (Guess Count 1 to 6, then Losses):
 
 | Strategy | Opener | 1 | 2 | 3 | 4 | 5 | 6 | Losses | Average |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `bits-answers-candidates` | raise | 1 | 131 | 999 | 919 | 207 | 47 | 11 | 3.582 |
+| `bits-answers-candidates` | raise | 1 | 131 | 999 | 919 | 207 | 47 | 11 | 3.599 |
 | `bits-answers-all` | raise | 1 | 61 | 1139 | 1020 | 92 | 2 | 0 | 3.495 |
-| `bits-guesses-candidates` | tarse | 0 | 147 | 1021 | 941 | 166 | 34 | 6 | 3.532 |
+| `bits-guesses-candidates` | tarse | 0 | 147 | 1021 | 941 | 166 | 34 | 6 | 3.542 |
 | `bits-guesses-all` | tarse | 0 | 61 | 1256 | 943 | 53 | 2 | 0 | 3.429 |
-| `expected-answers-candidates` | raise | 1 | 131 | 957 | 946 | 224 | 42 | 14 | 3.603 |
+| `expected-answers-candidates` | raise | 1 | 131 | 957 | 946 | 224 | 42 | 14 | 3.625 |
 | `expected-answers-all` | raise | 1 | 61 | 1077 | 1086 | 90 | 0 | 0 | 3.520 |
-| `expected-guesses-candidates` | roate | 0 | 126 | 1006 | 936 | 195 | 39 | 13 | 3.572 |
+| `expected-guesses-candidates` | roate | 0 | 126 | 1006 | 936 | 195 | 39 | 13 | 3.594 |
 | `expected-guesses-all` | roate | 0 | 55 | 1136 | 1084 | 40 | 0 | 0 | 3.479 |
 
-`bits-answers-candidates` agrees with the table in [solver-strategy.md](solver-strategy.md) (its average there, 3.60, counts the 11 Losses at 7 or 8 Guesses). The four Strategies the Benchmark had before (`bits-candidates`, `expected-candidates`, `bits-all`, `expected-all`) are now `*-answers-candidates` and `*-guesses-all`, with the same results.
+`bits-answers-candidates` agrees with the table in [solver-strategy.md](solver-strategy.md). The four Strategies the Benchmark had before (`bits-candidates`, `expected-candidates`, `bits-all`, `expected-all`) are now `*-answers-candidates` and `*-guesses-all`, with the same results.
 
 The Opener leaderboard ranks every Guess List word as a first Guess by Expected Information (ties: Candidate first, then Expected Candidates, then alphabetical) and keeps the top 500. It stores the first-turn stats only, not a Benchmark per Opener.
 
@@ -89,7 +89,7 @@ Words are lowercase five-letter strings. A Feedback is written as **five digits,
 | `POST /api/suggestions` | `{state, pool, scope, by, top}` (`top` default 10) | `{candidates, suggestions: [WordStats]}`, best first |
 | `GET /api/solve` | `answer` (Answer List word), `pool`, `scope`, `by` | `{answer, solved, guesses, steps}`; the first Guess (the Opener) is ranked over the whole Guess Pool whatever `scope` says, as in the Benchmark, and `scope` applies from the second Guess on; each step is `{number, guess, marks, code, candidates_before, candidates_after, alternatives: [WordStats]}`, with the top 5 for that step (the first is the Guess played) |
 | `GET /api/openers` | `top` (default 20) | `{total, openers}` with `total` the number saved (500); each opener is `{rank, word, bits, expected_candidates, groups, largest_group, is_candidate}`, best first |
-| `GET /api/benchmark` | none | `{guess_limit, strategies}`; each Strategy is `{id, name, pool, scope, by, opener, games, distribution, losses, lost_answers, average_guess_count}`. `distribution` has six numbers, Games won in 1 to 6 Guesses; `lost_answers` lists the Losses; `average_guess_count` is over won Games (`null` if none) |
+| `GET /api/benchmark` | none | `{guess_limit, strategies}`; each Strategy is `{id, name, pool, scope, by, opener, games, distribution, losses, lost_answers, average_guess_count}`. `distribution` has six numbers, Games won in 1 to 6 Guesses; `lost_answers` lists the Losses; `average_guess_count` is over every Game, Losses at their real Guess Count |
 | `GET /api/guess-counts` | `strategy` (one of the eight Strategy ids, default `bits-guesses-all`) | `{strategy: {id, name}, complete_rows, total_rows, openers}`; `total_rows` is the size of the Strategy's Guess Pool (14,855 for the Guess List, 2,315 for the Answer List), the rows of its Guess Count Matrix, and `complete_rows` how many Openers have a finished row in the Guess Count Matrix, which is how many `openers` there are. Each opener is `{rank, word, average_guess_count, losses, is_answer}`, in the summary's rank order (lowest unrounded Average Guess Count first, then Expected Information, then alphabetical). `average_guess_count` is over all 2,315 Answers with no Guess Limit, so it times 2,315 is a whole number. About 15k entries, so the response is gzipped (`GZipMiddleware` in `main.py`, for any response over 1 kB) |
 
 Invalid input (an unknown word, a malformed Feedback, a bad `pool`/`scope`/`by`, a missing parameter, `top` below 1 or not a number, an empty Candidate Set for `/api/split`) returns HTTP 400 with `{"detail": "<message>"}`; the `RequestValidationError` handler in `main.py` replaces FastAPI's 422. `/api/solve` stops after 12 Guesses as a safety limit. If `benchmark.json` or `openers.json` is missing, `/api/benchmark` or `/api/openers` returns HTTP 503 with `{"detail": "... Run `just precompute-benchmark` first."}`; the rest of the API still works.  If `summary.json` is missing (or lacks the Strategy), `/api/guess-counts` returns 503 with a message naming `just precompute-guess-counts` (or `just restore-cache`); an unknown `strategy` (an old version 1 id such as `bits-all` included) is 400, with a message listing the eight ids. The real `summary.json` must be version 2 (its keys the new ids; `just migrate-guess-counts` moves a version 1 folder), or every Strategy is a 503.

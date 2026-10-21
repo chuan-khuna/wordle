@@ -134,11 +134,11 @@ How many Games in a Benchmark ended at each Guess Count, plus the number of Loss
 _Avoid_: histogram, stats
 
 **Average Guess Count**:
-The mean Guess Count across the won Games of a Benchmark.
+The mean Guess Count of a set of Games, such as a Benchmark or one Opener's row of the Guess Count Matrix. Every Game counts: each is played to a Win with no Guess Limit, so a Game that would be a Loss counts at the Guess Count it needed.
 _Avoid_: average score, mean tries
 
 **Guess Count Matrix**:
-A table of the Guess Count of every Game, one row per Opener in the Strategy's Guess Pool and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count with no Guess Limit; Openers are compared by it.
+A table of the Guess Count of every Game, one row per Opener in the Strategy's Guess Pool and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count; Openers are compared by it.
 _Avoid_: turn to win matrix, turns matrix, score matrix
 
 **Opener Distribution**:

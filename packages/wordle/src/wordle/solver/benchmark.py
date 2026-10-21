@@ -45,8 +45,6 @@ def run_benchmark(solver: Solver, how: Strategy, answers: list[str] | None = Non
     counts = by_answer if answers is None else {answer: by_answer[answer] for answer in answers}
     distribution = [sum(1 for n in counts.values() if n == k) for k in range(1, GUESS_LIMIT + 1)]
     lost = sorted(answer for answer, n in counts.items() if n > GUESS_LIMIT)
-    won = len(counts) - len(lost)
-    total = sum(n * games for n, games in enumerate(distribution, start=1))
     return {
         "id": how.id,
         "name": how.name,
@@ -58,7 +56,8 @@ def run_benchmark(solver: Solver, how: Strategy, answers: list[str] | None = Non
         "distribution": distribution,
         "losses": len(lost),
         "lost_answers": lost,
-        "average_guess_count": total / won if won else None,
+        # Every Game counts, a Loss at the Guess Count it needed, as in the Guess Count Matrix.
+        "average_guess_count": sum(counts.values()) / len(counts),
     }
 
 
