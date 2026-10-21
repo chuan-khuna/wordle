@@ -2,9 +2,10 @@
 
 A Benchmark plays every Answer with one Strategy, starting from that Strategy's
 own best Opener, and counts the Guesses each Game took. The Guess Limit is six:
-a Game that needs more is a Loss. Every named Strategy of
-`wordle.solver.strategy` is compared: Expected Information or Expected Candidates,
-each over Candidates only or over All words (the Guess List).
+a Game that needs more is a Loss. All eight Strategies of
+`wordle.solver.strategy` are compared: each Ranking (Expected Information or
+Expected Candidates) with each Guess Pool (the Answer List or the Guess List)
+and each Search Scope (Candidates only or All words).
 
 The Opener leaderboard ranks every Guess List word as a first Guess by
 Expected Information over the whole Answer List.
@@ -30,9 +31,8 @@ LEADERBOARD_SIZE = 500  # Openers saved
 
 
 def best_opener(solver: Solver, how: Strategy) -> str:
-    return solver.rank(
-        solver.all_candidates(), pool=how.pool, scope=how.scope, by=how.by, top=1
-    )[0].word
+    """The Strategy's Opener: ranked over the whole Guess Pool, whatever its Search Scope."""
+    return solver.rank(solver.all_candidates(), pool=how.pool, scope="global", by=how.by, top=1)[0].word
 
 
 def run_benchmark(solver: Solver, how: Strategy, answers: list[str] | None = None) -> dict:

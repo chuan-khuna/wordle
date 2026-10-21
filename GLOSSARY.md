@@ -66,7 +66,7 @@ _Avoid_: remaining word, possible answer, option
 
 **Candidate Set**:
 All Candidates for a State. At the start of a Game it is the whole Answer List.
-_Avoid_: solution space, search space, pool
+_Avoid_: solution space, search space, pool (the Guess Pool is a different thing)
 
 **Suggestion**:
 The Guess the Solver recommends for the current State.
@@ -96,8 +96,20 @@ _Avoid_: entropy, entropy score, info gain (an Article may name "entropy" once, 
 How many Candidates a Guess is expected to leave, averaged over its Feedback Split: the fewer, the better.
 _Avoid_: expected vocabulary size, expected words left, average group size
 
+**Guess Pool**:
+The list the Solver may take its Guesses from, the Opener included: the Answer List or the Guess List.
+_Avoid_: word list, dictionary, words (on its own)
+
+**Search Scope**:
+Which Guess Pool words the Solver considers for each Guess after the Opener: **Candidates only**, or **All words** in the Guess Pool, so a word that can't be the Answer may still be guessed to split the Candidates. The Opener may be any Guess Pool word under either Search Scope, so with Candidates only the Guess Pool decides only the Opener, since every Candidate is on the Answer List.
+_Avoid_: search mode, hard mode (Hard Mode is a different rule)
+
+**Ranking**:
+The measure the Solver uses to pick the best Guess among those it considers: highest Expected Information or lowest Expected Candidates.
+_Avoid_: score, metric, objective
+
 **Strategy**:
-The rule the Solver uses to pick a Suggestion, such as highest Expected Information.
+The rule the Solver uses to pick each Guess: one Guess Pool, one Search Scope and one Ranking, such as the Guess List, All words and highest Expected Information.
 _Avoid_: algorithm, heuristic, policy
 
 ## Using the app
@@ -126,7 +138,7 @@ The mean Guess Count across the won Games of a Benchmark.
 _Avoid_: average score, mean tries
 
 **Guess Count Matrix**:
-A table of the Guess Count of every Game, one row per Opener and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count with no Guess Limit; Openers are compared by it.
+A table of the Guess Count of every Game, one row per Opener in the Strategy's Guess Pool and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count with no Guess Limit; Openers are compared by it.
 _Avoid_: turn to win matrix, turns matrix, score matrix
 
 **Opener Distribution**:

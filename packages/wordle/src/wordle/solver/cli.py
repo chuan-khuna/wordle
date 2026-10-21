@@ -103,13 +103,18 @@ def precompute_guess_counts() -> None:
 
     solver = Solver.load()
     fresh = args.fresh
+    folder = args.out / guess_count_matrix.SUBDIR
+    if not fresh and (reason := guess_count_matrix.folder_mismatch(args.out)):
+        sys.exit(f"Can't use {folder}: {reason}, or run again with --fresh to start the chosen matrices over.")
     done = {how: guess_count_matrix.filled_rows(args.out, how) for how in chosen}
     if not fresh and any(done.values()):
         for how in chosen:
             if done[how] and (reason := guess_count_matrix.mismatch(args.out, how, solver)):
                 sys.exit(f"Can't resume {how.id}: {reason}. Run again with --fresh to start it over.")
         if not args.yes:
-            lines = "\n".join(f"  {how.id}: {n} of {len(solver.guesses)} Openers have rows" for how, n in done.items())
+            lines = "\n".join(
+                f"  {how.id}: {n} of {len(solver.pool_words(how.pool))} Openers have rows" for how, n in done.items()
+            )
             answer = questionary.select(
                 f"These matrices are already filled:\n{lines}\nResume, start over or cancel?",
                 choices=[
@@ -129,8 +134,8 @@ def precompute_guess_counts() -> None:
     except KeyboardInterrupt:
         print("\nInterrupted. Finished rows are kept and the summary is written; run again to resume.")
     elapsed = time.perf_counter() - started
-    summary_path = args.out / guess_count_matrix.SUBDIR / guess_count_matrix.SUMMARY_FILE
-    for path in sorted(summary_path.parent.iterdir()):
+    summary_path = folder / guess_count_matrix.SUMMARY_FILE
+    for path in sorted(path for path in folder.rglob("*") if path.is_file()):  # the files in bits/ and expected/ too
         print(f"{path} ({path.stat().st_size / 1_000_000:.1f} MB)")
     summary = json.loads(summary_path.read_text())
     for how in chosen:

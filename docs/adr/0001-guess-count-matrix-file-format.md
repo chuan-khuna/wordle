@@ -16,3 +16,7 @@ Keep one uncompressed `.npy` per Strategy as the store, because it is the only o
 - Rows and columns are indices; anything that maps them to words reads the manifest.
 - Changing the word lists makes old matrices unresumable by design; `--fresh` rebuilds them.
 - The Feedback Matrices still have no manifest; that is a separate change.
+
+## Note: format version 2 (2026-10-21)
+
+With eight Strategies (Guess Pool × Search Scope × Ranking, see [the spec](../../.scratch/eight-strategies/spec.md)) the decision still holds: one uncompressed `.npy` per Strategy, a manifest and the readable layer. What changes is the layout. Files sit in one folder per Ranking, `<ranking>/<pool>-<scope>.npy`, and a matrix's rows are its Strategy's Guess Pool, so an Answer List matrix is 2,315 × 2,315 (5.4 MB) and a Guess List one stays 14,855 × 2,315. The manifest is `format_version: 2`: `rows` maps each Guess Pool to its sorted words and each Strategy entry gives its `path`. A version 1 folder is a mismatch, migrated with `just migrate-guess-counts` rather than played again. On disk the eight Strategies take 4 × 34.4 + 4 × 5.4 ≈ 159 MB.

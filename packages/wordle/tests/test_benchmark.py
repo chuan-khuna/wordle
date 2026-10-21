@@ -43,11 +43,22 @@ def test_tree_play_matches_playing_each_game(solver, results, how):
     assert result["games"] == len(SUBSET)
     assert result["distribution"] == [alone.count(k) for k in range(1, 7)]
     assert result["losses"] == sum(n > 6 for n in alone)
-    assert result["opener"] == solver.rank(solver.all_candidates(), pool=how.pool, scope=how.scope, by=how.by, top=1)[0].word
+    # The Opener is ranked over the whole Guess Pool, whatever the Search Scope.
+    assert result["opener"] == solver.rank(solver.all_candidates(), pool=how.pool, scope="global", by=how.by, top=1)[0].word
+
+
+def test_eight_benchmarks_and_openers_from_each_guess_pool(solver, results):
+    assert list(results) == [how.id for how in STRATEGIES] and len(results) == 8
+    for how in STRATEGIES:
+        if how.pool == "answers":
+            assert results[how.id]["opener"] in solver.answers
+    # Candidates only differs from the Answer List Strategy only in its Opener, which may be any Guess List word.
+    assert results["bits-guesses-candidates"]["opener"] == results["bits-guesses-all"]["opener"]
+    assert results["bits-guesses-candidates"]["opener"] not in solver.answers
 
 
 def test_average_is_over_won_games(results):
-    result = results["bits-all"]
+    result = results["bits-guesses-all"]
     won = sum(result["distribution"])
     assert won + result["losses"] == len(SUBSET)
     assert result["average_guess_count"] == pytest.approx(sum(k * n for k, n in enumerate(result["distribution"], 1)) / won)
@@ -62,7 +73,7 @@ def test_openers_ranked_by_bits(solver):
 
 
 def test_save_and_load_round_trip(solver, results, tmp_path):
-    result = results["bits-candidates"]
+    result = results["bits-answers-candidates"]
     benchmark.save([result], benchmark.opener_leaderboard(solver, 3), tmp_path)
     saved, openers = benchmark.load(tmp_path)
     assert saved == {"guess_limit": 6, "strategies": [json.loads(json.dumps(result))]}

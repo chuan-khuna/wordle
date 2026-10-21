@@ -11,8 +11,8 @@ How the Python package and the gpui app store the precomputed matrices, what one
 | File (under `precompute-cache/`) | Python package | gpui app (Rust) |
 | --- | --- | --- |
 | `feedback/answers_vs_answers.npy`, `feedback/guesses_vs_answers.npy` | writes (`wordle.solver.matrix.build`, `np.save`) and reads; the backend reads them too | writes (`solver/matrix.rs` `build`, `npy_bytes`) and reads |
-| `guess-counts/<strategy id>.npy` | writes in place (`open_memmap`) and reads | writes in place (`solver/guess_count_matrix.rs` `build`) and reads |
-| `guess-counts/manifest.json`, `summary.json`, `<id>.ranking.csv` | writes them | writes them (with `serde_json`); the Solver panel reads `summary.json` |
+| `guess-counts/<ranking>/<pool>-<scope>.npy` (format version 2) | writes in place (`open_memmap`) and reads | writes in place (`solver/guess_count_matrix.rs` `build`) and reads; still the version 1 `guess-counts/<strategy id>.npy` until eight-strategies ticket 03 |
+| `guess-counts/manifest.json`, `summary.json`, `<ranking>/<pool>-<scope>.ranking.csv` | writes them | writes them (with `serde_json`, version 1 for now); the Solver panel reads `summary.json` |
 
 Both tools share the folders, so either reads and resumes what the other wrote (running both on one folder at once is not guarded against). For the Feedback matrices both tools write byte-identical files; this was checked by building both into empty folders and comparing them with `cmp`. For the Guess Count Matrix the gpui app follows the contract below: its rows equal the Python command's rows, and from the same matrices it writes `summary.json` and the ranking CSVs byte for byte as Python does (`rows_equal_the_python_commands_rows` and `the_summary_equals_the_python_commands_summary` in `solver/guess_count_matrix_tests.rs`). `manifest.json` differs only in `tool`, which the resume check ignores. Those comparison tests read Python's files from `WORDLE_PYTHON_GUESS_COUNTS`, or else from `precompute-cache/guess-counts/` when its manifest's `tool` ends in `(python)`, and skip otherwise; to run them after the gpui app last wrote the folder, build Python's into another folder (`just precompute-guess-counts --out DIR`) and point the variable at it.
 
@@ -28,7 +28,7 @@ offset 0                         10                                             
        └──────────┴────┴────┴──────────────────────────────────────────────────────┴────────────────────────────┘
 ```
 
-The header of `bits-candidates.npy` (`xxd`). The other three 14,855 × 2,315 files have exactly the same header:
+The header of `guess-counts/bits/guesses-candidates.npy` (`xxd`). Every 14,855 × 2,315 Guess List matrix has exactly the same header; an Answer List one (2,315 × 2,315) differs only in the shape, `(2315, 2315)`, and is also 128 bytes:
 
 ```
 00000000: 934e 554d 5059 0100 7600 7b27 6465 7363  .NUMPY..v.{'desc
@@ -55,17 +55,17 @@ The file size is always `128 + rows × columns` (34,389,453 bytes for 14,855 × 
 
 Neither file stores words, only indices. Both tools derive the same order from the same word lists:
 
-- **Rows** are the Guess List sorted by byte order (Python `sorted(words.guesses)`, Rust `sort_unstable()` on `&str`, the same for lowercase ASCII). Row 0 is `aahed`, row 14,854 is `zymic`. `answers_vs_answers.npy` uses the sorted Answer List instead.
+- **Rows** are the Guess List sorted by byte order (Python `sorted(words.guesses)`, Rust `sort_unstable()` on `&str`, the same for lowercase ASCII). Row 0 is `aahed`, row 14,854 is `zymic`. `answers_vs_answers.npy` and the Answer List Guess Count Matrices (`<ranking>/answers-<scope>.npy`) use the sorted Answer List instead.
 - **Columns** are the Answer List sorted: column 0 is `aback`, column 2,314 is `zonal`.
 - The Guess List always includes every Answer: both tools add the Answers to `guesses.txt`, which already contains them, so there are 14,855 rows.
 
-The word lists are two copies of the same files: `packages/wordle/src/wordle/data/` for Python and `app/wordle-gpui/data/` for Rust, which the app compiles in with `include_str!`. If they drifted apart, every row index would shift. `test_the_gpui_app_has_the_same_word_lists` fails if they differ. For the Guess Count Matrix, `manifest.json` also stores both lists in full (`rows`, `columns`), so any reader can map indices to words without the package.
+The word lists are two copies of the same files: `packages/wordle/src/wordle/data/` for Python and `app/wordle-gpui/data/` for Rust, which the app compiles in with `include_str!`. If they drifted apart, every row index would shift. `test_the_gpui_app_has_the_same_word_lists` fails if they differ. For the Guess Count Matrix, `manifest.json` also stores the lists in full (`rows`, one list per Guess Pool, and `columns`), so any reader can map indices to words without the package.
 
 ## What the cells hold
 
 The same rows and columns with words, from the finished matrices (first four Answers and the last):
 
-**`guess-counts/bits-candidates.npy`:** Guess Count, 1 to 13 (13 = the 12-Guess safety limit was hit), 0 = row not filled yet
+**`guess-counts/bits/guesses-candidates.npy`** (formerly `bits-candidates.npy`): Guess Count, 1 to 13 (13 = the 12-Guess safety limit was hit), 0 = row not filled yet
 
 | row | Opener ↓ / Answer → | aback (0) | abase (1) | abate (2) | abbey (3) | … | zonal (2314) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -95,8 +95,9 @@ In Python:
 ```python
 import json, numpy as np
 manifest = json.load(open("precompute-cache/guess-counts/manifest.json"))
-m = np.load("precompute-cache/guess-counts/bits-candidates.npy", mmap_mode="r")
-m[manifest["rows"].index("salet"), manifest["columns"].index("abase")]   # 4
+how = manifest["strategies"]["bits-guesses-candidates"]
+m = np.load("precompute-cache/guess-counts/" + how["path"], mmap_mode="r")
+m[manifest["rows"][how["pool"]].index("salet"), manifest["columns"].index("abase")]   # 4
 ```
 
 ## How each tool writes and reads
@@ -124,15 +125,16 @@ m[manifest["rows"].index("salet"), manifest["columns"].index("abase")]   # 4
 
 What the gpui app's writer (gpui ticket 02) matches so that either tool can resume a copy of the other's files:
 
-- **`.npy`:** the header from `npy_bytes(14855, 2315, …)`, cells `u8`, rows and columns as above. Create the file full of zeros at full size, and write a finished row at offset `128 + row × 2315`, zeroing it first if it held values. A row is finished when none of its cells is 0.
+- **Layout (format version 2):** one file per Strategy at `guess-counts/<ranking>/<pool>-<scope>.npy` (the Strategy's `path`; the `global` Search Scope is written `all`), with one row per word of its Guess Pool.
+- **`.npy`:** the header from `npy_bytes(rows, 2315, …)` with 2,315 rows for an Answer List Strategy and 14,855 for a Guess List one, cells `u8`, rows and columns as above. Create the file full of zeros at full size, and write a finished row at offset `128 + row × 2315`, zeroing it first if it held values. A row is finished when none of its cells is 0.
 - **Cell values:** the Guess Count of the Game played with no Guess Limit, 13 when the safety limit of 12 Guesses is hit. Never 0.
-- **`manifest.json`:** compact JSON (`separators=(",", ":")`) plus a newline, with keys `format_version` (1), `tool`, `safety_limit` (12), `strategies` (`id → {name, pool, scope, ranked_by}`), `rows`, `columns`. Write it to a temporary file and rename it over the old one. Only `tool` differs between writers (`wordle precompute-guess-counts (python)` or `wordle-gpui Precompute guess counts (rust)`).
-- **`summary.json` and `<id>.ranking.csv`:** written from the matrices. Two Python details a port would otherwise miss: the CSV's `is_answer` column is `True`/`False` (Python's `str(bool)`), and floats are Python's shortest round-trip `repr` (`3.52829373650108`). `serde_json` prints the same, and so does Rust's `{}` except for whole numbers (`3` where Python writes `3.0`); the gpui app uses `serde_json` for both files. A third: `bits` must be summed in numpy's pairwise order (blocks of up to 128 values in eight running sums), not left to right, or about half the values differ in the last digit; `strategy::numpy_sum` does this.
+- **`manifest.json`:** compact JSON (`separators=(",", ":")`) plus a newline, with keys `format_version` (2), `tool`, `safety_limit` (12), `strategies` (`id → {name, pool, scope, ranked_by, path}`), `rows` (`{"answers": [...], "guesses": [...]}`, each sorted), `columns`. Write it to a temporary file and rename it over the old one. A manifest with `format_version` 1 is a mismatch whose reason points at `just migrate-guess-counts`; it is never read as version 2. Only `tool` differs between writers (`wordle precompute-guess-counts (python)` or `wordle-gpui Precompute guess counts (rust)`).
+- **`summary.json` and `<ranking>/<pool>-<scope>.ranking.csv`:** written from the matrices, each Strategy's Openers from its own rows only. Two Python details a port would otherwise miss: the CSV's `is_answer` column is `True`/`False` (Python's `str(bool)`), and floats are Python's shortest round-trip `repr` (`3.52829373650108`). `serde_json` prints the same, and so does Rust's `{}` except for whole numbers (`3` where Python writes `3.0`); the gpui app uses `serde_json` for both files. A third: `bits` must be summed in numpy's pairwise order (blocks of up to 128 values in eight running sums), not left to right, or about half the values differ in the last digit; `strategy::numpy_sum` does this.
 
 ## Checking it yourself
 
 ```sh
 xxd -l 128 precompute-cache/feedback/guesses_vs_answers.npy           # the header
-od -A d -t u1 -j 128 -N 16 precompute-cache/guess-counts/bits-candidates.npy   # the first cells of row 0
+od -A d -t u1 -j 128 -N 16 precompute-cache/guess-counts/bits/guesses-candidates.npy   # the first cells of row 0
 just test && just test-gpui                                           # the guards above
 ```

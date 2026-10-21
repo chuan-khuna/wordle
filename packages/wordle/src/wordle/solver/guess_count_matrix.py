@@ -1,9 +1,10 @@
 """The Guess Count Matrix: how many Guesses every Opener takes to Win every Answer.
 
-One matrix per Strategy, saved as `<out>/guess-counts/<strategy id>.npy`:
+One matrix per Strategy, saved as `<out>/guess-counts/<ranking>/<pool>-<scope>.npy`
+(`Strategy.path`, such as `bits/answers-candidates.npy`):
 
-  - rows are Openers (the whole Guess List) and columns are Answers, both in the
-    same sorted order as `guesses_vs_answers.npy` (14,855 x 2,315, `uint8`);
+  - rows are Openers (the whole Guess Pool of the Strategy) and columns are Answers,
+    both sorted as in the Feedback matrices (2,315 or 14,855 x 2,315, `uint8`);
   - a cell is the Guess Count of that Game played to a Win with no Guess Limit
     (13, `UNSOLVED`, if the safety limit was hit), so a Loss keeps its real count;
   - a row of zeros is not filled yet, since no Guess Count is 0.
@@ -14,15 +15,18 @@ written only once its Opener is fully played, after being zeroed, and the map is
 flushed every few seconds, so a stop loses at most the rows in flight. A plain
 run fills only the rows with a zero cell; asking for Openers plays them again.
 
-`manifest.json` (see ADR 0001) records the word lists (`rows`, `columns`) and each
-Strategy's definition, written before any row. A matrix with rows is resumed only
-if the manifest matches the current word lists and Strategy; otherwise `build`
-raises `ManifestMismatch` and the caller starts over with `fresh=True`.
+`manifest.json` (see ADR 0001, format version 2) records the word lists (`rows`,
+one list per Guess Pool, and `columns`) and each Strategy's definition and path,
+written before any row. A matrix with rows is resumed only if the manifest matches
+the current word lists and Strategy; otherwise `build` raises `ManifestMismatch`
+and the caller starts over with `fresh=True`. A folder written by format version 1
+(flat `<strategy id>.npy` files, every matrix 14,855 rows) is a mismatch too, to
+migrate with `just migrate-guess-counts` rather than read as version 2.
 
 `summary.json` ranks, for each Strategy, every Opener whose row is complete by
 its Average Guess Count over all Answers, then by Expected Information as a first
-Guess (higher first), then alphabetically. `<id>.ranking.csv` holds the same
-entries for a spreadsheet.
+Guess (higher first), then alphabetically. `<ranking>/<pool>-<scope>.ranking.csv`
+holds the same entries for a spreadsheet.
 """
 
 import csv
@@ -45,7 +49,8 @@ from wordle.solver.strategy import STRATEGIES, Solver, Strategy
 SUBDIR = "guess-counts"
 SUMMARY_FILE = "summary.json"
 MANIFEST_FILE = "manifest.json"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
+MIGRATE_COMMAND = "just migrate-guess-counts"  # turns a version 1 folder into version 2
 TOOL = "wordle precompute-guess-counts (python)"
 FLUSH_SECONDS = 10  # how often finished rows are flushed to disk during a run
 RANKING_COLUMNS = (
@@ -60,15 +65,20 @@ class ManifestMismatch(Exception):
 
 
 def matrix_path(out: Path, how: Strategy) -> Path:
-    return out / SUBDIR / f"{how.id}.npy"
+    return out / SUBDIR / how.path
 
 
 def ranking_path(out: Path, how: Strategy) -> Path:
-    return out / SUBDIR / f"{how.id}.ranking.csv"
+    return matrix_path(out, how).with_suffix(".ranking.csv")
 
 
 def _definition(how: Strategy) -> dict:
-    return {"name": how.name, "pool": how.pool, "scope": how.scope, "ranked_by": how.by}
+    return {"name": how.name, "pool": how.pool, "scope": how.scope, "ranked_by": how.by, "path": how.path}
+
+
+def _rows(solver: Solver) -> dict[str, list[str]]:
+    """The rows of each Guess Pool's matrices, as the manifest records them."""
+    return {pool: list(solver.pool_words(pool)) for pool in ("answers", "guesses")}
 
 
 def _manifest(out: Path) -> dict | None:
@@ -81,9 +91,20 @@ def _same_lists(manifest: dict | None, solver: Solver) -> bool:
         manifest is not None
         and manifest.get("format_version") == FORMAT_VERSION
         and manifest.get("safety_limit") == SAFETY_LIMIT
-        and manifest.get("rows") == list(solver.guesses)
+        and manifest.get("rows") == _rows(solver)
         and manifest.get("columns") == list(solver.answers)
     )
+
+
+def folder_mismatch(out: Path) -> str | None:
+    """Why the folder in `out` can't be used at all (its manifest is another format version), or None."""
+    manifest = _manifest(out)
+    if manifest is None or manifest.get("format_version") == FORMAT_VERSION:
+        return None
+    version = manifest.get("format_version")
+    if version == 1:
+        return f"{MANIFEST_FILE} was written by format version 1; migrate it with `{MIGRATE_COMMAND}`"
+    return f"{MANIFEST_FILE} was written by format version {version}, not {FORMAT_VERSION}"
 
 
 def mismatch(out: Path, how: Strategy, solver: Solver) -> str | None:
@@ -91,6 +112,8 @@ def mismatch(out: Path, how: Strategy, solver: Solver) -> str | None:
     manifest = _manifest(out)
     if manifest is None:
         return f"there is no {MANIFEST_FILE}"
+    if reason := folder_mismatch(out):
+        return reason
     if not _same_lists(manifest, solver):
         return f"the word lists, format or safety limit in {MANIFEST_FILE} differ from the current ones"
     if manifest.get("strategies", {}).get(how.id) != _definition(how):
@@ -115,7 +138,7 @@ def _write_manifest(out: Path, strategies: tuple[Strategy, ...], solver: Solver)
         "tool": TOOL,
         "safety_limit": SAFETY_LIMIT,
         "strategies": {**kept, **{how.id: _definition(how) for how in strategies}},
-        "rows": list(solver.guesses),
+        "rows": _rows(solver),
         "columns": list(solver.answers),
     }
     path = out / SUBDIR / MANIFEST_FILE
@@ -137,7 +160,10 @@ def _open(path: Path, shape: tuple[int, int]) -> np.ndarray:
 
 
 def summarize(matrix: np.ndarray, guesses: tuple[str, ...], bits: dict[str, float], answers: frozenset[str]) -> list[dict]:
-    """The ranked entries for every complete row of `matrix`; `bits` has at least those words' Expected Information."""
+    """The ranked entries for every complete row of `matrix`, whose rows are `guesses` (its Guess Pool).
+
+    `bits` has at least those words' Expected Information.
+    """
     complete = np.flatnonzero((matrix > 0).all(axis=1))
     totals = matrix[complete].sum(axis=1, dtype=np.int64)  # exact, so equal averages tie exactly
     order = sorted(range(len(complete)), key=lambda i: (totals[i], -bits[guesses[complete[i]]], guesses[complete[i]]))
@@ -177,16 +203,17 @@ def write_summary(out: Path, solver: Solver) -> list[Path]:
     """
     strategies = tuple(how for how in STRATEGIES if matrix_path(out, how).exists() and mismatch(out, how, solver) is None)
     matrices = {how.id: np.load(matrix_path(out, how), mmap_mode="r") for how in strategies}
-    complete_rows = set()
-    for matrix in matrices.values():
-        complete_rows.update(np.flatnonzero((matrix > 0).all(axis=1)).tolist())
+    complete = set()
+    for how in strategies:
+        words = solver.pool_words(how.pool)
+        complete.update(words[r] for r in np.flatnonzero((matrices[how.id] > 0).all(axis=1)))
     everyone = solver.all_candidates()
-    bits = {solver.guesses[r]: solver.stats(solver.guesses[r], everyone).bits for r in complete_rows}
+    bits = {word: solver.stats(word, everyone).bits for word in complete}
     answers = frozenset(solver.answers)
     summary = {}
     paths = []
     for how in strategies:
-        openers = summarize(matrices[how.id], solver.guesses, bits, answers)
+        openers = summarize(matrices[how.id], solver.pool_words(how.pool), bits, answers)
         summary[how.id] = {"id": how.id, "name": how.name, "complete_rows": len(openers), "openers": openers}
         write_ranking(ranking_path(out, how), openers)
         paths.append(ranking_path(out, how))
@@ -217,9 +244,11 @@ def build(
 ) -> list[Path]:
     """Fill the Guess Count Matrix of each Strategy, then write the manifest-checked summary and ranking CSVs.
 
-    By default only the rows with a zero cell are played (a resume). With `openers`, those rows are
-    played again, finished or not. `fresh` clears each Strategy's matrix first. Without `fresh`, a
-    matrix that already has rows must match the manifest or `ManifestMismatch` is raised, before anything is written.
+    Each matrix has one row per word of the Strategy's Guess Pool. By default only the rows with a
+    zero cell are played (a resume). With `openers`, those rows are played again, finished or not;
+    an Opener that is not in a Strategy's Guess Pool is skipped for that Strategy. `fresh` clears
+    each Strategy's matrix first. Without `fresh`, a folder of another format version, or a matrix
+    that already has rows and doesn't match the manifest, raises `ManifestMismatch` before anything is written.
 
     `threads` workers play the Openers, sharing one Solver (one memory map of the Feedback Matrices)
     and one `NextGuessCache`; the calling thread commits each finished row, so the files are the same
@@ -232,23 +261,27 @@ def build(
     if solver is None:
         solver = Solver.load()
     if not fresh:
+        if reason := folder_mismatch(out):
+            raise ManifestMismatch(reason)
         for how in strategies:
             if filled_rows(out, how) and (reason := mismatch(out, how, solver)):
                 raise ManifestMismatch(f"{how.id}: {reason}")
-    asked = None if openers is None else sorted(solver.guesses.index(word) for word in openers)
-    shape = (len(solver.guesses), len(solver.answers))
     if fresh:
         for how in strategies:
             matrix_path(out, how).unlink(missing_ok=True)
     _write_manifest(out, strategies, solver)
     paths = [matrix_path(out, how) for how in strategies]
-    matrices = {how: _open(matrix_path(out, how), shape) for how in strategies}
+    matrices = {how: _open(matrix_path(out, how), (len(solver.pool_words(how.pool)), len(solver.answers))) for how in strategies}
     jobs, complete = [], 0
     for how, matrix in matrices.items():
+        words = solver.pool_words(how.pool)
         unfinished = np.flatnonzero(~(matrix > 0).all(axis=1)).tolist()
-        jobs.extend((how, row) for row in (asked if asked is not None else unfinished))
-        if asked is None:
-            complete += shape[0] - len(unfinished)
+        if openers is None:
+            jobs.extend((how, row) for row in unfinished)
+            complete += len(words) - len(unfinished)
+        else:
+            row_of = {word: row for row, word in enumerate(words)}
+            jobs.extend((how, row) for row in sorted({row_of[word] for word in openers if word in row_of}))
     try:
         _fill(solver, matrices, jobs, complete, threads, progress, after_row)
     except KeyboardInterrupt:
@@ -303,9 +336,10 @@ def _fill(
                 if job is None:
                     return
                 how, row = job
-                bar.set_description(f"{how.id} {solver.guesses[row]}", refresh=False)
+                opener = solver.pool_words(how.pool)[row]
+                bar.set_description(f"{how.id} {opener}", refresh=False)
                 bar.reset()
-                finished.put((how, row, guess_counts(solver, how, solver.guesses[row], cache, settled)))
+                finished.put((how, row, guess_counts(solver, how, opener, cache, settled)))
         except _Stopped:
             pass
         except BaseException as error:  # handed to the calling thread, which re-raises it

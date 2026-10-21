@@ -17,15 +17,15 @@ Restrict a Guess's matrix row to the Candidate columns and count each Feedback C
 
 `Solver.rank(candidates, pool=..., scope=..., by=..., top=...)`:
 
-- `pool="answers"` searches the Answer × Answer matrix (only Answer List words); `pool="guesses"` searches the Guess × Answer matrix (any Guess List word).
-- `scope="candidates"` only considers current Candidates; `scope="global"` considers every word in the pool.
-- `by="bits"` ranks by most Expected Information; `by="expected"` by lowest Expected Candidates.
+- `pool`, the Guess Pool: `"answers"` searches the Answer × Answer matrix (only Answer List words); `"guesses"` searches the Guess × Answer matrix (any Guess List word). `Solver.pool_words(pool)` gives its words, sorted, which are also the rows of its matrix.
+- `scope`, the Search Scope: `"candidates"` only considers current Candidates; `"global"` (**All words**) considers every word in the Guess Pool.
+- `by`, the Ranking: `"bits"` ranks by most Expected Information; `"expected"` by lowest Expected Candidates.
 
 Ties go to a Candidate, then to the other measure, then to alphabetical order. `suggest` returns the top Guess and switches to `scope="candidates"` once two or fewer Candidates are left. `stats(word, candidates)` scores any one Guess List word, and `split(word, candidates)` lists the Candidates in each group. `candidates(state)` and `narrow(...)` filter the Candidate Set from Feedback, and `codes(guess, candidates)` gives the Feedback Code the Guess gets against each Candidate.
 
 ## Tree play
 
-`wordle.solver.guess_counts.guess_counts(solver, how, opener, cache=None, settled=None)` plays a Strategy `how` (one of `STRATEGIES`) from an Opener against every Answer and returns the Guess Count of each, as a numpy array in Answer List order. Games are not played one by one: every Answer that has got the same Feedback so far shares a Candidate Set and so the same next Guess, so the Answers are played together as a tree, one search per node. The results are the same as playing each Game alone (`packages/wordle/tests/test_guess_counts.py` checks this for all four Strategies). The next Guess comes from `suggest`, so with two or fewer Candidates the search goes Candidates only. An Answer still unsolved after 12 Guesses (`SAFETY_LIMIT`, only a stop for a runaway) gets Guess Count 13 (`UNSOLVED`), a Loss anyway. `settled(n)`, if given, is called each time `n` more Answers get their Guess Count (the Guess Count Matrix's per-thread progress bars use it, and stop a worker by raising from it).
+`wordle.solver.guess_counts.guess_counts(solver, how, opener, cache=None, settled=None)` plays a Strategy `how` (one of `STRATEGIES`) from an Opener against every Answer and returns the Guess Count of each, as a numpy array in Answer List order. Games are not played one by one: every Answer that has got the same Feedback so far shares a Candidate Set and so the same next Guess, so the Answers are played together as a tree, one search per node. The results are the same as playing each Game alone (`packages/wordle/tests/test_guess_counts.py` checks this for all eight Strategies). The next Guess comes from `suggest`, so with two or fewer Candidates the search goes Candidates only. An Answer still unsolved after 12 Guesses (`SAFETY_LIMIT`, only a stop for a runaway) gets Guess Count 13 (`UNSOLVED`), a Loss anyway. `settled(n)`, if given, is called each time `n` more Answers get their Guess Count (the Guess Count Matrix's per-thread progress bars use it, and stop a worker by raising from it).
 
 The next Guess depends only on the Candidate Set and the Strategy, so different Openers reach many of the same Candidate Sets. A `NextGuessCache` keyed by (Strategy, the bytes of the Candidate index array) can be passed in and reused across Openers and threads. It is a plain dict with no lock: a single get or set is atomic under the GIL, and two threads that miss on the same Candidate Set both search and store the same word, which only wastes work. In a 30-Opener prototype the cache cut a global Strategy from about 8.7 s to 5 s per Opener, and a Candidates-only Strategy to about 0.02 s.
 
@@ -38,9 +38,26 @@ The next Guess depends only on the Candidate Set and the Strategy, so different 
 - The old code had one matrix (common words × common words), so "all words" could only mean that list; here the Guess pool can be the Answer List or the full Guess List.
 - Scoring uses `uint8` Feedback Codes and vectorised counting instead of per-column pandas work.
 
-`STRATEGIES` in the same module names the four combinations of scope (Candidates only, or all words) and ranking (`bits-candidates`, `expected-candidates`, `bits-all`, `expected-all`), each with an id, a display name, a pool, a scope and a ranking; the web backend's Benchmark plays every one.
+## The eight Strategies
 
-Tests: `packages/wordle/tests/test_strategy.py` checks the stats against a brute-force count with `wordle.engine.feedback.feedback`.
+`STRATEGIES` in the same module names every combination of Ranking, Guess Pool and Search Scope, in that order of sorting. Each has an id `<ranking>-<pool>-<scope>` (the `global` Search Scope is written `all`, as in the gpui **All words** setting), a display name, its `pool`, `scope` and `by`, and a `path`, the file of its [Guess Count Matrix](guess-count-matrix.md) under `guess-counts/`:
+
+| id | `path` | Display name |
+| --- | --- | --- |
+| `bits-answers-candidates` | `bits/answers-candidates.npy` | Expected Information, Answer List, Candidates only |
+| `bits-answers-all` | `bits/answers-all.npy` | Expected Information, Answer List, All words |
+| `bits-guesses-candidates` | `bits/guesses-candidates.npy` | Expected Information, Guess List, Candidates only |
+| `bits-guesses-all` | `bits/guesses-all.npy` | Expected Information, Guess List, All words |
+| `expected-answers-candidates` | `expected/answers-candidates.npy` | Expected Candidates, Answer List, Candidates only |
+| `expected-answers-all` | `expected/answers-all.npy` | Expected Candidates, Answer List, All words |
+| `expected-guesses-candidates` | `expected/guesses-candidates.npy` | Expected Candidates, Guess List, Candidates only |
+| `expected-guesses-all` | `expected/guesses-all.npy` | Expected Candidates, Guess List, All words |
+
+The id stays flat (no `/`) so it works as a URL parameter, a JSON key and a CLI argument.
+
+**The Opener comes from the whole Guess Pool**, under either Search Scope; the Search Scope applies from the second Guess on. So wherever the Solver picks an Opener itself, such as the Benchmark's `best_opener` (`wordle.solver.benchmark`), it ranks with `scope="global"`, and a Strategy's Guess Count Matrix has one row per Guess Pool word. Since every Candidate is on the Answer List, `*-guesses-candidates` differs from `*-answers-candidates` only in the Opener: in a Benchmark it opens with the best Guess List word (which need not be on the Answer List), and the Answer List rows of its Guess Count Matrix are exactly the rows of the `*-answers-candidates` one. `just precompute-benchmark` plays all eight.
+
+Tests: `packages/wordle/tests/test_strategy.py` checks the stats against a brute-force count with `wordle.engine.feedback.feedback`; `test_guess_count_matrix.py` checks the eight ids, paths and names, and `test_benchmark.py` that each Benchmark opens with the best word of its whole Guess Pool.
 
 ## Where a Candidates-only search struggles
 
