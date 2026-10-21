@@ -5,6 +5,7 @@
  *
  *   bun run screenshot                              every page, default theme, desktop width
  *   bun run screenshot articles/rules openers       only these paths (the leading slash is optional)
+ *   bun run screenshot th th/openers                only the Thai pages (every run without paths includes them)
  *   bun run screenshot --theme nord --mobile        another theme, phone width
  *   bun run screenshot --theme all                  every page in all ten themes
  *   bun run screenshot --full-page                  one full-page shot per page instead
@@ -14,7 +15,7 @@
  * --width, --height, --mobile (390x844), --full-page.
  * Start the site first (`just web`); the Widgets need the backend for their data.
  */
-import { mkdirSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { chromium, type Page } from "playwright";
@@ -41,10 +42,12 @@ const { values, positionals } = parseArgs({
 /** A WidgetFrame: every Widget and every <Boards> is a labelled section whose first child is its eyebrow title. */
 const FIGURE = "section[aria-label]:has(> h3.eyebrow)";
 
-/** The home page, every Article, and the Opener Distribution page. */
+/** The home page, every Article, and the Opener Distribution page, then the Thai pages (`/th`, `/th/openers` and every Article that has a Translation). */
 function allPaths(): string[] {
   const files = readdirSync(path.join(root, "content/articles")).filter((f) => f.endsWith(".mdx"));
-  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers"];
+  const thaiDir = path.join(root, "content/th/articles");
+  const thai = existsSync(thaiDir) ? readdirSync(thaiDir).filter((f) => f.endsWith(".mdx")).sort().map((f) => `/th/articles/${f.replace(/^\d{2}-/, "").replace(/\.mdx$/, "")}`) : [];
+  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/th", ...thai, "/th/openers"];
 }
 
 /** "Feedback Split explorer" -> "feedback-split-explorer". */

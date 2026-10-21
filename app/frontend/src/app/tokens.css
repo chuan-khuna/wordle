@@ -44,11 +44,13 @@
 /* Type: families (loaded in layout.tsx with next/font, which sets --font-newsreader etc. on <html>),
    scale (size and line-height), tracking. */
 @theme inline {
-  --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* Noto Sans Thai Looped comes after the Latin family, so only Thai letters use it. Its variable exists only on Thai pages
+     (fonts-thai.ts); on English pages the fallback after the comma stands in. */
+  --font-serif: var(--font-newsreader), var(--font-noto-thai-looped, "Iowan Old Style"), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-inter), var(--font-noto-thai-looped, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
   /* Letter tiles, as Wordle draws them: the UI sans, bold. Mono stays for code, Feedback digits and words as data. */
-  --font-tile: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-tile: var(--font-inter), var(--font-noto-thai-looped, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {
@@ -97,6 +99,19 @@
   --shadow-sm: none;
   --shadow-md: none;
   --shadow-lg: none;
+}
+
+/* Thai stacks vowels and tone marks above and below the line, so every step of the scale gets a taller line height on Thai pages
+   (body text about 1.8). The utilities read these variables, so a language-scoped override is enough. */
+:root:lang(th) {
+  --text-xs--line-height: 1.7;
+  --text-sm--line-height: 1.75;
+  --text-base--line-height: 1.8;
+  --text-lg--line-height: 1.7;
+  --text-xl--line-height: 1.55;
+  --text-2xl--line-height: 1.45;
+  --text-3xl--line-height: 1.35;
+  --text-4xl--line-height: 1.3;
 }
 
 /* shadcn/ui variables, mapped onto the roles above. The components in components/ui/ read these (bg-popover,

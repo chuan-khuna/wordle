@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import { glossary, lookupMark, lookupTerm, parseMarkKinds, splitDefinition } from "@/lib/glossary";
+import GLOSSARY from "@content/glossary.json";
+import GLOSSARY_TH from "@content/th/glossary.json";
+import { checkGlossary, glossary, lookupMark, lookupTerm, parseMarkKinds, splitDefinition } from "@/lib/glossary";
 
 const SENTENCE =
   "The verdict on one letter of a Guess: **Correct** (in the Answer at this position), **Present** (in the Answer at a different position) or **Absent** (not in the Answer, or already accounted for).";
@@ -62,6 +64,53 @@ test("every glossary term found in a definition is a glossary entry", () => {
   for (const e of glossary().values()) {
     for (const p of splitDefinition(e.definition, terms, [e.term])) {
       if (p.kind === "term") expect(lookupTerm(p.term).term).toBe(p.term);
+    }
+  }
+});
+
+test("lookups default to English and take a language", () => {
+  expect(lookupTerm("Candidate Set", "en")).toBe(lookupTerm("Candidate Set"));
+  expect(lookupMark("present", "en")).toEqual(lookupMark("present"));
+});
+
+test("the Thai glossary has exactly the English term names, in the same order", () => {
+  expect(GLOSSARY_TH.map((e) => e.term)).toEqual(GLOSSARY.map((e) => e.term));
+  expect(() => checkGlossary("content/th/glossary.json", GLOSSARY, GLOSSARY_TH)).not.toThrow();
+});
+
+test("checkGlossary fails, naming the file, on a missing, extra, duplicate or empty term", () => {
+  const en = [{ term: "Game", definition: "a" }, { term: "Win", definition: "b" }];
+  expect(() => checkGlossary("th.json", en, [{ term: "Game", definition: "ก" }])).toThrow(/th\.json: missing glossary term "Win"/);
+  expect(() => checkGlossary("th.json", en, [...en, { term: "Loss", definition: "ก" }])).toThrow(/th\.json: glossary term "Loss" not in the English glossary/);
+  expect(() => checkGlossary("th.json", en, [en[0], en[1], en[1]])).toThrow(/"Win" is defined twice/);
+  expect(() => checkGlossary("th.json", en, [en[0], { term: "Win", definition: " " }])).toThrow(/"Win" has an empty definition/);
+});
+
+test("checkGlossary needs the Thai Mark entry to keep the **Correct** (...) shape", () => {
+  const en = [{ term: "Mark", definition: SENTENCE }];
+  expect(() => checkGlossary("th.json", en, [{ term: "Mark", definition: "ผลตัดสิน" }])).toThrow(/Correct/);
+});
+
+test("Thai lookups return Thai definitions, and Thai Mark kinds parse", () => {
+  expect(lookupTerm("candidate set", "th").definition).toBe(GLOSSARY_TH.find((e) => e.term === "Candidate Set")!.definition);
+  expect(lookupTerm("Candidate Set", "th").definition).not.toBe(lookupTerm("Candidate Set").definition);
+  const kinds = parseMarkKinds(lookupTerm("Mark", "th").definition);
+  expect(Object.values(kinds).every((d) => /[\u0E00-\u0E7F]/.test(d))).toBe(true);
+  expect(lookupMark("present", "th")).toEqual({ name: "Present", definition: kinds.present });
+});
+
+test("splitDefinition links English term names inside a Thai definition, with Thai text around them", () => {
+  const terms = [...glossary("th").values()].map((e) => e.term);
+  const parts = splitDefinition(lookupTerm("Loss", "th").definition, terms, ["Loss"]);
+  expect(parts.filter((p) => p.kind === "term").map((p) => p.text)).toEqual(["Game", "Guess Limit", "Win"]);
+  expect(parts.some((p) => p.kind === "text" && /[\u0E00-\u0E7F]/.test(p.text))).toBe(true);
+});
+
+test("every term linked inside a Thai definition is a Thai glossary entry", () => {
+  const terms = [...glossary("th").values()].map((e) => e.term);
+  for (const e of glossary("th").values()) {
+    for (const p of splitDefinition(e.definition, terms, [e.term])) {
+      if (p.kind === "term") expect(lookupTerm(p.term, "th").term).toBe(p.term);
     }
   }
 });

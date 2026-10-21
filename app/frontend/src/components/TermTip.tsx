@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Popover } from "radix-ui";
 import { MARK_LABEL, MARK_PAINT } from "@/components/mark-style";
 import { MARK_KINDS, type MarkKind, glossary, lookupMark, splitDefinition } from "@/lib/glossary";
+import { DEFAULT_LANGUAGE, type Language } from "@/lib/language";
 
 export const TERM_UNDERLINE = "cursor-help underline decoration-accent decoration-dotted decoration-1 underline-offset-4";
 
@@ -31,6 +32,7 @@ export function TermTip({
   children,
   className = TERM_UNDERLINE,
   style,
+  lang = DEFAULT_LANGUAGE,
 }: {
   term: string;
   definition: string;
@@ -38,6 +40,8 @@ export function TermTip({
   /** Classes for the focusable trigger; <Term> underlines it, <Mark> paints it as a label. */
   className?: string;
   style?: React.CSSProperties;
+  /** The language of the card: which glossary its nested terms and Marks come from. */
+  lang?: Language;
 }) {
   const ancestors = useContext(Ancestors);
   const [open, setOpen] = useState(false);
@@ -67,7 +71,7 @@ export function TermTip({
   const mouse = (e: React.PointerEvent) => e.pointerType === "mouse";
 
   const nested = [...ancestors, term];
-  const terms = [...glossary().values()].map((e) => e.term);
+  const terms = [...glossary(lang).values()].map((e) => e.term);
 
   return (
     <Popover.Root open={open} onOpenChange={(next) => now(next, "tap")}>
@@ -128,11 +132,11 @@ export function TermTip({
             <strong className="font-medium">{term}</strong>:{" "}
             {splitDefinition(definition, terms, nested).map((part, i) =>
               part.kind === "term" ? (
-                <TermTip key={i} term={part.term} definition={glossary().get(part.term.toLowerCase())!.definition}>
+                <TermTip key={i} term={part.term} definition={glossary(lang).get(part.term.toLowerCase())!.definition} lang={lang}>
                   {part.text}
                 </TermTip>
-              ) : part.kind === "bold" && isMarkKind(part.text) && !nested.includes(lookupMark(part.text.toLowerCase()).name) ? (
-                <MarkTip key={i} kind={part.text.toLowerCase() as MarkKind} />
+              ) : part.kind === "bold" && isMarkKind(part.text) && !nested.includes(lookupMark(part.text.toLowerCase(), lang).name) ? (
+                <MarkTip key={i} kind={part.text.toLowerCase() as MarkKind} lang={lang} />
               ) : part.kind === "bold" ? (
                 <strong key={i} className="font-medium">
                   {part.text}
@@ -151,10 +155,10 @@ export function TermTip({
 const isMarkKind = (text: string) => (MARK_KINDS as readonly string[]).includes(text.toLowerCase());
 
 /** A Mark's coloured label with its own card, inside another card. */
-function MarkTip({ kind }: { kind: MarkKind }) {
-  const { name, definition } = lookupMark(kind);
+function MarkTip({ kind, lang }: { kind: MarkKind; lang: Language }) {
+  const { name, definition } = lookupMark(kind, lang);
   return (
-    <TermTip term={name} definition={definition} className={`${MARK_LABEL} ${MARK_PAINT[kind]}`}>
+    <TermTip term={name} definition={definition} lang={lang} className={`${MARK_LABEL} ${MARK_PAINT[kind]}`}>
       {name}
     </TermTip>
   );

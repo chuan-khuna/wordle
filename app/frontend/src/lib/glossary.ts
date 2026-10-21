@@ -1,4 +1,6 @@
 import GLOSSARY from "@content/glossary.json";
+import GLOSSARY_TH from "@content/th/glossary.json";
+import { DEFAULT_LANGUAGE, type Language } from "@/lib/language";
 
 /** One glossary term and its definition, as copied from the repo's GLOSSARY.md into `content/glossary.json`. */
 export type GlossaryEntry = { term: string; definition: string };
@@ -8,15 +10,48 @@ export function indexGlossary(entries: GlossaryEntry[]): Map<string, GlossaryEnt
   return new Map(entries.map((entry) => [entry.term.toLowerCase(), entry]));
 }
 
-let cache: Map<string, GlossaryEntry> | undefined;
+/** The glossary of each language that has one; the English one is the original. */
+const GLOSSARIES: Partial<Record<Language, GlossaryEntry[]>> = { en: GLOSSARY, th: GLOSSARY_TH };
 
-export function glossary(): Map<string, GlossaryEntry> {
-  return (cache ??= indexGlossary(GLOSSARY));
+/**
+ * Throws, naming the file, when a translated glossary does not have exactly the English term names (a missing term would leave a card
+ * empty, an extra one is a typo) or an entry has an empty definition. The term names are the English ones, so the Mark entry
+ * also has to keep its `**Correct** (…)` shape.
+ */
+export function checkGlossary(file: string, english: readonly GlossaryEntry[], translated: readonly GlossaryEntry[]): void {
+  const have = new Set(translated.map((e) => e.term));
+  const missing = english.filter((e) => !have.has(e.term)).map((e) => e.term);
+  const known = new Set(english.map((e) => e.term));
+  const extra = translated.filter((e) => !known.has(e.term)).map((e) => e.term);
+  if (missing.length) throw new Error(`${file}: missing glossary term${missing.length > 1 ? "s" : ""} ${missing.map((t) => `"${t}"`).join(", ")}. It must have exactly the English term names.`);
+  if (extra.length) throw new Error(`${file}: glossary term${extra.length > 1 ? "s" : ""} ${extra.map((t) => `"${t}"`).join(", ")} not in the English glossary. It must have exactly the English term names.`);
+  const seen = new Set<string>();
+  for (const e of translated) {
+    if (seen.has(e.term)) throw new Error(`${file}: glossary term "${e.term}" is defined twice.`);
+    seen.add(e.term);
+    if (e.definition.trim() === "") throw new Error(`${file}: glossary term "${e.term}" has an empty definition.`);
+  }
+  const mark = translated.find((e) => e.term === "Mark");
+  if (mark) parseMarkKinds(mark.definition);
+}
+
+const cache = new Map<Language, Map<string, GlossaryEntry>>();
+
+/** The indexed glossary of a language. Throws, so the build fails, for a language that has no glossary yet. */
+export function glossary(lang: Language = DEFAULT_LANGUAGE): Map<string, GlossaryEntry> {
+  let index = cache.get(lang);
+  if (!index) {
+    const entries = GLOSSARIES[lang];
+    if (!entries) throw new Error(`lib/glossary.ts: no glossary for language "${lang}".`);
+    if (lang !== DEFAULT_LANGUAGE) checkGlossary(`content/${lang}/glossary.json`, GLOSSARY, entries);
+    cache.set(lang, (index = indexGlossary(entries)));
+  }
+  return index;
 }
 
 /** The entry for a term (case-insensitive). Throws, so the build fails, when `content/glossary.json` does not define it. */
-export function lookupTerm(term: string): GlossaryEntry {
-  const entry = glossary().get(term.trim().toLowerCase());
+export function lookupTerm(term: string, lang: Language = DEFAULT_LANGUAGE): GlossaryEntry {
+  const entry = glossary(lang).get(term.trim().toLowerCase());
   if (!entry) {
     throw new Error(`<Term>: "${term}" is not defined in content/glossary.json. Add it there, or fix the spelling (use the of="..." prop when the shown text differs).`);
   }
@@ -90,10 +125,10 @@ export function parseMarkKinds(definition: string): Record<MarkKind, string> {
 }
 
 /** The glossary's definition of one kind of Mark. Throws, so the build fails, for an unknown kind. */
-export function lookupMark(kind: string): { name: string; definition: string } {
+export function lookupMark(kind: string, lang: Language = DEFAULT_LANGUAGE): { name: string; definition: string } {
   if (!(MARK_KINDS as readonly string[]).includes(kind)) {
     throw new Error(`<Mark>: unknown kind "${kind}". Use one of ${MARK_KINDS.map((k) => `"${k}"`).join(", ")}.`);
   }
   const k = kind as MarkKind;
-  return { name: k[0].toUpperCase() + k.slice(1), definition: parseMarkKinds(lookupTerm("Mark").definition)[k] };
+  return { name: k[0].toUpperCase() + k.slice(1), definition: parseMarkKinds(lookupTerm("Mark", lang).definition)[k] };
 }

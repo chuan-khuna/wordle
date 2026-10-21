@@ -1,7 +1,9 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import { DEFAULT_LANGUAGE, type Language } from "@/lib/language";
 import { parseArticleFiles, validateParts } from "@/lib/parts";
+import { blobHash, checkTranslation, staleWarning } from "@/lib/translation";
 
 const CONTENT_DIR = path.resolve(process.cwd(), "content");
 
@@ -39,6 +41,8 @@ export type Article = {
   number: number;
   /** Where this Article starts in the Series' video, in seconds. */
   videoStart?: number;
+  /** Whether it is written in the language it was loaded for. False for a Thai Series' Article that has no Translation yet: its title and summary are the English ones, and links go to the English page. Always true for English. */
+  translated: boolean;
 };
 
 export type Content = {
@@ -50,7 +54,19 @@ export type Content = {
   backlinks: (slug: string) => Article[];
 };
 
-function articleFiles(): { slug: string; fileName: string; number: number; file: string; data: Record<string, unknown> }[] {
+/** One Article file as read: its names and parsed frontmatter, not yet validated. */
+export type RawArticle = { slug: string; fileName: string; number: number; file: string; data: Record<string, unknown> };
+
+/** A Translation of one Article as read: only its frontmatter's `title` and `summary` are used. `fileName` (without `.mdx`), when given, must be the English file's. */
+export type RawTranslatedArticle = { slug: string; fileName?: string; file: string; data: Record<string, unknown> };
+
+/** A language's own files as read: its Series file (title, intro, Part titles and intros) and the Articles it has translated. */
+export type RawTranslation = { seriesFile: string; series: Record<string, unknown>; articles: RawTranslatedArticle[] };
+
+/** The English Series file and Article files as read, not yet validated, and the Translation's files for a language other than English. */
+export type RawContent = { seriesFile: string; series: Record<string, unknown>; articles: RawArticle[]; translation?: RawTranslation };
+
+function articleFiles(): RawArticle[] {
   const names = readdirSync(path.join(CONTENT_DIR, "articles")).filter((f) => f.endsWith(".mdx"));
   return parseArticleFiles(names).map((a) => {
     const file = `content/articles/${a.name}.mdx`;
@@ -61,6 +77,46 @@ function articleFiles(): { slug: string; fileName: string; number: number; file:
 function seriesData(): { file: string; data: Record<string, unknown> } {
   const file = "content/series.mdx";
   return { file, data: matter(readFileSync(path.join(CONTENT_DIR, "series.mdx"), "utf8")).data };
+}
+
+/** The Translation checks already warned about, so a dev server (which rebuilds the content on every request) prints each once. */
+const warned = new Set<string>();
+
+/**
+ * A language's files live in content/<lang>/, mirroring English: `series.mdx` and `articles/NN-slug.mdx`, one per Translation.
+ * Each Translation is checked against its English original (`checkTranslation` throws, so the build fails) and a stale `source` hash is
+ * printed as a warning. A file with no English original is left for `buildContent` to reject.
+ */
+function translationFiles(lang: Language, english: RawArticle[]): RawTranslation {
+  const file = `content/${lang}/series.mdx`;
+  const dir = path.join(CONTENT_DIR, lang, "articles");
+  const names = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".mdx")).sort() : [];
+  const articles = names.map((n): RawTranslatedArticle => {
+    const fileName = n.replace(/\.mdx$/, "");
+    const slug = fileName.replace(/^\d{2}-/, "");
+    const rel = `content/${lang}/articles/${n}`;
+    const parsed = matter(readFileSync(path.join(dir, n), "utf8"));
+    const original = english.find((a) => a.slug === slug && a.fileName === fileName);
+    if (original) {
+      const englishPath = path.join(CONTENT_DIR, "articles", `${original.fileName}.mdx`);
+      const bytes = readFileSync(englishPath);
+      checkTranslation(rel, matter(bytes.toString("utf8")).content, parsed.content);
+      const warning = staleWarning(rel, original.file, parsed.data.source, blobHash(bytes));
+      if (warning && !warned.has(warning)) {
+        warned.add(warning);
+        console.warn(`warning: ${warning}`);
+      }
+    }
+    return { slug, fileName, file: rel, data: parsed.data };
+  });
+  return { seriesFile: file, series: matter(readFileSync(path.join(CONTENT_DIR, lang, "series.mdx"), "utf8")).data, articles };
+}
+
+/** Reads the English files, and the language's own files when it is not English. */
+function read(lang: Language): RawContent {
+  const { file: seriesFile, data: series } = seriesData();
+  const articles = articleFiles();
+  return { seriesFile, series, articles, translation: lang === DEFAULT_LANGUAGE ? undefined : translationFiles(lang, articles) };
 }
 
 function text(data: Record<string, unknown>, key: string, file: string): string {
@@ -84,8 +140,45 @@ function videoId(v: string): string {
   return m ? m[1] : v;
 }
 
-function load(): Content {
-  const { file: seriesFile, data: sd } = seriesData();
+type PartDef = { id: string; title: string; intro: string };
+
+/**
+ * The Translation's Series title, intro, and Part titles and intros, in the English Parts' order. Its Part ids must be the English ones,
+ * in the same order, since the Translation never decides the Series' structure.
+ */
+function translateSeries({ seriesFile: file, series: td }: RawTranslation, english: PartDef[]): { title: string; intro: string; parts: PartDef[] } {
+  const rawParts = td.parts;
+  if (!Array.isArray(rawParts)) throw new Error(`${file}: frontmatter "parts" must be a list of {id, title, intro}.`);
+  const parts = rawParts.map((p: unknown, i) => {
+    const d = (typeof p === "object" && p !== null ? p : {}) as Record<string, unknown>;
+    const where = `${file} (parts[${i}])`;
+    return { id: text(d, "id", where), title: text(d, "title", where), intro: text(d, "intro", where) };
+  });
+  const ids = parts.map((p) => p.id).join(", ");
+  const englishIds = english.map((p) => p.id).join(", ");
+  if (ids !== englishIds) throw new Error(`${file}: Part ids [${ids}] must be the English ones [${englishIds}], in the same order.`);
+  return { title: text(td, "title", file), intro: text(td, "intro", file), parts };
+}
+
+/** The English Articles with the Translations' titles and summaries laid over them. An Article without one keeps its English text and `translated: false`. */
+function translateArticles({ articles: translated }: RawTranslation, english: Article[]): Article[] {
+  const known = new Set(english.map((a) => a.slug));
+  for (const t of translated) {
+    if (!known.has(t.slug)) throw new Error(`${t.file}: no English Article "${t.slug}". Known Articles: ${[...known].join(", ")}.`);
+  }
+  const bySlug = new Map(translated.map((t) => [t.slug, t]));
+  return english.map((a) => {
+    const t = bySlug.get(a.slug);
+    if (!t) return { ...a, translated: false };
+    if (t.fileName !== undefined && t.fileName !== a.fileName) {
+      throw new Error(`${t.file}: its name must be the English file's, ${a.fileName}.mdx (the number is the Article's place in the Series).`);
+    }
+    return { ...a, title: text(t.data, "title", t.file), summary: text(t.data, "summary", t.file), translated: true };
+  });
+}
+
+/** Validates what was read and assembles the Series, Parts and Articles. Pure: no file access, so it can be tested on inline data. */
+export function buildContent({ seriesFile, series: sd, articles: raw, translation }: RawContent): Content {
   const rawParts = sd.parts;
   if (!Array.isArray(rawParts) || rawParts.length === 0) {
     throw new Error(`${seriesFile}: frontmatter "parts" must be a non-empty list of {id, title, intro}.`);
@@ -96,9 +189,8 @@ function load(): Content {
     return { id: text(d, "id", where), title: text(d, "title", where), intro: text(d, "intro", where) };
   });
 
-  const raw = articleFiles();
   const articleSlugs = new Set(raw.map((a) => a.slug));
-  const articles: Article[] = raw.map(({ slug, fileName, number, file, data }) => {
+  let articles: Article[] = raw.map(({ slug, fileName, number, file, data }) => {
     const prerequisites = data.prerequisites ?? [];
     if (!Array.isArray(prerequisites) || prerequisites.some((p) => typeof p !== "string")) {
       throw new Error(`${file}: frontmatter "prerequisites" must be a list of Article slugs.`);
@@ -118,6 +210,7 @@ function load(): Content {
       part: typeof data.part === "string" ? data.part : "",
       number,
       videoStart: data.video === undefined ? undefined : seconds(data.video, file),
+      translated: true,
     };
   });
 
@@ -126,11 +219,18 @@ function load(): Content {
     raw.map(({ slug, file, number, data }) => ({ slug, file, part: data.part, number })),
     seriesFile,
   );
+  let title = text(sd, "title", seriesFile);
+  let intro = text(sd, "intro", seriesFile);
+  let parts = partDefs;
+  if (translation) {
+    ({ title, intro, parts } = translateSeries(translation, partDefs));
+    articles = translateArticles(translation, articles);
+  }
   const series: Series = {
-    title: text(sd, "title", seriesFile),
-    intro: text(sd, "intro", seriesFile),
+    title,
+    intro,
     video: sd.video === undefined ? undefined : videoId(text(sd, "video", seriesFile)),
-    parts: partDefs.map((p, i) => ({ ...p, number: i + 1, articles: articles.filter((a) => a.part === p.id) })),
+    parts: parts.map((p, i) => ({ ...p, number: i + 1, articles: articles.filter((a) => a.part === p.id) })),
   };
 
   // A Prerequisite cycle would make "builds on" meaningless.
@@ -148,13 +248,18 @@ function load(): Content {
   };
 }
 
-let cache: Content | undefined;
+const cache = new Map<Language, Content>();
 
-/** Reads and validates content/. Throws on a bad reference, so the build fails with a clear message. */
-export function content(): Content {
+/**
+ * Reads and validates content/ for a language (English by default). Throws on a bad reference, so the build fails with a clear message.
+ * Every language has the same Series, Parts and Articles in the same order; a Translation only replaces text (see `buildContent`).
+ */
+export function content(lang: Language = DEFAULT_LANGUAGE): Content {
   // No cache in dev, so edits to frontmatter show up on reload.
-  if (process.env.NODE_ENV === "production") return (cache ??= load());
-  return load();
+  if (process.env.NODE_ENV !== "production") return buildContent(read(lang));
+  let built = cache.get(lang);
+  if (!built) cache.set(lang, (built = buildContent(read(lang))));
+  return built;
 }
 
 export function youtubeUrl(video: string, start?: number): string {

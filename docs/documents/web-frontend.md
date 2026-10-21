@@ -14,19 +14,29 @@ app/frontend/
   next.config.ts            the /api rewrite to BACKEND_URL, and @next/mdx with its plugins
   content/
     series.mdx              the site's one Series and its Parts (frontmatter + MDX)
+    th/series.mdx           the Thai Series: title, intro, and each Part's title and intro, keyed by the English Part ids (frontmatter only)
     articles/NN-<slug>.mdx  Articles (frontmatter + MDX); NN is the number in the Series
   src/
-    mdx-components.tsx      components every MDX file can use without importing (<Term>, <Mark>, <Word>, <Letter>, <MarginNote>, the Widgets)
+    mdx-components.tsx      components every MDX file can use without importing (<Term>, <Mark>, <Word>, <Letter>, <MarginNote>, the Widgets); `componentsFor(lang)` binds <Term> and <Mark> to a language
     app/
-      layout.tsx            <html>, the no-flash theme script, the sidebar, KaTeX CSS
-      page.tsx              the home page, which is the Series page: title, intro, video, then each Part with its Articles
-      articles/[slug]/      an Article page
-      openers/page.tsx      the Opener Distribution page (`/openers`)
+      (en)/                 the English route group, with its own root layout (`<html lang="en">`)
+        layout.tsx          renders SiteDocument for English
+        page.tsx            the home page, which is the Series page: title, intro, video, then each Part with its Articles
+        articles/[slug]/    an Article page (a thin wrapper: static params and metadata, then ArticleView)
+        openers/page.tsx    the Opener Distribution page (`/openers`; a thin wrapper around OpenersView)
+        type-lab/           the throwaway font comparison
+      (th)/                 the Thai route group, with its own root layout (`<html lang="th">` and the Thai font)
+        layout.tsx          renders SiteDocument for Thai
+        th/page.tsx, th/openers/page.tsx   `/th` and `/th/openers`
       globals.css           Tailwind, the base body style, the prose-theme rules and KaTeX tweaks
       tokens.css            the design tokens: colour roles, fonts, type scale, space, measure, shape, focus, shared utilities
       themes.css            the ten palettes as CSS variables (generated from the gpui themes)
     components/ui/          shadcn/ui components (button, input, label, select, table, tooltip, dropdown-menu, collapsible), restyled with the tokens
-    components/Sidebar.tsx, ThemePicker.tsx
+    components/SiteDocument.tsx   a language's whole document (`<html lang>`, theme script, sidebar, `<main>`) and its metadata; EnTag.tsx the "EN" tag
+    components/Sidebar.tsx, ThemePicker.tsx, LanguageToggle.tsx (the EN / ไทย toggle)
+    lib/language-switch.ts  `switchTarget`: the page a toggle click goes to, or null when it has no Thai page (language-switch.test.ts)
+    lib/fonts.ts, fonts-thai.ts   the Latin fonts (every page) and Noto Sans Thai Looped (Thai pages only)
+    components/SeriesPage.tsx, ArticleView.tsx, OpenersView.tsx   the three pages' bodies, each taking a `lang` (default English), so a language's routes can render them
     lib/opener-bars.ts       the pure grouping of Openers into bars 0.01 wide, the Answer List filter and label rows (with opener-bars.test.ts)
     lib/opener-lookup.ts     the pure Opener search behind the stat panel (with opener-lookup.test.ts)
     lib/opener-presets.ts    the highlight tab lists (Best, Myths, Bad, All) and the preset that matches a word list (with opener-presets.test.ts)
@@ -38,9 +48,12 @@ app/frontend/
     lib/widget-state.ts     the `guess:feedback,...` State text format
     lib/state-board.ts      the pure logic of the State input: typing, Backspace pull-back, Mark cycling, Win, six-row cap (state-board.test.ts)
     lib/api.ts              fetch helpers and response types for /api (errors carry the API's `detail`)
-    lib/content.ts          reads and validates content/ (frontmatter via gray-matter)
+    lib/content.ts          reads and validates content/ (frontmatter via gray-matter): `content(lang)`, with the pure `buildContent(raw)` (content.test.ts)
+    lib/language.ts         the `Language` type (`en`, `th`) and `DEFAULT_LANGUAGE`
+    lib/paths.ts            the pure path helper `pathIn(path, lang)` and `articlePath`, `homePath`, `openersPath`, `languageOf` (paths.test.ts)
+    lib/page-text.ts        the page text table (sidebar, Part labels, Prerequisites, ...) keyed by name, `pageText(lang)` (page-text.test.ts)
     lib/parts.ts            formatNumber, parseArticleFiles (NN-slug file names) and validateParts (parts.test.ts)
-    lib/glossary.ts         looks <Term> and <Mark> up in content/glossary.json
+    lib/glossary.ts         looks <Term> and <Mark> up in a language's glossary (English: content/glossary.json)
     lib/utils.ts            cn() (clsx + tailwind-merge), used by components/ui
     lib/themes.ts           the theme ids, names and appearance, in the gpui picker's order
     lib/theme-script.ts     the inline script that sets the theme before paint
@@ -82,6 +95,8 @@ The gpui app's ten palettes (see [gpui-app.md](gpui-app.md)) with the same role 
 **No flash.** `layout.tsx` puts an inline script (`lib/theme-script.ts`) in `<head>`. It runs before the first paint: it reads `localStorage` (inside `try/catch`, since storage can be blocked), falls back to `DEFAULT_THEME` for a missing or unknown value, and sets `data-theme` on `<html>`. `<html>` has `suppressHydrationWarning` because of that. `ThemePicker` reads `data-theme` with `useSyncExternalStore` (the server renders the default), and changes the theme by saving the choice and dispatching a `wordle-theme` event that the script listens for.
 
 **The theme menu** (`ThemePicker.tsx`): a shadcn `DropdownMenu` opened by an icon `Button` (lucide `Palette`, `aria-label="Theme"`). Its content is one `DropdownMenuRadioGroup`: the Light palettes under a "Light" label, then the Dark ones under "Dark"; the current choice is checked. Choosing an item saves its id and dispatches the event. It sits at the top of the sidebar, beside the site title; on phones that row is the top bar, where it sits next to the Articles button, so it is reachable without opening the menu.
+
+**The language toggle** (`LanguageToggle.tsx`, in the sidebar header beside the theme menu on every width, so on phones it sits in the top bar next to the menu button): a bordered group of two options, "EN" and "ไทย", labelled with the page text `language` (so its accessible name is in the page's language). The current language is a plain `aria-current` span; the other is a `Link` to the same page in that language, from `switchTarget(pathname, to, translatedSlugs)` (which goes through `pathIn`). `SiteDocument` computes `translatedSlugs` from `content("th")` (the Articles with `translated: true`), so nothing lists slugs by hand. A Thai page exists for the home page, `/openers` and a translated Article only; otherwise (an English Article with no Translation, or a page like `/type-lab`) the Thai option is a disabled, still-focusable `aria-disabled` element, never a link, with a short visible note under the toggle ("Not in Thai yet", described by the group). Clicking a link saves the target language in `localStorage` (`wordle-language`, `LANGUAGE_STORAGE_KEY`) inside `try/catch`. **Remembered means recorded, not applied:** every page already shows its own URL's language and every link on it points into that language, so nothing needs to read the saved value and nothing does; there is no redirect, by it or by browser language. If a language-less entry point is ever added, it may read it.
 
 ## shadcn/ui
 
@@ -130,6 +145,40 @@ The look is a minimal editorial one: the text leads and chrome recedes. All non-
 - **Colour use**: `text` and `background` carry the page (headings are `text`, not `heading`: `heading` and `accent` fall under 3:1 on `background` in Rosé Pine Dawn and Catppuccin Latte); `accent` is only link underlines, the Term underline and focus. Small metadata uses the derived `text-meta` (`subtle` mixed 45% toward `text`, so it stays above about 4.5:1 in every palette); plain `subtle` is for placeholders and `muted` only for decoration. `surface` is used only behind the video embed and `overlay` for tooltips.
 - **Shared utilities** (in `tokens.css`): `link`, `eyebrow` (small uppercase UI label). Inputs, selects, buttons and tables are the shadcn components (see "shadcn/ui"). A Widget is `WidgetFrame` in `widgets/ui.tsx`: hairline rules above and below and an `eyebrow` title, no fill. Charts use `CHART_CLASS` (UI sans, `text-meta`, tooltip variables) and `CHART_THEME` (grid in `highlight-med`).
 - **Prose** (`prose-theme` in `globals.css`) takes fonts, sizes and colours from the tokens; its rules skip `not-prose` blocks (Widgets). KaTeX is sized at 1.08em and long display maths scrolls inside itself.
+
+## Languages
+
+The site has a Thai Translation of the Series under way (`.scratch/thai-translation/spec.md`). English is the original. So far Thai has the home page `/th` (Series title and intro, Part titles and intros, a Thai sidebar and page text) and `/th/openers`; every other Article is listed in Thai with its English title and an "EN" tag and links to its English page. The pieces:
+
+- **The language argument.** `Language` (`en` | `th`, `lib/language.ts`) is an argument that defaults to `DEFAULT_LANGUAGE` (`en`) on every language-aware function, so existing callers are unchanged: `content(lang)`, `glossary(lang)`, `lookupTerm(term, lang)`, `lookupMark(kind, lang)`, `pageText(lang)`, and the views `SeriesPage`, `ArticleView` and `OpenersView` (each takes `lang`). 
+- **`content(lang)`** returns the same shape as before. Reading the files (`read()`) is separate from the pure `buildContent(raw)`, which validates and assembles the Series, Parts, Articles and backlinks from already-parsed frontmatter (tested on inline data in `content.test.ts`).
+- **The language reaches `<Term>` and `<Mark>` through the MDX components, not a global.** `componentsFor(lang)` in `mdx-components.tsx` returns the components with `<Term>` and `<Mark>` bound to the language; a view passes them to the MDX body (`<Body components={componentsFor(lang)} />`). They hand `lang` to `TermTip`, which uses it for the glossary behind its nested cards. The `*.mdx` module type (`mdx.d.ts`) accepts the `components` prop.
+- **The path helper** (`lib/paths.ts`, pure): `pathIn(path, lang)` swaps a path between languages (`/articles/x` and `/th/articles/x`, `/` and `/th`, `/openers` and `/th/openers`, in both directions, so it round-trips), `languageOf(path)` reads the language of a path, and `articlePath(slug, lang)`, `homePath(lang)` and `openersPath(lang)` build the pages' paths. Every internal link the pages and the sidebar build goes through it. (Links written inside MDX prose are part of the content, so a Translation writes its own.)
+- **The page text table** (`lib/page-text.ts`): the English words around the content (the Series eyebrow, "Part N", "Prerequisites", "Builds on this Article", the prev/next label, "Explore", "Opener Distribution", "How it works", "Watch from m:ss", the sidebar's nav label and Menu/Close) in one `PageText` object keyed by name, some keys functions for the parts that vary. `PageText` is a type, so a second language's table must have every key. `Sidebar` (a Client Component) takes a `lang` and calls `pageText(lang)` itself, since functions cannot be passed from a Server Component. The Opener Distribution page's two paragraphs and the theme menu are not in the table yet.
+
+- **Thai routes and `<html lang>`.** English and Thai are two route groups, `(en)` and `(th)`, each with its own root layout (there is no top-level `app/layout.tsx`); both render `SiteDocument` with their `lang`, so `<html lang="en">` or `<html lang="th">` is in the static HTML of every page (the Thai pages are `app/(th)/th/page.tsx` and `th/openers/page.tsx`, both statically generated). Navigating between the two groups is a full page load, which is what changes `<html lang>`.
+- **The Thai Series file** `content/th/series.mdx` holds only frontmatter: `title`, `intro` and `parts` (`id`, `title`, `intro`). `buildContent(raw)` takes an optional `translation` (its Series file and the Articles translated so far) and lays it over the English content: the Series title and intro and each Part's title and intro are replaced, and the build fails when the Thai Part ids are not the English ones in the same order. Each `Article` has `translated`: always true for English, and for Thai true only for an Article with a Translation (its title and summary replaced; Prerequisites, Part and number always come from English); an untranslated one keeps its English text. `articleLink(article, lang)` in `lib/paths.ts` is the link to use: the Article in `lang`, or the English page when `translated` is false.
+- **The "EN" tag** (`EnTag`, text from page text `enTag` and `englishOnly`) follows an untranslated Article's title in the sidebar and in each Part's list.
+- **Thai fonts and line height.** `lib/fonts-thai.ts` loads Noto Sans Thai Looped (`subsets: ["thai"]`, variable weight) with `next/font`, and only the Thai layout imports it, so English pages do not load it. `tokens.css` lists `var(--font-noto-thai-looped, <fallback>)` after the Latin family in the serif, sans and tile stacks, so Thai letters use it and Latin letters keep Newsreader or Inter; on English pages the variable is undefined and the fallback stands in. `:root:lang(th)` in `tokens.css` raises every step of the line-height scale (body 1.8, headings 1.3 to 1.55) so stacked vowels and tone marks are not clipped.
+- **Screenshots.** `bun run screenshot` with no paths also shoots `/th`, every translated Article and `/th/openers`.
+
+### Translations
+
+A Translation of an Article is `content/th/articles/<same file name as the English one>.mdx` (`01-rules.mdx`). Its MDX body is written with the same components as English; its frontmatter holds only:
+
+```yaml
+title: "กติกา"
+summary: "..."
+source: fad7f9922ce97020d0736a090eea2a23db6fcc59   # git hash-object content/articles/01-rules.mdx
+```
+
+Prerequisites, Part, number and `video` are never read from it. `/th/articles/<slug>` (`app/(th)/th/articles/[slug]/page.tsx`, the same `ArticleView` with `lang="th"`, importing the body from `content/th/articles/`) is generated only for Articles that have a Translation; a Prerequisite link, backlink or prev/next link on a Thai page goes to the Thai page when there is one and otherwise to the English page, followed by the "EN" tag.
+
+**To add a Translation:** write the Thai file, keep every Widget, `##` heading and code block exactly as in English, set `source` to `git hash-object <English file>`, and run `bun test` and `bun run build`. When the English file later changes, the build prints `warning: ... has changed since this Translation was made`; review the Translation, then set `source` to the hash it prints. A stale hash never fails the build.
+
+**What the build enforces** (`lib/translation.ts`, pure, tested in `translation.test.ts`; `content.ts` runs it while reading `content/th/articles/`): `checkTranslation(file, english, translation)` throws, naming the file and the first mismatch, when the Widgets differ (every capitalised tag except the prose components `<Term>`, `<Word>`, `<Mark>`, `<Letter>`, `<MarginNote>`; tag, props including `id` in any order, and order of appearance), when the number of `##` headings differs, or when a fenced code block differs in any character (title line, comments and docstrings included). Fenced and inline code text is otherwise ignored. It compares structure, not meaning. `buildContent` fails on a Thai file with no English Article, one whose name is not the English file's, or a missing or empty `title` or `summary`. `staleWarning` compares `source` with `blobHash` (git's blob hash) of the English file.
+
+**The Thai glossary** `content/th/glossary.json` has the same shape as `content/glossary.json` and must have exactly its term names (the English names are the keys; `checkGlossary` throws on a missing, extra, repeated or empty term when the Thai glossary is first used, so the build fails). Definitions are Thai with the other terms in English, so `splitDefinition` links them unchanged and cards nest. The Mark entry keeps `**Correct** (…)`, `**Present** (…)`, `**Absent** (…)`, which `parseMarkKinds` reads, so Mark cards show Thai definitions. Add a term to both files together.
 
 ## Series and Articles
 

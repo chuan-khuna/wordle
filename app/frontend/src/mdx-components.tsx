@@ -7,6 +7,7 @@ import { MarginNote } from "@/components/MarginNote";
 import { Mark } from "@/components/Mark";
 import { Term } from "@/components/Term";
 import { Word } from "@/components/Word";
+import { DEFAULT_LANGUAGE, type Language } from "@/lib/language";
 import { BenchmarkChart } from "@/components/widgets/BenchmarkChart";
 import { CandidateFilter } from "@/components/widgets/CandidateFilter";
 import { FeedbackScorer } from "@/components/widgets/FeedbackScorer";
@@ -23,6 +24,15 @@ function Figure(props: ComponentProps<"figure">) {
 }
 
 const components: MDXComponents = { figure: Figure, Term, Mark, Word, Letter, MarginNote, Boards, Board, FeedbackScorer, CandidateFilter, SplitExplorer, StepThroughGame, SideBySideGame, OpenerTable, BenchmarkChart, OpenerDistribution };
+
+/** The components for a language: <Term> and <Mark> look their definitions up in that language's glossary. A page passes them to the MDX body as `components`. */
+export function componentsFor(lang: Language = DEFAULT_LANGUAGE): MDXComponents {
+  return {
+    ...components,
+    Term: (props: ComponentProps<typeof Term>) => <Term {...props} lang={lang} />,
+    Mark: (props: ComponentProps<typeof Mark>) => <Mark {...props} lang={lang} />,
+  };
+}
 
 export function useMDXComponents(): MDXComponents {
   return components;
