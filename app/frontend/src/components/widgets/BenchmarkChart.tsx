@@ -1,23 +1,38 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useId, useMemo } from "react";
 import { barY, defineChart, group } from "@tanstack/charts";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
 import { type BenchmarkStrategy, getBenchmark } from "@/lib/api";
+import { STRATEGIES, STRATEGY_GROUPS, shortName } from "@/lib/strategies";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
 
-/** One theme role per Strategy, in the order the API lists them; the chart and the table swatches share them. */
-const ROLE_COLORS = ["var(--accent)", "var(--present)", "var(--correct)", "var(--error)"];
+/**
+ * One theme role per Guess Pool and Search Scope; Expected Information takes it as it is, Expected Candidates a
+ * lighter tint of it, so the two Rankings of one Guess Pool and Search Scope sit side by side in one hue.
+ */
+const ROLES: Record<string, string> = {
+  "answers-candidates": "var(--accent)",
+  "answers-all": "var(--present)",
+  "guesses-candidates": "var(--error)",
+  "guesses-all": "var(--correct)",
+};
 const LOST = "Lost";
 
-const DEFAULT_STRATEGIES = "bits-candidates,expected-candidates,bits-all,expected-all";
+const DEFAULT_STRATEGIES = STRATEGIES.map((s) => s.id).join(",");
 
+/** The colour of a Strategy, by its id (`<ranking>-<pool>-<scope>`): a theme role, tinted for Expected Candidates. */
+export function strategyColor(id: string): string {
+  const [by, ...rest] = id.split("-");
+  const role = ROLES[rest.join("-")] ?? "var(--accent)";
+  return by === "expected" ? `color-mix(in oklab, ${role} 50%, var(--background))` : role;
+}
 interface Bar {
   count: string;
   strategy: string;
@@ -36,10 +51,23 @@ export function pickStrategies<T extends { id: string }>(all: readonly T[], text
 }
 
 /**
+ * The `strategies` text after ticking or unticking `id`: the ticked ids in `order`, comma separated. The last
+ * ticked Strategy can't be unticked (no ids would mean all of them).
+ */
+export function toggleStrategy(order: readonly string[], shown: readonly string[], id: string): string {
+  const on = new Set(shown);
+  if (on.has(id)) {
+    if (on.size > 1) on.delete(id);
+  } else on.add(id);
+  return order.filter((i) => on.has(i)).join(",");
+}
+
+/**
  * Widget 6: the Benchmark. Every chosen Strategy plays all 2315 Answers; the chart groups the Guess Distribution
- * by Guess Count (1 to 6), with the Losses as a last group, one bar per Strategy. A table below gives each
- * Strategy's Opener, Average Guess Count, Losses (with the lost Answers) and the exact counts.
- * Props: `strategies` (comma separated ids, default all four: `bits-candidates`, `expected-candidates`, `bits-all`, `expected-all`),
+ * by Guess Count (1 to 6), with the Losses as a last group, one bar per Strategy. A picker above it ticks the
+ * Strategies to show, grouped by Ranking. A table below gives each Strategy's Opener, Average Guess Count, Losses
+ * (with the lost Answers) and the exact counts.
+ * Props: `strategies` (comma separated ids, default all eight, e.g. `bits-answers-candidates,bits-guesses-all`),
  * `id` (URL param `id.strategies`). The URL param `strategies` overrides the prop.
  */
 export function BenchmarkChart(props: { strategies?: string; id?: string }) {
@@ -51,13 +79,17 @@ export function BenchmarkChart(props: { strategies?: string; id?: string }) {
 }
 
 function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?: string; id?: string }) {
-  const [text] = useWidgetParam(id, "strategies", prop);
+  const uid = useId();
+  const [text, setText] = useWidgetParam(id, "strategies", prop);
   const { data, error, loading } = useLoad("benchmark", (signal) => getBenchmark(signal));
   const limit = data?.guess_limit ?? 6;
   const shown = useMemo(() => (data ? pickStrategies(data.strategies, text) : []), [data, text]);
-  const colors = useMemo(
-    () => new Map(shown.map((s) => [s.id, ROLE_COLORS[(data?.strategies.findIndex((x) => x.id === s.id) ?? 0) % ROLE_COLORS.length]])),
-    [shown, data],
+  const colors = useMemo(() => new Map(shown.map((s) => [s.id, strategyColor(s.id)])), [shown]);
+  const order = useMemo(() => (data ? data.strategies.map((s) => s.id) : []), [data]);
+  const shownIds = shown.map((s) => s.id);
+  // The picker lists the Strategies the Benchmark holds, grouped by Ranking.
+  const groups = STRATEGY_GROUPS.map((g) => ({ ...g, strategies: g.strategies.filter((s) => order.includes(s.id)) })).filter(
+    (g) => g.strategies.length > 0,
   );
 
   return (
@@ -73,14 +105,32 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
 
       {data && (
         <>
-          <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Strategies">
-            {shown.map((s) => (
-              <li key={s.id} className="flex items-center gap-1.5">
-                <span aria-hidden className="inline-block h-3 w-3 rounded-xs" style={{ background: colors.get(s.id) }} />
-                {s.name}
-              </li>
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {groups.map((g) => (
+              <fieldset key={g.by}>
+                <legend className="mb-1 text-sm text-meta">{g.label}</legend>
+                <div className="flex flex-col gap-1">
+                  {g.strategies.map((s) => {
+                    const checked = shownIds.includes(s.id);
+                    return (
+                      <label key={s.id} htmlFor={`${uid}-${s.id}`} className="flex items-center gap-2 text-sm text-text">
+                        <input
+                          id={`${uid}-${s.id}`}
+                          type="checkbox"
+                          className="h-4 w-4 accent-accent"
+                          checked={checked}
+                          disabled={checked && shownIds.length === 1}
+                          onChange={() => setText(toggleStrategy(order, shownIds, s.id))}
+                        />
+                        <span aria-hidden className="inline-block h-3 w-3 rounded-xs" style={{ background: strategyColor(s.id) }} />
+                        {shortName(s)}
+                      </label>
+                    );
+                  })}
+                </div>
+              </fieldset>
             ))}
-          </ul>
+          </div>
 
           <DistributionChart strategies={shown} colors={colors} limit={limit} />
           <p className="mt-1 text-xs text-meta">

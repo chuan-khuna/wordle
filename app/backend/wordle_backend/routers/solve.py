@@ -29,7 +29,8 @@ def get_solve(
     candidates = solver.all_candidates()
     steps = []
     for number in range(1, MAX_GUESSES + 1):
-        ranked = solver.rank(candidates, pool=pool, scope=scope, by=by, top=SOLVE_ALTERNATIVES)
+        # The Opener is ranked over the whole Guess Pool, whatever the Search Scope (as in the Benchmark).
+        ranked = solver.rank(candidates, pool=pool, scope="global" if number == 1 else scope, by=by, top=SOLVE_ALTERNATIVES)
         guess = ranked[0].word
         code = pack(feedback(guess, answer))
         after = solver.narrow(candidates, guess, code)

@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useId, useState } from "react";
 import { type Pool, type Rank, type Scope, type SolveResponse, getSolve } from "@/lib/api";
 import { WORD_LENGTH, parseMarks } from "@/lib/feedback";
+import { POOL_NAMES, RANKING_NAMES, SCOPE_NAMES } from "@/lib/strategies";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,7 +25,8 @@ const oneOf = <T extends string>(value: string, allowed: readonly T[], fallback:
  * Widget 4: the Solver plays an Answer one Guess at a time (`GET /api/solve`).
  * Props: `answer`, `pool` ("guesses" | "answers", default guesses), `scope` ("global" | "candidates", default global),
  * `by` ("bits" | "expected", default bits), `step` (1-based Guess shown, default 1), `id`.
- * The defaults are the main Strategy: Expected Information over all Guesses. URL params of the same names
+ * The defaults are the main Strategy: Expected Information, Guess List, All words. The Opener is ranked over the whole
+ * Guess Pool under either Search Scope (the API does this). URL params of the same names
  * (`id.answer`, `id.step`, ...) override the props. Left and Right arrow keys step through the Game.
  */
 export function StepThroughGame(props: {
@@ -108,9 +110,9 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
         {/* The Answer's five tiles need their own line: in a quarter-width cell they ran under the first option. */}
         <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={current?.error} />
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SelectField id={`${uid}-p`} label="Guesses from" value={pool} onChange={setPool} options={[["guesses", "all words"], ["answers", "Answers only"]]} />
-          <SelectField id={`${uid}-s`} label="Search" value={scope} onChange={setScope} options={[["global", "all Guesses"], ["candidates", "Candidates only"]]} />
-          <SelectField id={`${uid}-b`} label="Rank by" value={by} onChange={setBy} options={[["bits", "Expected Information"], ["expected", "Expected Candidates"]]} />
+          <SelectField id={`${uid}-p`} label="Guess Pool" value={pool} onChange={setPool} options={POOLS.map((p): [string, string] => [p, POOL_NAMES[p]])} />
+          <SelectField id={`${uid}-s`} label="Search Scope" value={scope} onChange={setScope} options={SCOPES.map((c): [string, string] => [c, SCOPE_NAMES[c]])} />
+          <SelectField id={`${uid}-b`} label="Ranking" value={by} onChange={setBy} options={RANKS.map((r): [string, string] => [r, RANKING_NAMES[r]])} />
         </div>
 
         <div aria-live="polite" className="mt-3 min-h-6 text-sm">

@@ -16,7 +16,7 @@ export function unionWords(...lists: readonly (readonly string[])[]): string[] {
   return [...new Set(lists.flat())];
 }
 
-/** The tabs, in order. Ranks are for `bits-all` in the Guess Count Matrix summary. */
+/** The tabs, in order. Ranks are for `bits-guesses-all` in the Guess Count Matrix summary. */
 export const OPENER_PRESETS: readonly OpenerPreset[] = [
   { id: "best", label: "Best Openers", words: BEST, caption: "The top of the ranking when every Opener is played out." },
   {

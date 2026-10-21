@@ -38,11 +38,11 @@ while not game.is_over:
 
 ## A Guess that can't win
 
-One setting in `suggest` decides a lot: `scope`. The Solver may search only the Candidates, or it may search **every word on the Guess List**, including words that cannot be the Answer.
+One setting in `suggest` decides a lot: `scope`, the <Term>Search Scope</Term>. The Solver may search only the Candidates, or it may search **All words** on the Guess List, including words that cannot be the Answer.
 
 Playing a word that cannot win sounds wasteful. But it can be the best question. Here is why, in a Game where the Answer is <Word>watch</Word>.
 
-First, the Solver uses the narrow setting, Candidates only. Step through it:
+First, the Solver uses the narrow setting, Candidates only, and takes its Guesses from the Answer List, its <Term>Guess Pool</Term>. Step through it:
 
 <StepThroughGame id="trap" answer="watch" pool="answers" scope="candidates" step={4} />
 
@@ -50,7 +50,7 @@ First, the Solver uses the narrow setting, Candidates only. Step through it:
 
 This is the <Word>_atch</Word> trap. A family of words that differ in a single letter is a trap for any Strategy that only guesses Candidates, because every Candidate rules out only itself.
 
-Now the same Answer, with the Solver allowed to search all words:
+Now the same Answer, with the Solver allowed to search All words on the Guess List:
 
 <StepThroughGame id="free" answer="watch" step={3} />
 

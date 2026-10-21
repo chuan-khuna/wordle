@@ -27,7 +27,7 @@ export function Boards({ title, children }: { title: string; children: ReactNode
  * The last Guess is the Answer, and every row is painted with its Feedback against it. A rule after the sixth row
  * marks the Guess Limit. `pattern` (optional) names the family above the board, as <Word> draws it, and `label`
  * (optional) says which Strategy played it. `highlight` (optional, space-separated) rings those Guesses, such as the
- * word a search over all words plays that is not a Candidate. A Guess not on the Guess List, or a highlight that is
+ * word a search over All words plays that is not a Candidate. A Guess not on the Guess List, or a highlight that is
  * not one of the Guesses, throws, which fails the build.
  */
 export function Board({

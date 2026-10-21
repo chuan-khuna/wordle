@@ -27,17 +27,17 @@ def benchmark(solver, opener, **strategy):
     return counts
 ```
 
-Each Strategy plays from its own best Opener. Here are the three:
+A Strategy is three choices: a <Term>Guess Pool</Term> (the Answer List or the Guess List), a <Term>Search Scope</Term> (Candidates only or All words) and a <Term>Ranking</Term> (Expected Information or Expected Candidates). That makes eight Strategies. Each plays from its own best Opener, the best first Guess in its whole Guess Pool. Here are all eight:
 
 <BenchmarkChart id="bm" />
 
 ## What it shows
 
-**Expected Information over all words** starts with <Word>tarse</Word>. It never loses. Its Average Guess Count is **3.43**: 61 Games in 2 Guesses, 1,256 in 3, 943 in 4, 53 in 5 and 2 in 6. Three Guesses is the most common result, and almost every Game is over by the fourth.
+**Expected Information, Guess List, All words** starts with <Word>tarse</Word>. It never loses. Its Average Guess Count is **3.43**: 61 Games in 2 Guesses, 1,256 in 3, 943 in 4, 53 in 5 and 2 in 6. Three Guesses is the most common result, and almost every Game is over by the fourth.
 
-**Expected Candidates over all words** starts with <Word>roate</Word>. It never loses either, and averages **3.48**. It is slightly slower, but it is steadier: no Game takes six Guesses.
+**Expected Candidates, Guess List, All words** starts with <Word>roate</Word>. It never loses either, and averages **3.48**. It is slightly slower, but it is steadier: no Game takes six Guesses.
 
-**Expected Information over Candidates only** starts with <Word>raise</Word>. It is the Strategy from the last Article. Its average is **3.58**, and it **loses 11 Games**, listed under the chart, among them <Word>match</Word> and <Word>watch</Word>. These are the words with look-alike families, the <Word>_atch</Word> trap and others like it. The average counts the won Games only, so the real cost is a little higher than 3.58.
+**Expected Information, Answer List, Candidates only** starts with <Word>raise</Word>. It is the narrow setting from the last Article. Its average is **3.58**, and it **loses 11 Games**, listed under the chart, among them <Word>match</Word> and <Word>watch</Word>. These are the words with look-alike families, the <Word>_atch</Word> trap and others like it. The average counts the won Games only, so the real cost is a little higher than 3.58.
 
 Every one of the 11 Losses is such a trap. After two or three Guesses the Candidates are a family that shares most of its letters, and the Solver guesses its members one at a time until it runs out of Guesses.
 
@@ -55,9 +55,9 @@ Every one of the 11 Losses is such a trap. After two or three Guesses the Candid
 
 Each board is one Game, opening with <Word>raise</Word>. The dashed rule is the Guess Limit: everything below it is a Loss. On the <Word>_atch</Word> and <Word>_o_er</Word> boards two Answers are lost, <Word>match</Word> and <Word>foyer</Word> on the seventh row and <Word>watch</Word> and <Word>goner</Word> on the eighth.
 
-### How searching all words gets out
+### How searching All words gets out
 
-Searching all words does not wait for the trap to close. From the same State, it plays a word that is not a Candidate but holds the letters the family differs in (ringed below). Here is <Word>watch</Word> again, after the same <Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word>, and <Word>tatty</Word> after the same <Word>raise</Word> and <Word>tangy</Word>:
+Searching All words on the Guess List does not wait for the trap to close. From the same State, it plays a word that is not a Candidate but holds the letters the family differs in (ringed below). Here is <Word>watch</Word> again, after the same <Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word>, and <Word>tatty</Word> after the same <Word>raise</Word> and <Word>tangy</Word>:
 
 <Boards title="Same State, two searches">
   <Board label="Candidates only" pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
@@ -73,6 +73,8 @@ With five Candidates left, guessing one of them, say <Word>match</Word>, can onl
 - against <Word variant="text">watch</Word>: <Word answer="watch">ablow</Word>
 - against <Word variant="text">hatch</Word> or <Word variant="text">match</Word>: <Word answer="hatch">ablow</Word>
 
-That is four groups, none bigger than two, so the next Guess is at worst a coin toss. The Answer <Word>watch</Word> is found on the fifth Guess instead of the eighth. <Word>bafta</Word> does the same for the <Word>ta__y</Word> family with <Letter>b</Letter>, <Letter>f</Letter> and a <Letter>t</Letter> in the fourth place: it leaves only <Word variant="text">tacky</Word> and <Word variant="text">tally</Word> together, and <Word>tatty</Word> takes 4 Guesses instead of 7. Replayed from the same States, searching all words wins all 11 lost Games, most of them in 4 or 5 Guesses.
+That is four groups, none bigger than two, so the next Guess is at worst a coin toss. The Answer <Word>watch</Word> is found on the fifth Guess instead of the eighth. <Word>bafta</Word> does the same for the <Word>ta__y</Word> family with <Letter>b</Letter>, <Letter>f</Letter> and a <Letter>t</Letter> in the fourth place: it leaves only <Word variant="text">tacky</Word> and <Word variant="text">tally</Word> together, and <Word>tatty</Word> takes 4 Guesses instead of 7. Replayed from the same States, searching All words wins all 11 lost Games, most of them in 4 or 5 Guesses.
+
+The other four Strategies pull the Guess Pool and the Search Scope apart. Searching All words of the Answer List still opens with <Word>raise</Word>, and it loses no Game either: it averages **3.50** by Expected Information and 3.52 by Expected Candidates. Opening from the whole Guess List and then guessing Candidates only starts with <Word>tarse</Word> or <Word>roate</Word>, and still loses 6 and 13 Games.
 
 The big gain comes from one change: letting the Solver play a word that cannot win. It takes the Losses from 11 to 0 and the average down by 0.15 Guesses. (The Opener differs too, but the trap is what costs the Games.) Which measure the Solver uses matters less: Expected Information and Expected Candidates are within 0.05 Guesses of each other.

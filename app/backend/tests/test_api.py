@@ -129,6 +129,14 @@ def test_solve_candidates_only_hits_the_atch_trap(client):
     assert client.get("/api/solve", params=params).json()["guesses"] > 6
 
 
+def test_solve_ranks_the_opener_over_the_whole_guess_pool(client):
+    # Candidates only from the second Guess on: the Guess List Opener is TARSE, as in the Benchmark, not an Answer.
+    params = {"answer": "watch", "scope": "candidates", "pool": "guesses"}
+    steps = client.get("/api/solve", params=params).json()["steps"]
+    assert steps[0]["guess"] == "tarse"
+    assert all(s["alternatives"][0]["is_candidate"] for s in steps[1:])
+
+
 def test_rank_switches_to_candidates_only_at_two_candidates():
     # The package's Solver.rank does not; the backend's WebSolver does.
     solver = WebSolver.load(DEFAULT_DIR)

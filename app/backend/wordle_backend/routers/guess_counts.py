@@ -8,7 +8,7 @@ from wordle_backend.common import BadRequest, NotPrecomputed, solver_of
 
 router = APIRouter(prefix="/api")
 
-DEFAULT_STRATEGY = "bits-all"
+DEFAULT_STRATEGY = "bits-guesses-all"
 
 
 @router.get("/guess-counts")
@@ -17,7 +17,8 @@ def get_guess_counts(request: Request, strategy: str = DEFAULT_STRATEGY) -> dict
     summary = request.app.state.guess_counts
     if summary is None:
         raise NotPrecomputed(f"{SUBDIR}/{SUMMARY_FILE} is missing. Run `just precompute-guess-counts` (or `just restore-cache`) first.")
-    if strategy not in {how.id for how in STRATEGIES}:
+    how = next((how for how in STRATEGIES if how.id == strategy), None)
+    if how is None:
         raise BadRequest(f"strategy {strategy!r} must be one of {', '.join(how.id for how in STRATEGIES)}")
     entry = summary.get(strategy)
     if entry is None:
@@ -25,7 +26,7 @@ def get_guess_counts(request: Request, strategy: str = DEFAULT_STRATEGY) -> dict
     return {
         "strategy": {"id": entry["id"], "name": entry["name"]},
         "complete_rows": entry["complete_rows"],
-        "total_rows": len(solver_of(request).guesses),
+        "total_rows": len(solver_of(request).pool_words(how.pool)),
         "openers": [
             {key: opener[key] for key in ("rank", "word", "average_guess_count", "losses", "is_answer")}
             for opener in entry["openers"]

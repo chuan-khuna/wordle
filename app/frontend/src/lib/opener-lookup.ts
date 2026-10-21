@@ -11,7 +11,7 @@ interface Row {
 export type OpenerLookup<T extends Row> =
   /** Fewer than five letters typed (or none): nothing to look up yet. */
   | { kind: "incomplete" }
-  /** Not among the Openers played (not on the Guess List, or its row is not finished yet). */
+  /** Not among the Openers played (not in the Strategy's Guess Pool, or its row is not finished yet). */
   | { kind: "unknown"; word: string }
   | {
       kind: "found";

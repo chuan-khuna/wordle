@@ -7,23 +7,17 @@ import { type Bar, chartDomain, filterOpeners, groupOpeners, labelRows } from "@
 import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/opener-column";
 import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/opener-lookup";
 import { OPENER_PRESETS, presetFor } from "@/lib/opener-presets";
+import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, STRATEGY_GROUPS, shortName } from "@/lib/strategies";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseHighlight } from "./OpenerTable";
 import { WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
 
-const DEFAULT_STRATEGY = "bits-all";
-const STRATEGIES: [string, string][] = [
-  ["bits-all", "Expected Information, all words"],
-  ["bits-candidates", "Expected Information, Candidates only"],
-  ["expected-all", "Expected Candidates, all words"],
-  ["expected-candidates", "Expected Candidates, Candidates only"],
-];
 
 // Chart geometry in SVG user units. Each bar is at least BAR_WIDTH wide, so a phone scrolls the frame sideways.
 const BAR_WIDTH = 14;
@@ -64,7 +58,7 @@ interface Props {
  * printed, and each gets a stat card. Hover a block for its stats, click or tap a bar for a side column listing its
  * Openers. The chart keeps its pixel size and its X range when the Answer List filter flips; only the Y axis
  * rescales to the Openers shown. On a phone the chart scrolls sideways inside its frame.
- * Props: `strategy` (default `bits-all`), `answersOnly` (chart only Answer List Openers, default false),
+ * Props: `strategy` (default `bits-guesses-all`), `answersOnly` (chart only Answer List Openers, default false),
  * `highlight` (comma separated words), `controls` (show the Strategy picker, the highlight field and the Answer List
  * toggle, default true), `tabs` (a tab row that sets the highlight words to a preset list; with no `highlight` it starts
  * on the first, default false), `id` (URL params `id.strategy`, ...). Each URL param of the same name overrides its prop.
@@ -112,13 +106,19 @@ function Distribution({
             </Label>
             <Select value={strategy} onValueChange={setStrategy}>
               <SelectTrigger id={`${uid}-strategy`} className="w-full">
-                <SelectValue />
+                {/* The trigger names the whole Strategy; the items leave out the Ranking, which is their group's label. */}
+                <SelectValue>{STRATEGIES.find((s) => s.id === strategy)?.name ?? strategy}</SelectValue>
               </SelectTrigger>
               <SelectContent position="popper">
-                {STRATEGIES.map(([value, name]) => (
-                  <SelectItem key={value} value={value}>
-                    {name}
-                  </SelectItem>
+                {STRATEGY_GROUPS.map((g) => (
+                  <SelectGroup key={g.by}>
+                    <SelectLabel>{g.label}</SelectLabel>
+                    {g.strategies.map((s) => (
+                      <SelectItem key={s.id} value={s.id} textValue={s.name}>
+                        {shortName(s)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
@@ -233,7 +233,7 @@ function Chart({
           {data.complete_rows.toLocaleString("en-US")} of {data.total_rows.toLocaleString("en-US")} Openers played
         </p>
       )}
-      <StatCards lookups={cards} partial={partial} />
+      <StatCards lookups={cards} partial={partial} pool={poolName(data.strategy.id)} />
       <ul className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm" aria-label="Colours">
         <li className="flex items-center gap-1.5">
           <span aria-hidden className="inline-block h-3 w-3 rounded-xs" style={{ background: ANSWER_FILL }} />
@@ -276,8 +276,11 @@ function Chart({
   );
 }
 
-/** One card per highlighted word on the Guess List, best rank first, then a note for each that is not. */
-function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpener>[]; partial: boolean }) {
+/** The Guess Pool of a Strategy id, by name ("Guess List" for an id the site does not know). */
+const poolName = (id: string) => POOL_NAMES[STRATEGIES.find((s) => s.id === id)?.pool ?? "guesses"];
+
+/** One card per highlighted word in the Guess Pool (`pool`), best rank first, then a note for each that is not. */
+function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCountOpener>[]; partial: boolean; pool: string }) {
   const found = lookups.filter((l) => l.kind === "found");
   const unknown = lookups.filter((l) => l.kind === "unknown");
   if (found.length === 0 && unknown.length === 0) return null;
@@ -360,7 +363,7 @@ function StatCards({ lookups, partial }: { lookups: OpenerLookup<GuessCountOpene
       )}
       {unknown.map((l) => (
         <p key={l.word} className="text-error">
-          <span className="font-mono uppercase">{l.word}</span>: {partial ? "not in the Guess List, or not played yet" : "Not in the Guess List"}
+          <span className="font-mono uppercase">{l.word}</span>: {partial ? `not on the ${pool}, or not played yet` : `Not on the ${pool}`}
         </p>
       ))}
     </div>
