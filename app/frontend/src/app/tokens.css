@@ -191,3 +191,15 @@
     animation: shake 0.35s ease-in-out;
   }
 }
+
+/* A Side-by-side Game tile turns face up, top edge first. Not with reduced motion: the tile just appears. */
+@keyframes flip-in {
+  from { transform: rotateX(90deg); }
+  to { transform: rotateX(0); }
+}
+@utility animate-flip-in {
+  display: inline-flex;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: flip-in 0.3s ease-out both;
+  }
+}

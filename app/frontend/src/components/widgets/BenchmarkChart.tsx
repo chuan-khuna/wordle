@@ -6,8 +6,9 @@ import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart } from "@tanstack/react-charts";
-import { type BenchmarkStrategy, getBenchmark } from "@/lib/api";
-import { STRATEGIES, STRATEGY_GROUPS, shortName } from "@/lib/strategies";
+import { type BenchmarkStrategy, getBenchmark, type Pool, type Scope } from "@/lib/api";
+import { POOL_NAMES, RANKING_NAMES, SCOPE_NAMES, STRATEGIES, STRATEGY_GROUPS, type StrategyInfo, shortName, strategyById } from "@/lib/strategies";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
@@ -25,7 +26,55 @@ const ROLES: Record<string, string> = {
 };
 const LOST = "Lost";
 
+/**
+ * What each Guess Pool and Search Scope lets the Solver guess: the Opener, then every later Guess. Every Candidate
+ * is on the Answer List, so with Candidates only the Guess Pool decides only the Opener.
+ */
+const GUESS_SOURCES: readonly { pool: Pool; scope: Scope; opener: string; later: string }[] = [
+  { pool: "answers", scope: "candidates", opener: "Any Answer List word", later: "Candidates only" },
+  { pool: "answers", scope: "global", opener: "Any Answer List word", later: "Any Answer List word, even one that can no longer be the Answer" },
+  { pool: "guesses", scope: "candidates", opener: "Any Guess List word", later: "Candidates only, so Answer List words only" },
+  { pool: "guesses", scope: "global", opener: "Any Guess List word", later: "Any Guess List word, even one that can never be the Answer" },
+];
+
 const DEFAULT_STRATEGIES = STRATEGIES.map((s) => s.id).join(",");
+
+/** A tab of the Benchmark chart: the Strategies it shows, as ids in the package's order. */
+export interface Comparison {
+  id: string;
+  label: string;
+  ids: string[];
+  caption: string;
+}
+
+const comparison = (id: string, label: string, keep: (s: StrategyInfo) => boolean, caption: string): Comparison => ({
+  id,
+  label,
+  ids: STRATEGIES.filter(keep).map((s) => s.id),
+  caption,
+});
+
+/** The tabs: all eight, then one tab per choice that holds it fixed, so the four Strategies shown differ in the other two. */
+export const COMPARISONS: readonly Comparison[] = [
+  comparison("all", "All", () => true, "All eight Strategies."),
+  comparison("bits", RANKING_NAMES.bits, (s) => s.by === "bits", `Ranked by ${RANKING_NAMES.bits}: what the Guess Pool and Search Scope change.`),
+  comparison("expected", RANKING_NAMES.expected, (s) => s.by === "expected", `Ranked by ${RANKING_NAMES.expected}: what the Guess Pool and Search Scope change.`),
+  comparison("answers", POOL_NAMES.answers, (s) => s.pool === "answers", `The ${POOL_NAMES.answers} as Guess Pool: what the Search Scope and Ranking change.`),
+  comparison("guesses", POOL_NAMES.guesses, (s) => s.pool === "guesses", `The ${POOL_NAMES.guesses} as Guess Pool: what the Search Scope and Ranking change.`),
+  comparison(
+    "candidates",
+    SCOPE_NAMES.candidates,
+    (s) => s.scope === "candidates",
+    "Searching Candidates only: what the Guess Pool and Ranking change. Here the Guess Pool decides only the Opener.",
+  ),
+  comparison("global", SCOPE_NAMES.global, (s) => s.scope === "global", "Searching All words: what the Guess Pool and Ranking change."),
+];
+
+/** The tab whose Strategies are exactly the shown ones, if any. */
+export function comparisonFor(shown: readonly string[]): Comparison | undefined {
+  const on = new Set(shown);
+  return COMPARISONS.find((c) => c.ids.length === on.size && c.ids.every((i) => on.has(i)));
+}
 
 /** The colour of a Strategy, by its id (`<ranking>-<pool>-<scope>`): a theme role, tinted for Expected Candidates. */
 export function strategyColor(id: string): string {
@@ -65,8 +114,10 @@ export function toggleStrategy(order: readonly string[], shown: readonly string[
 /**
  * Widget 6: the Benchmark. Every chosen Strategy plays all 2315 Answers; the chart groups the Guess Distribution
  * by Guess Count (1 to 6), with the Losses as a last group, one bar per Strategy. A picker above it ticks the
- * Strategies to show, grouped by Ranking. A table below gives each Strategy's Opener, Average Guess Count, Losses
- * (with the lost Answers) and the exact counts.
+ * Strategies to show, grouped by Ranking; tabs above it tick a preset to compare (all eight, or the four that share one
+ * Ranking, Guess Pool or Search Scope), and no tab is current when the ticks match none. A table below gives each Strategy's Opener, Average Guess Count, Losses
+ * (with the lost Answers) and the exact counts, with its Ranking, Guess Pool and Search Scope in columns of their own.
+ * A last table says which words each Guess Pool and Search Scope lets the Solver guess.
  * Props: `strategies` (comma separated ids, default all eight, e.g. `bits-answers-candidates,bits-guesses-all`),
  * `id` (URL param `id.strategies`). The URL param `strategies` overrides the prop.
  */
@@ -94,6 +145,25 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
 
   return (
     <WidgetFrame title="Benchmark chart">
+      <Tabs
+        value={comparisonFor(shownIds)?.id ?? ""}
+        onValueChange={(v) => setText(COMPARISONS.find((c) => c.id === v)?.ids.join(",") ?? text)}
+        className="mb-3"
+      >
+        <TabsList aria-label="Compare Strategies">
+          {COMPARISONS.map((c) => (
+            <TabsTrigger key={c.id} value={c.id}>
+              {c.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {COMPARISONS.map((c) => (
+          <TabsContent key={c.id} value={c.id} className="mt-2 text-sm text-meta">
+            {c.caption}
+          </TabsContent>
+        ))}
+      </Tabs>
+
       <div aria-live="polite" className="min-h-6 text-sm">
         {loading && <p className="text-meta">Loading the Benchmark…</p>}
         {error && (
@@ -138,11 +208,13 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
           </p>
 
           <div className="mt-5 overflow-x-auto" tabIndex={0} role="region" aria-label="Benchmark results, scrollable">
-            <Table className="min-w-[34rem]">
+            <Table className="min-w-[46rem]">
               <TableCaption className="sr-only">Benchmark results for each Strategy, with its Guess Distribution.</TableCaption>
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col" className="text-left">Strategy</TableHead>
+                  <TableHead scope="col" className="text-left">Ranking</TableHead>
+                  <TableHead scope="col" className="text-left">Guess Pool</TableHead>
+                  <TableHead scope="col" className="text-left">Search Scope</TableHead>
                   <TableHead scope="col" className="text-left">Opener</TableHead>
                   <TableHead scope="col" className="text-right">Average Guess Count</TableHead>
                   <TableHead scope="col" className="text-right">Losses</TableHead>
@@ -154,22 +226,28 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shown.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableHead scope="row" className="text-left font-normal text-text whitespace-nowrap">
-                      <span aria-hidden className="mr-1.5 inline-block h-3 w-3 rounded-xs align-middle" style={{ background: colors.get(s.id) }} />
-                      {s.name}
-                    </TableHead>
-                    <TableCell className="font-mono uppercase">{s.opener}</TableCell>
-                    <TableCell className="text-right font-mono font-semibold text-text">{s.average_guess_count.toFixed(3)}</TableCell>
-                    <TableCell className={`text-right font-mono ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</TableCell>
-                    {s.distribution.map((n, i) => (
-                      <TableCell key={i} className="text-right font-mono">
-                        {n}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                {shown.map((s) => {
+                  const info = strategyById(s.id);
+                  return (
+                    <TableRow key={s.id}>
+                      <TableHead scope="row" className="text-left font-normal text-text whitespace-nowrap">
+                        <span aria-hidden className="mr-1.5 inline-block h-3 w-3 rounded-xs align-middle" style={{ background: colors.get(s.id) }} />
+                        <span className="sr-only">{s.name}</span>
+                        <span aria-hidden>{info ? RANKING_NAMES[info.by] : s.name}</span>
+                      </TableHead>
+                      <TableCell className="whitespace-nowrap">{info && POOL_NAMES[info.pool]}</TableCell>
+                      <TableCell className="whitespace-nowrap">{info && SCOPE_NAMES[info.scope]}</TableCell>
+                      <TableCell className="font-mono uppercase">{s.opener}</TableCell>
+                      <TableCell className="text-right font-mono font-semibold text-text">{s.average_guess_count.toFixed(3)}</TableCell>
+                      <TableCell className={`text-right font-mono ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</TableCell>
+                      {s.distribution.map((n, i) => (
+                        <TableCell key={i} className="text-right font-mono">
+                          {n}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -188,9 +266,45 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
           <p className="mt-2 text-xs text-meta">
             Average Guess Count is over every Game, a Loss at the Guess Count it needed; each Strategy played {shown[0]?.games ?? 0} Games.
           </p>
+          <GuessSources />
         </>
       )}
     </WidgetFrame>
+  );
+}
+
+/** Which words each Guess Pool and Search Scope lets the Solver guess, the same under either Ranking. */
+function GuessSources() {
+  return (
+    <div className="mt-5 overflow-x-auto" tabIndex={0} role="region" aria-label="What each Strategy may guess, scrollable">
+      <Table className="min-w-[34rem]">
+        <TableCaption className="sr-only">Which words each Guess Pool and Search Scope lets the Solver guess.</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead scope="col" className="text-left">Guess Pool</TableHead>
+            <TableHead scope="col" className="text-left">Search Scope</TableHead>
+            <TableHead scope="col" className="text-left">Opener</TableHead>
+            <TableHead scope="col" className="text-left">Every later Guess</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {GUESS_SOURCES.map((g) => (
+            <TableRow key={`${g.pool}-${g.scope}`}>
+              <TableHead scope="row" className="text-left font-normal text-text whitespace-nowrap">
+                {POOL_NAMES[g.pool]}
+              </TableHead>
+              <TableCell className="whitespace-nowrap">{SCOPE_NAMES[g.scope]}</TableCell>
+              <TableCell>{g.opener}</TableCell>
+              <TableCell>{g.later}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <p className="mt-1 text-xs text-meta">
+        Each pair plays under both Rankings: highest {RANKING_NAMES.bits} or lowest {RANKING_NAMES.expected}. With two or fewer Candidates
+        left, every Strategy guesses Candidates only.
+      </p>
+    </div>
   );
 }
 

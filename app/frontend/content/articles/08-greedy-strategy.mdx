@@ -58,4 +58,8 @@ This time the Solver opens with <Word>tarse</Word> and, from 5 Candidates, plays
 
 You can see the same thing with the same 5 Candidates. A Candidate such as <Word>batch</Word> is worth 0.72 bits, with 3.4 words left on average. The best word on the whole list, <Word>ablow</Word>, is worth 1.92 bits and leaves 1.4 words on average, with no group larger than 2. It cannot win now, and it nearly guarantees a win next.
 
+Watch three Strategies play the same Answers side by side, one Guess at a time. Guess List with Candidates only takes its Opener from the Guess List, but every later Guess is a Candidate, so an Answer List word. Only the All words board is free to play a word that cannot win:
+
+<SideBySideGame id="race" />
+
 The rule of thumb: **a Guess that cannot win can still be the best Guess.** Searching every word is what turns eight Guesses into five. The last line of `suggest` has one more detail. With two Candidates left it goes back to Candidates only, because then guessing one is never worse.
