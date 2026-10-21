@@ -1,8 +1,8 @@
 // The small letter tiles <Word> and <Letter> draw in prose. Full class names, so Tailwind sees them.
 
-// Mono caps on the tile radius, sized in em so a tile does not grow the prose line.
+// Bold sans caps (the tile font) on the tile radius, sized in em so a tile does not grow the prose line.
 export const TILE =
-  "inline-flex h-[1.45em] w-[1.3em] items-center justify-center rounded-sm font-mono text-[0.72em] leading-none font-semibold uppercase";
+  "inline-flex h-[1.45em] w-[1.3em] items-center justify-center rounded-sm font-tile text-[0.72em] leading-none font-bold uppercase";
 
 // A tile with no Mark: a quiet hairline frame, the rule colour the page uses for its dividers.
 export const PLAIN = "border border-rule text-text";

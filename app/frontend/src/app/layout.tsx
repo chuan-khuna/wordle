@@ -8,7 +8,7 @@ import { themeScript } from "@/lib/theme-script";
 import "./globals.css";
 
 // Self-hosted at build; each sets a CSS variable that tokens.css maps to font-serif, font-sans, font-mono.
-const serif = Newsreader({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-newsreader", display: "swap" });
+const serif = Newsreader({ subsets: ["latin"], style: ["normal", "italic"], axes: ["opsz"], variable: "--font-newsreader", display: "swap" });
 const sans = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" });
 

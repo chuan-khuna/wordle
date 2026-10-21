@@ -137,7 +137,7 @@ export function WordRow({
               <span
                 key={i}
                 className={cn(
-                  "relative inline-flex h-12 w-12 items-center justify-center rounded-md border-2 font-mono text-2xl font-semibold uppercase select-none sm:h-14 sm:w-14",
+                  "relative inline-flex h-12 w-12 items-center justify-center rounded-md border-2 font-tile text-2xl font-bold uppercase select-none sm:h-14 sm:w-14",
                   error ? "border-error text-error" : letter ? "border-text text-text" : "border-rule-strong",
                   next && "outline-2 outline-offset-2 outline-accent",
                 )}

@@ -5,14 +5,15 @@ import { INLINE, PAINT, PLAIN, TILE } from "./letter-tile";
 const VARIANTS = ["cell", "simple", "text"] as const;
 type Variant = (typeof VARIANTS)[number];
 
-// Mono caps, smaller than the prose and spaced like <Mark>, so a run of capitals is no louder than the words around it.
+// Caps in the surrounding font, a little smaller and spaced, so a run of capitals is no louder than the words around
+// it. Tiles and frames are kept for words that carry Feedback.
+const SIMPLE = "text-[0.82em] uppercase tracking-[0.06em]";
+
+// Mono caps, for a word shown as data.
 const TEXT = "font-mono text-[0.8em] uppercase tracking-caps";
 
-// TEXT in one hairline frame around the whole word, the rule colour the tiles use.
-const SIMPLE = `${TEXT} rounded-sm border border-rule px-[0.3em]`;
-
 /**
- * A word in prose. `<Word>speed</Word>` shows the word in mono caps in a hairline frame (variant "simple");
+ * A word in prose. `<Word>speed</Word>` shows the word in small caps of the surrounding font, unframed (variant "simple");
  * `<Word feedback="00101">speed</Word>` draws five letter tiles painted with each letter's Mark (digits 0 Absent,
  * 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works the Feedback out against that Answer.
  * `variant` overrides the look: "cell" (five tiles, plain without Feedback), "simple", or "text" (mono caps, no frame).

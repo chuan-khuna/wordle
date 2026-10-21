@@ -67,7 +67,7 @@ export function Board({
             key={i}
             className={`flex items-center gap-2 ${i === GUESS_LIMIT ? "mt-2 border-t border-dashed border-rule pt-2" : ""}`}
           >
-            <span className={`w-3 text-right font-mono text-xs ${ringed.has(guess) ? "font-semibold text-accent" : "text-meta"}`}>
+            <span className={`w-3 text-right font-sans text-xs tabular-nums ${ringed.has(guess) ? "font-semibold text-accent" : "text-meta"}`}>
               {i + 1}
             </span>
             {/* A ring in the accent colour, a gap of the page background between it and the tiles. */}

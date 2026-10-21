@@ -88,7 +88,7 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
                 </span>
               ) : before && after && !("error" in before) && !("error" in after) ? (
                 <span>
-                  <span className="font-mono">{before.count}</span> → <strong className="font-mono text-text">{after.count}</strong>{" "}
+                  <span className="tabular-nums">{before.count}</span> → <strong className="text-text tabular-nums">{after.count}</strong>{" "}
                   <span className="text-meta">Candidates</span>
                 </span>
               ) : (

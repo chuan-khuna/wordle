@@ -126,7 +126,7 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
             <ol className="my-3 space-y-1.5" aria-label={`Guesses so far for ${data.answer}`}>
               {data.steps.slice(0, step).map((s) => (
                 <li key={s.number} className="flex items-center gap-3">
-                  <span className="w-6 text-right font-mono text-sm text-meta">{s.number}</span>
+                  <span className="w-6 text-right text-sm text-meta tabular-nums">{s.number}</span>
                   <span className="flex gap-1.5" role="group" aria-label={`Guess ${s.number}: ${s.guess}`}>
                     {[...s.guess].map((l, i) => (
                       <Tile key={i} letter={l} mark={parseMarks(s.marks)?.[i] ?? 0} />
@@ -151,8 +151,8 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
             <p className="mt-1 text-xs text-meta">Left and Right arrow keys also step through the Game.</p>
 
             <p className="mt-3" aria-live="polite">
-              Candidate Set: <strong className="font-mono text-text">{shown.candidates_before}</strong> →{" "}
-              <strong className="font-mono text-text">{shown.candidates_after}</strong>{" "}
+              Candidate Set: <strong className="text-text tabular-nums">{shown.candidates_before}</strong> →{" "}
+              <strong className="text-text tabular-nums">{shown.candidates_after}</strong>{" "}
               <span className="text-meta">after {shown.guess.toUpperCase()}</span>
             </p>
 
@@ -174,8 +174,8 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
                         {w.word}
                         {i === 0 && <span className="ml-2 text-xs font-normal normal-case text-meta">played</span>}
                       </TableCell>
-                      <TableCell className="text-right font-mono">{w.bits.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono">{w.expected_candidates.toFixed(1)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{w.bits.toFixed(2)}</TableCell>
+                      <TableCell className="text-right tabular-nums">{w.expected_candidates.toFixed(1)}</TableCell>
                       <TableCell>{w.is_candidate ? "yes" : "no"}</TableCell>
                     </TableRow>
                   ))}

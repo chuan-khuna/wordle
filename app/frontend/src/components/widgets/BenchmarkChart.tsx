@@ -238,10 +238,10 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
                       <TableCell className="whitespace-nowrap">{info && POOL_NAMES[info.pool]}</TableCell>
                       <TableCell className="whitespace-nowrap">{info && SCOPE_NAMES[info.scope]}</TableCell>
                       <TableCell className="font-mono uppercase">{s.opener}</TableCell>
-                      <TableCell className="text-right font-mono font-semibold text-text">{s.average_guess_count.toFixed(3)}</TableCell>
-                      <TableCell className={`text-right font-mono ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</TableCell>
+                      <TableCell className="text-right font-semibold text-text tabular-nums">{s.average_guess_count.toFixed(3)}</TableCell>
+                      <TableCell className={`text-right tabular-nums ${s.losses > 0 ? "font-semibold text-error" : ""}`}>{s.losses}</TableCell>
                       {s.distribution.map((n, i) => (
-                        <TableCell key={i} className="text-right font-mono">
+                        <TableCell key={i} className="text-right tabular-nums">
                           {n}
                         </TableCell>
                       ))}

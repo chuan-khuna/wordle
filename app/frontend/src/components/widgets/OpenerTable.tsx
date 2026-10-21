@@ -158,12 +158,12 @@ function OpenerRows({ top: topProp = 20, highlight: highlightProp = "", id }: { 
 function Row({ o, on }: { o: Opener; on: boolean }) {
   return (
     <TableRow className={on ? "bg-highlight-low" : undefined}>
-      <TableCell className="text-right font-mono text-meta">{o.rank}</TableCell>
+      <TableCell className="text-right text-meta tabular-nums">{o.rank}</TableCell>
       <TableCell className={`font-mono uppercase ${on ? "font-semibold text-text" : ""}`}>{o.word}</TableCell>
-      <TableCell className="text-right font-mono">{o.bits.toFixed(3)}</TableCell>
-      <TableCell className="text-right font-mono">{o.expected_candidates.toFixed(1)}</TableCell>
-      <TableCell className="text-right font-mono">{o.groups}</TableCell>
-      <TableCell className="text-right font-mono">{o.largest_group}</TableCell>
+      <TableCell className="text-right tabular-nums">{o.bits.toFixed(3)}</TableCell>
+      <TableCell className="text-right tabular-nums">{o.expected_candidates.toFixed(1)}</TableCell>
+      <TableCell className="text-right tabular-nums">{o.groups}</TableCell>
+      <TableCell className="text-right tabular-nums">{o.largest_group}</TableCell>
       <TableCell>{o.is_candidate ? "Yes" : "No"}</TableCell>
     </TableRow>
   );

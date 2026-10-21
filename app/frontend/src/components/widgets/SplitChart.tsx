@@ -71,7 +71,7 @@ export function SplitChart({
                     style={{ width: `${barPercent(g.count, largest)}%`, minWidth: 3 }}
                   />
                 </span>
-                <span className="flex items-baseline justify-end gap-2 font-mono text-xs tabular-nums" aria-hidden>
+                <span className="flex items-baseline justify-end gap-2 text-xs tabular-nums" aria-hidden>
                   <span className="w-[3ch] text-right text-text">{g.count}</span>
                   <span className="w-[5ch] text-meta max-sm:hidden">{g.count === 1 ? "word" : "words"}</span>
                   <span className="text-meta max-sm:hidden">·</span>

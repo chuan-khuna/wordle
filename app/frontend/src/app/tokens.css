@@ -47,6 +47,8 @@
   --font-serif: var(--font-newsreader), "Iowan Old Style", Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  /* Letter tiles, as Wordle draws them: the UI sans, bold. Mono stays for code, Feedback digits and words as data. */
+  --font-tile: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 @theme {

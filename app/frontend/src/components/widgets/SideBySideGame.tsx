@@ -285,7 +285,7 @@ function GameBoard({
           const marks = step ? parseMarks(step.marks) : null;
           return (
             <li key={i} className={`flex items-center gap-1 sm:gap-1.5 ${i === GUESS_LIMIT ? "mt-2 border-t border-dashed border-rule pt-2" : ""}`}>
-              <span className="w-3 text-right font-mono text-[10px] text-meta">{i + 1}</span>
+              <span className="w-3 text-right text-[10px] text-meta tabular-nums">{i + 1}</span>
               {step && marks ? (
                 <span className="flex gap-0.5 sm:gap-1" role="group" aria-label={`Guess ${i + 1}: ${step.guess}`}>
                   {[...step.guess].map((l, j) => (
@@ -302,7 +302,7 @@ function GameBoard({
                   ))}
                 </span>
               )}
-              {step && <span className="ml-auto font-mono text-[10px] text-meta tabular-nums">{step.candidates_after}</span>}
+              {step && <span className="ml-auto text-[10px] text-meta tabular-nums">{step.candidates_after}</span>}
             </li>
           );
         })}

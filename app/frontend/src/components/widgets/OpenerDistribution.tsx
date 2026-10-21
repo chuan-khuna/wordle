@@ -295,7 +295,7 @@ function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCoun
                     {l.opener.is_answer && <span className="ml-2 rounded-xs border border-rule px-1 py-0.5 text-[11px] text-meta">Answer</span>}
                   </td>
                   <td className="px-2 py-1 text-text">#{l.opener.rank.toLocaleString("en-US")}</td>
-                  <td className="px-2 py-1 font-mono text-text">{l.opener.average_guess_count.toFixed(3)}</td>
+                  <td className="px-2 py-1 text-text tabular-nums">{l.opener.average_guess_count.toFixed(3)}</td>
                   <td className="whitespace-nowrap px-2 py-1 text-left text-meta">
                     {(l.hundredths / 100).toFixed(2)} ·{" "}
                     {l.charted ? `${l.inBar.toLocaleString("en-US")} ${l.inBar === 1 ? "Opener" : "Openers"}` : "hidden: not on the Answer List"}
@@ -324,7 +324,7 @@ function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCoun
                   </p>
                 </div>
                 <p className="mt-3 flex items-baseline gap-2">
-                  <span className="font-mono text-3xl font-semibold leading-none tabular-nums text-text">{opener.average_guess_count.toFixed(3)}</span>
+                  <span className="text-3xl font-semibold leading-none tabular-nums text-text">{opener.average_guess_count.toFixed(3)}</span>
                   <span className="text-xs text-meta">Average Guess Count</span>
                 </p>
                 <p className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-meta">
