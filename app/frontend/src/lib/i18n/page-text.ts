@@ -32,6 +32,8 @@ export type PageText = {
   removeCompare: string;
   /** The five figures of a split: number of groups, largest group, single-word groups, Expected Information and Expected Candidates. */
   figuresLabel: (guess: string) => string;
+  onAnswerList: string;
+  onGuessListOnly: string;
   groupsFigure: string;
   largestGroupFigure: string;
   singleWordGroupsFigure: string;
@@ -178,6 +180,8 @@ export const EN: PageText = {
   comparedOpenerLabel: "Compared Opener",
   removeCompare: "Remove",
   figuresLabel: (g) => `Figures for ${g}`,
+  onAnswerList: "On the Answer List",
+  onGuessListOnly: "On the Guess List, not the Answer List",
   groupsFigure: "Groups",
   largestGroupFigure: "Largest group",
   singleWordGroupsFigure: "Single-word groups",
@@ -299,6 +303,8 @@ export const TH: PageText = {
   comparedOpenerLabel: "Opener ที่เปรียบเทียบ",
   removeCompare: "ลบ",
   figuresLabel: (g) => `ตัวเลขของ ${g}`,
+  onAnswerList: "อยู่ใน Answer List",
+  onGuessListOnly: "อยู่ใน Guess List แต่ไม่อยู่ใน Answer List",
   groupsFigure: "จำนวนกลุ่ม",
   largestGroupFigure: "กลุ่มที่ใหญ่ที่สุด",
   singleWordGroupsFigure: "กลุ่มที่มีคำเดียว",

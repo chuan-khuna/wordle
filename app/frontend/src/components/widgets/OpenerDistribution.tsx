@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseHighlight } from "./OpenerTable";
 import { StrategyPicker } from "./StrategyPicker";
 import { WidgetFrame } from "./ui";
+import { WordListBadge } from "./WordListBadge";
 import { useLoad } from "./useLoad";
 import { useWidgetParam } from "./useWidgetParam";
 
@@ -293,7 +294,7 @@ function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCoun
                 <tr key={l.opener.word} className="border-t border-rule text-right">
                   <td className="px-2 py-1 text-left">
                     <span className="font-mono text-sm font-semibold uppercase tracking-wider text-text">{l.opener.word}</span>
-                    {l.opener.is_answer && <span className="ml-2 rounded-xs border border-rule px-1 py-0.5 text-[11px] text-meta">Answer</span>}
+                    <WordListBadge list={l.opener.is_answer ? "answer" : "guess"} className="ml-2" />
                   </td>
                   <td className="px-2 py-1 text-text">#{l.opener.rank.toLocaleString("en-US")}</td>
                   <td className="px-2 py-1 text-text tabular-nums">{l.opener.average_guess_count.toFixed(3)}</td>
@@ -317,7 +318,7 @@ function StatCards({ lookups, partial, pool }: { lookups: OpenerLookup<GuessCoun
                 <div className="flex items-start justify-between gap-3">
                   <p className="flex items-center gap-2 leading-none">
                     <span className="font-mono text-xl font-semibold uppercase tracking-wider text-text">{opener.word}</span>
-                    {opener.is_answer && <span className="rounded-xs border border-rule px-1.5 py-0.5 text-xs text-meta">Answer</span>}
+                    <WordListBadge list={opener.is_answer ? "answer" : "guess"} />
                   </p>
                   <p className="text-right leading-none">
                     <span className="text-sm font-medium tabular-nums text-text">#{opener.rank.toLocaleString("en-US")}</span>

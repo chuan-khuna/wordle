@@ -27,6 +27,11 @@ export function singleWordGroups(groups: readonly Pick<SplitGroup, "count">[]): 
   return groups.filter((g) => g.count === 1).length;
 }
 
+/** Whether the Guess is one of the split's Candidates: only then does a group get the all-Correct Feedback. */
+export function guessIsCandidate(groups: readonly Pick<SplitGroup, "marks">[]): boolean {
+  return groups.some((g) => g.marks === "22222");
+}
+
 /** What a block's head says about its Feedback: how many words it leaves, the chance of getting it, and the information it gives, in bits. */
 export interface HeadStats {
   words: number;

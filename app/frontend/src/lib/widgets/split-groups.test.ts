@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { SolveResponse, SplitGroup, SplitResponse } from "@/lib/api";
 import solveFixture from "@/lib/widgets/fixtures/solve-watch-crane.json";
 import splitFixture from "@/lib/widgets/fixtures/split-moist-after-crane.json";
-import { answerGroup, betterFigures, chainNodes, columnCount, headStats, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
+import { answerGroup, betterFigures, chainNodes, columnCount, guessIsCandidate, headStats, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
 
 const group = (code: number, count: number, words: string[] = []) => ({ marks: String(code), code, count, words });
 
@@ -49,6 +49,13 @@ test("singleWordGroups counts the groups of exactly one word", () => {
   expect(singleWordGroups([group(1, 5), group(2, 1), group(3, 1), group(4, 2)])).toBe(2);
   expect(singleWordGroups([group(1, 5)])).toBe(0);
   expect(singleWordGroups([])).toBe(0);
+});
+
+test("guessIsCandidate: only when a group is all Correct", () => {
+  const marks = (m: string) => ({ marks: m });
+  expect(guessIsCandidate([marks("00000"), marks("22222")])).toBe(true);
+  expect(guessIsCandidate([marks("00000"), marks("22221")])).toBe(false);
+  expect(guessIsCandidate([])).toBe(false);
 });
 
 // Recorded from the running backend: `GET /api/solve?answer=watch&opener=crane`, and `POST /api/split` for row 2.

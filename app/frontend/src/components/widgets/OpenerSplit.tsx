@@ -11,11 +11,12 @@ import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { followPath } from "@/lib/i18n/paths";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatLeft } from "@/lib/widgets/split-chart";
-import { betterFigures, singleWordGroups } from "@/lib/widgets/split-groups";
+import { betterFigures, guessIsCandidate, singleWordGroups } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { cn } from "@/lib/utils";
 import { SplitBars } from "./SplitBars";
 import { SplitGroups } from "./SplitGroups";
+import { WordListBadge } from "./WordListBadge";
 import { WordRow, cleanWord } from "./WordRow";
 import { useGuessCheck } from "./useGuessCheck";
 import { useParamInitial, useParamSync, useWidgetParam } from "./useWidgetParam";
@@ -242,8 +243,9 @@ function SplitFigures({ split, other, lang }: { split: SplitResponse; other: Spl
   ];
   return (
     <div className="@container overflow-hidden rounded-md border border-rule bg-highlight-low">
-      <div className="border-b border-rule px-3 py-2">
+      <div className="flex items-center gap-2 border-b border-rule px-3 py-2">
         <span className="font-tile text-base font-bold tracking-widest uppercase text-text">{split.word}</span>
+        <WordListBadge list={guessIsCandidate(split.split) ? "answer" : "guess"} lang={lang} />
       </div>
       <dl aria-label={text.figuresLabel(split.word)} className="-mt-px -ml-px grid grid-cols-2 @md:grid-cols-5">
         {figures.map(({ name, value, unit }, i) => {
