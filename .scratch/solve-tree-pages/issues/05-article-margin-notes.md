@@ -4,10 +4,10 @@
 
 **Blocked by:** 01, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] One short Margin note in each of the two English Articles, using the existing Margin note syntax and the site's link style.
-- [ ] The Article 08 note links to the Follow an Answer page with the Article's own example Answer (`watch`), so the Strategy and Answer match the text.
-- [ ] No Thai Article changes: Articles 07 and 08 have no Translation yet. If one exists by the time this ticket is picked up, add the same note to it.
-- [ ] The build-time Article validation still passes, and `bun run screenshot` still covers both Articles.
-- [ ] `web-frontend.md`'s Article table mentions the new links.
+- [x] One short Margin note in each of the two English Articles, using the existing Margin note syntax and the site's link style.
+- [x] The Article 08 note links to the Follow an Answer page with the Article's own example Answer (`watch`), so the Strategy and Answer match the text.
+- [x] Thai Articles 07 and 08 already had Translations: the same note was added in Thai with /th/ links, and their `source` hashes were updated.
+- [x] The build-time Article validation still passes, and `bun run screenshot` still covers both Articles.
+- [x] `web-frontend.md`'s Article table mentions the new links.

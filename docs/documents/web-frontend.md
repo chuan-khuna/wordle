@@ -228,8 +228,8 @@ The Article page header shows its Part and number (`Part 2 · Solving Wordle · 
 | 04 | `solving-introduction` | 2 | `building-the-game` | text and the maths (Expected Candidates, Expected Information in KaTeX), no Widget |
 | 05 | `candidate-set` | 2 | `solving-introduction`, `feedback` | Candidate filter |
 | 06 | `feedback-split` | 2 | `candidate-set` | Split explorer (`crane`, whole Answer List), Feedback Split then Expected Information |
-| 07 | `openers` | 2 | `feedback-split` | Opener table |
-| 08 | `greedy-strategy` | 2 | `openers`, `candidate-set` | two Step-through Games on `watch`: the Answer List and Candidates only (the _ATCH trap), then the Guess List and All words; a Side-by-side Game of three Strategies looping five Answers; introduces Search Scope and Guess Pool |
+| 07 | `openers` | 2 | `feedback-split` | Opener table; a Margin note linking to the Opener Split page (`/opener-split`, `/th/opener-split` in Thai) |
+| 08 | `greedy-strategy` | 2 | `openers`, `candidate-set` | two Step-through Games on `watch`: the Answer List and Candidates only (the _ATCH trap), then the Guess List and All words; a Side-by-side Game of three Strategies looping five Answers; introduces Search Scope and Guess Pool; a Margin note after the second Step-through Game links to the Follow an Answer page with `answer=watch&pool=guesses&scope=global&by=bits` (`/th/follow` in Thai) |
 | 09 | `benchmark` | 2 | `greedy-strategy` | Benchmark chart of the eight Strategies (introduces Guess Pool, Search Scope and Ranking as the three choices), the 11 Losses, how searching All words gets out |
 | 10 | `greedy-vs-optimal` | 2 | `benchmark` | text, cites Selby and Bertsimas & Paskov (no Widget) |
 | 11 | `opener-distribution` | 2 | `benchmark` | Opener Distribution (fixed: `bits-guesses-all`, every Guess List Opener, no controls, `tabs` starting on Best Openers), the findings from `summary.json`, a link to `/openers` |

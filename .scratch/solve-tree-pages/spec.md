@@ -100,7 +100,7 @@ Every input is a URL param, so a view can be shared. Page text lives in the type
   - Opener Split params: `opener`, `compare`.
   - Follow an Answer params: `answer`, `pool`, `scope`, `by`, `opener`, `step`.
 - **Sidebar**: the Explore heading lists Opener Distribution, Opener Split, then Follow an Answer.
-- **Margin notes**: these go in the English Articles 07 and 08 only, since there are no Thai translations of those Articles yet.
+- **Margin notes**: these go in Articles 07 and 08, in English and in their Thai Translations.
 - **Docs**: `web-frontend.md`, `web-backend.md` and the `INDEX.md` summaries are updated with each change.
 
 ## Testing Decisions

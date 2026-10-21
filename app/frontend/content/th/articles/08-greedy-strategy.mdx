@@ -1,7 +1,7 @@
 ---
 title: "Greedy Strategy"
 summary: "เล่น Guess ที่ได้คะแนนดีที่สุดในทุกขั้น รวมถึง Guess ที่เป็น Answer ไม่ได้"
-source: 5cb5c4118e7e6a78c87e89c71cddbb5f78dda7fc
+source: 3b1e5db80ef9d05f6c767f72b7bf02aa66a4fde4
 ---
 
 ตอนนี้เราสร้าง <Term>Solver</Term> ได้แล้ว <Term>Strategy</Term> ของมันง่ายที่สุดเท่าที่มี: ในทุกขั้น ดู <Term>Candidate Set</Term> ปัจจุบัน ให้คะแนนทุก Guess ด้วย <Term>Expected Information</Term> แล้วเล่นคำที่ดีที่สุด วิธีนี้เรียกว่า greedy เพราะมันเลือก Guess ที่ดีที่สุดในตอนนี้ และไม่เคยวางแผนไกลกว่านั้น
@@ -53,7 +53,7 @@ while not game.is_over:
 
 <StepThroughGame id="free" answer="watch" step={3} />
 
-คราวนี้ Solver เปิดด้วย <Word>tarse</Word> และจาก Candidate 5 คำ มันเล่น <Word>abamp</Word> มันเป็นคำแปลก ๆ และเป็น Answer ไม่ได้ แต่มันมี <Letter>b</Letter>, <Letter>m</Letter> และ <Letter>a</Letter> อยู่ด้วยกัน และถามสี่คำถามพร้อมกัน Feedback ของมันแยกกลุ่มคำนั้นออกจากกัน Solver จึง Win ใน 5 Guess
+คราวนี้ Solver เปิดด้วย <Word>tarse</Word> และจาก Candidate 5 คำ มันเล่น <Word>abamp</Word> มันเป็นคำแปลก ๆ และเป็น Answer ไม่ได้ แต่มันมี <Letter>b</Letter>, <Letter>m</Letter> และ <Letter>a</Letter> อยู่ด้วยกัน และถามสี่คำถามพร้อมกัน Feedback ของมันแยกกลุ่มคำนั้นออกจากกัน Solver จึง Win ใน 5 Guess <MarginNote>ลองตาม <Word>watch</Word> ด้วย Strategy นี้ได้ที่หน้า [Follow an Answer](/th/follow?answer=watch&pool=guesses&scope=global&by=bits) และดู Candidate ที่เหลือหลังทุก Guess</MarginNote>
 
 คุณเห็นเรื่องเดียวกันได้จาก Candidate 5 คำเดิม Candidate อย่าง <Word>batch</Word> มีค่า 0.72 บิต และเหลือเฉลี่ย 3.4 คำ คำที่ดีที่สุดในรายการทั้งหมดคือ <Word>ablow</Word> มีค่า 1.92 บิต และเหลือเฉลี่ย 1.4 คำ โดยไม่มีกลุ่มไหนใหญ่กว่า 2 มันชนะตอนนี้ไม่ได้ แต่แทบรับประกันว่าจะชนะในครั้งต่อไป
 
