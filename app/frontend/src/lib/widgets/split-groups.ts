@@ -21,3 +21,8 @@ export function headSize(count: number): HeadSize {
   if (count >= 5) return "sm";
   return "xs";
 }
+
+/** How many groups hold a single word (the Feedbacks that name the Answer outright). */
+export function singleWordGroups(groups: readonly Pick<SplitGroup, "count">[]): number {
+  return groups.filter((g) => g.count === 1).length;
+}

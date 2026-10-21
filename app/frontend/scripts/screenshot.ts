@@ -10,7 +10,8 @@
  *   bun run screenshot --theme all                  every page in all ten themes
  *   bun run screenshot --full-page                  one full-page shot per page instead
  *
- * Shots go to <out>/<page>/<NN>-<name>.<theme>.<width>.png, e.g. screenshots/articles_rules/02-feedback-scorer.nord.1440.png.
+ * Shots go to <out>/<page>/<NN>-<name>.<theme>.<width>.png, e.g. screenshots/articles_rules/02-feedback-scorer.nord.1440.png
+ * (a path's `/`, `?`, `&` and `=` become `_`: `opener-split?compare=fuzzy` goes to screenshots/opener-split_compare_fuzzy/).
  * Options: --url (default http://localhost:3000), --out (default screenshots/), --theme <id|all>,
  * --width, --height, --mobile (390x844), --full-page.
  * Start the site first (`just web`); the Widgets need the backend for their data.
@@ -42,12 +43,12 @@ const { values, positionals } = parseArgs({
 /** A WidgetFrame: every Widget and every <Boards> is a labelled section whose first child is its eyebrow title. */
 const FIGURE = "section[aria-label]:has(> h3.eyebrow)";
 
-/** The home page, every Article, the Opener Distribution and Opener Split pages, then the Thai pages (`/th`, `/th/openers`, `/th/opener-split` and every Article that has a Translation). */
+/** The home page, every Article, the Opener Distribution and Opener Split pages (the latter also with `?compare=fuzzy`), then the Thai pages (`/th`, `/th/openers`, `/th/opener-split` and its compare view and every Article that has a Translation). */
 function allPaths(): string[] {
   const files = readdirSync(path.join(root, "content/articles")).filter((f) => f.endsWith(".mdx"));
   const thaiDir = path.join(root, "content/th/articles");
   const thai = existsSync(thaiDir) ? readdirSync(thaiDir).filter((f) => f.endsWith(".mdx")).sort().map((f) => `/th/articles/${f.replace(/^\d{2}-/, "").replace(/\.mdx$/, "")}`) : [];
-  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/opener-split", "/th", ...thai, "/th/openers", "/th/opener-split"];
+  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/opener-split", "/opener-split?compare=fuzzy", "/th", ...thai, "/th/openers", "/th/opener-split", "/th/opener-split?compare=fuzzy"];
 }
 
 /** "Feedback Split explorer" -> "feedback-split-explorer". */
@@ -103,7 +104,7 @@ try {
     };
     for (const p of paths) {
       await open(page, p);
-      const pageName = p === "/" ? "home" : p.replace(/^\/|\/$/g, "").replaceAll("/", "_");
+      const pageName = p === "/" ? "home" : p.replace(/^\/|\/$/g, "").replace(/[/?&=]+/g, "_");
       if (values["full-page"]) {
         mkdirSync(values.out, { recursive: true });
         await page.screenshot({ path: save(values.out, pageName), fullPage: true, animations: "disabled" });

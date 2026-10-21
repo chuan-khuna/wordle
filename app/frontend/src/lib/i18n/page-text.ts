@@ -24,6 +24,18 @@ export type PageText = {
   /** The "Full screen" toggle on the Opener Split page (shown from the `lg` breakpoint). */
   fullScreen: string;
   closeFullScreen: string;
+  /** Compare: the button that adds a second Opener, the second input's label, and the control that removes it. */
+  compare: string;
+  comparedOpenerLabel: string;
+  removeCompare: string;
+  /** The five figures of a split: number of groups, largest group, single-word groups, Expected Information and Expected Candidates. */
+  figuresLabel: (guess: string) => string;
+  groupsFigure: string;
+  largestGroupFigure: string;
+  singleWordGroupsFigure: string;
+  expectedInformationFigure: string;
+  expectedCandidatesFigure: string;
+  bits: string;
   /** The accessible name of the list of blocks (the Guess's name), of one block's Feedback, and a group's size in its head. */
   splitGroupsLabel: (guess: string) => string;
   feedbackLabel: string;
@@ -71,6 +83,16 @@ export const EN: PageText = {
   splitGroupsLabel: (g) => `Feedback Split of ${g} over the Answer List`,
   fullScreen: "Full screen",
   closeFullScreen: "Close",
+  compare: "Compare",
+  comparedOpenerLabel: "Compared Opener",
+  removeCompare: "Remove",
+  figuresLabel: (g) => `Figures for ${g}`,
+  groupsFigure: "Groups",
+  largestGroupFigure: "Largest group",
+  singleWordGroupsFigure: "Single-word groups",
+  expectedInformationFigure: "Expected Information",
+  expectedCandidatesFigure: "Expected Candidates",
+  bits: "bits",
   feedbackLabel: "Feedback",
   words: (n) => `${n} word${n === 1 ? "" : "s"}`,
   howItWorks: "How it works",
@@ -109,6 +131,16 @@ export const TH: PageText = {
   splitGroupsLabel: (g) => `Feedback Split ของ ${g} บน Answer List`,
   fullScreen: "เต็มจอ",
   closeFullScreen: "ปิด",
+  compare: "เปรียบเทียบ",
+  comparedOpenerLabel: "Opener ที่เปรียบเทียบ",
+  removeCompare: "ลบ",
+  figuresLabel: (g) => `ตัวเลขของ ${g}`,
+  groupsFigure: "จำนวนกลุ่ม",
+  largestGroupFigure: "กลุ่มที่ใหญ่ที่สุด",
+  singleWordGroupsFigure: "กลุ่มที่มีคำเดียว",
+  expectedInformationFigure: "Expected Information",
+  expectedCandidatesFigure: "Expected Candidates",
+  bits: "bits",
   feedbackLabel: "Feedback",
   words: (n) => `${n} คำ`,
   howItWorks: "ดูว่าทำงานอย่างไร",

@@ -4,13 +4,13 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] The figures come from the split response, except the single-word group count, which the split-groups module computes (covered by `bun test`).
-- [ ] Expected Information and Expected Candidates are formatted as elsewhere on the site (as in the Feedback Split explorer's chart title).
-- [ ] "Compare" adds a second Opener input and split. A remove control takes it away. The `compare` URL param holds the second Opener.
-- [ ] Each Opener's input reports its own errors without clearing the other's split.
-- [ ] The two splits are stacked one above the other on every width.
-- [ ] Page text for the figures and Compare exists in English and Thai.
-- [ ] `bun run screenshot` includes a compare view.
-- [ ] `web-frontend.md` describes the figures and Compare.
+- [x] The figures come from the split response, except the single-word group count, which the split-groups module computes (covered by `bun test`).
+- [x] Expected Information and Expected Candidates are formatted as elsewhere on the site (as in the Feedback Split explorer's chart title).
+- [x] "Compare" adds a second Opener input and split. A remove control takes it away. The `compare` URL param holds the second Opener.
+- [x] Each Opener's input reports its own errors without clearing the other's split.
+- [x] The two splits are stacked one above the other on every width.
+- [x] Page text for the figures and Compare exists in English and Thai.
+- [x] `bun run screenshot` includes a compare view.
+- [x] `web-frontend.md` describes the figures and Compare.

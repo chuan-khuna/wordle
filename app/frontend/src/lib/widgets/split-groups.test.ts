@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { columnCount, headSize, orderSplitGroups } from "@/lib/widgets/split-groups";
+import { columnCount, headSize, orderSplitGroups, singleWordGroups } from "@/lib/widgets/split-groups";
 
 const group = (code: number, count: number, words: string[] = []) => ({ marks: String(code), code, count, words });
 
@@ -40,4 +40,10 @@ test("headSize shrinks with the group", () => {
   expect(headSize(5)).toBe("sm");
   expect(headSize(4)).toBe("xs");
   expect(headSize(1)).toBe("xs");
+});
+
+test("singleWordGroups counts the groups of exactly one word", () => {
+  expect(singleWordGroups([group(1, 5), group(2, 1), group(3, 1), group(4, 2)])).toBe(2);
+  expect(singleWordGroups([group(1, 5)])).toBe(0);
+  expect(singleWordGroups([])).toBe(0);
 });

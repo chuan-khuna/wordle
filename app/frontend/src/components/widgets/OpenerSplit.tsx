@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
+import { formatLeft } from "@/lib/widgets/split-chart";
+import { singleWordGroups } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { SplitGroups } from "./SplitGroups";
 import { WordRow, cleanWord } from "./WordRow";
 import { useGuessCheck } from "./useGuessCheck";
-import { useWidgetParam } from "./useWidgetParam";
+import { useParamInitial, useParamSync, useWidgetParam } from "./useWidgetParam";
 
 const DEFAULT_OPENER = "salet";
 
@@ -26,14 +28,17 @@ export function OpenerSplit({ lang = DEFAULT_LANGUAGE }: { lang?: Language }) {
   );
 }
 
-function Split({ lang }: { lang: Language }) {
-  const text = pageText(lang);
-  const uid = useId();
-  const [opener, setOpener] = useWidgetParam(undefined, "opener", DEFAULT_OPENER);
-  const [fit, setFit] = useWidgetParam(undefined, "fit", "");
-  const g = cleanWord(opener);
-  const check = useGuessCheck(g);
-  const ready = g.length === WORD_LENGTH && !check.checking && !check.error;
+/** The word the compared Opener starts as: FUZZY, the spec's bad Opener, on the Guess List and a poor split next to SALET. */
+const DEFAULT_COMPARE = "fuzzy";
+
+/**
+ * One Opener's split of the Answer List: the typed word, the API's verdict on it, and the last good split. A word off
+ * the Guess List sets `check.error` (shown on its own input); a failed split keeps the last good one on screen.
+ */
+function useOpenerSplit(word: string, enabled = true) {
+  const g = cleanWord(word);
+  const check = useGuessCheck(g, enabled);
+  const ready = enabled && g.length === WORD_LENGTH && !check.checking && !check.error;
 
   // The last good split, and the API's message for the word last asked about.
   const [data, setData] = useState<SplitResponse | null>(null);
@@ -58,18 +63,96 @@ function Split({ lang }: { lang: Language }) {
     };
   }, [ready, g]);
 
+  const failed = failure?.word === g ? failure.message : null;
+  return { g, check, data, failed, waiting: ready && !failed && data?.word !== g };
+}
+
+function Split({ lang }: { lang: Language }) {
+  const text = pageText(lang);
+  const uid = useId();
+  const [opener, setOpener] = useWidgetParam(undefined, "opener", DEFAULT_OPENER);
+  const [fit, setFit] = useWidgetParam(undefined, "fit", "");
+  // Compare is on while `compare` is in the URL; it stays on if the word is cleared to be retyped.
+  const initialCompare = useParamInitial(undefined, "compare", "");
+  const [comparing, setComparing] = useState(initialCompare !== "");
+  const [compare, setCompare] = useState(initialCompare || DEFAULT_COMPARE);
+  useParamSync(undefined, "compare", comparing ? compare : "", "");
+
+  const first = useOpenerSplit(opener);
+  const second = useOpenerSplit(compare, comparing);
   const lg = useLg();
   const fitted = fit === "1" && lg;
-  const failed = failure?.word === g ? failure.message : null;
-  const waiting = ready && !failed && data?.word !== g;
+  const fittedSplits = [first.data, comparing ? second.data : null].filter((d) => d !== null);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
-        <WordRow id={`${uid}-opener`} label={text.openerLabel} value={g} onChange={setOpener} error={check.error} />
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {!comparing && (
+          <Button type="button" variant="default" onClick={() => setComparing(true)}>
+            {text.compare}
+          </Button>
+        )}
         <Button type="button" variant="default" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="hidden lg:inline-flex aria-pressed:bg-highlight-med">
           {text.fullScreen}
         </Button>
+      </div>
+      <OpenerPanel
+        uid={`${uid}-opener`}
+        label={text.openerLabel}
+        value={first.g}
+        onChange={setOpener}
+        state={first}
+        lang={lang}
+        showSplit={!fitted}
+      />
+      {comparing && (
+        <OpenerPanel
+          uid={`${uid}-compare`}
+          label={text.comparedOpenerLabel}
+          value={second.g}
+          onChange={setCompare}
+          state={second}
+          lang={lang}
+          showSplit={!fitted}
+          onRemove={() => setComparing(false)}
+        />
+      )}
+      {fitted && fittedSplits.length > 0 && <FitView splits={fittedSplits} lang={lang} onExit={() => setFit("")} />}
+    </div>
+  );
+}
+
+/** One Opener: its input (with its own error), status line, the five figures and its `SplitGroups`. */
+function OpenerPanel({
+  uid,
+  label,
+  value,
+  onChange,
+  state,
+  lang,
+  showSplit,
+  onRemove,
+}: {
+  uid: string;
+  label: string;
+  value: string;
+  onChange: (word: string) => void;
+  state: ReturnType<typeof useOpenerSplit>;
+  lang: Language;
+  showSplit: boolean;
+  onRemove?: () => void;
+}) {
+  const text = pageText(lang);
+  const { g, check, data, failed, waiting } = state;
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        <WordRow id={uid} label={label} value={value} onChange={onChange} error={check.error} />
+        {onRemove && (
+          <Button type="button" variant="default" onClick={onRemove}>
+            {text.removeCompare}
+          </Button>
+        )}
       </div>
       <div aria-live="polite" className="min-h-6 text-sm">
         {g.length < WORD_LENGTH && <p className="text-meta">{text.typeOpener}</p>}
@@ -80,9 +163,31 @@ function Split({ lang }: { lang: Language }) {
           </p>
         )}
       </div>
-      {data && !fitted && <SplitGroups split={data} lang={lang} />}
-      {data && fitted && <FitView split={data} lang={lang} onExit={() => setFit("")} />}
-    </div>
+      {data && <SplitFigures split={data} lang={lang} />}
+      {data && showSplit && <SplitGroups split={data} lang={lang} />}
+    </section>
+  );
+}
+
+/** The five figures of a split, formatted as the Feedback Split explorer's chart title does (`formatLeft`, bits to two decimals). */
+function SplitFigures({ split, lang }: { split: SplitResponse; lang: Language }) {
+  const text = pageText(lang);
+  const figures = [
+    [text.groupsFigure, String(split.groups)],
+    [text.largestGroupFigure, String(split.largest_group)],
+    [text.singleWordGroupsFigure, String(singleWordGroups(split.split))],
+    [text.expectedInformationFigure, `${split.bits.toFixed(2)} ${text.bits}`],
+    [text.expectedCandidatesFigure, formatLeft(split.expected_candidates)],
+  ];
+  return (
+    <dl aria-label={text.figuresLabel(split.word)} className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+      {figures.map(([name, value]) => (
+        <div key={name}>
+          <dt className="text-xs text-meta">{name}</dt>
+          <dd className="text-lg tabular-nums text-text">{value}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -107,14 +212,14 @@ const W_TOLERANCE = 6;
 const MAX_PASSES = 16;
 
 /**
- * Fit mode: a full-window overlay (above the sidebar) with a small bar (the Opener and an Exit button; Escape also exits)
- * and the whole split scaled to fill the rest of the window with no scrolling, like the video's single shot.
+ * Fit mode: a full-window overlay (above the sidebar) with a small bar (the Opener, or both with Compare on, and an Exit
+ * button; Escape also exits) and the whole split (both splits stacked, laid out and scaled together) scaled to fill the rest of the window with no scrolling, like the video's single shot.
  * The split's height H(W) falls as its layout width W grows, and the best W is where H/W equals the window's height over its
  * width. That is found by bisection, each pass laying the blocks out at W (column counts follow W, not the container; the
  * layout effect re-runs before paint) and reading the height. It then scales by min(width / W, height / H, 1). Searched again
  * when the window or the split changes.
  */
-function FitView({ split, lang, onExit }: { split: SplitResponse; lang: Language; onExit: () => void }) {
+function FitView({ splits, lang, onExit }: { splits: SplitResponse[]; lang: Language; onExit: () => void }) {
   const text = pageText(lang);
   const area = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
@@ -122,6 +227,7 @@ function FitView({ split, lang, onExit }: { split: SplitResponse; lang: Language
   const [layoutW, setLayoutW] = useState(1200);
   const [scale, setScale] = useState<number | null>(null);
   const search = useRef({ key: "", lo: MIN_W, hi: MAX_W, passes: 0 });
+  const words = splits.map((x) => x.word).join(" ");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onExit();
@@ -148,7 +254,7 @@ function FitView({ split, lang, onExit }: { split: SplitResponse; lang: Language
     const el = inner.current;
     if (!el || size.w === 0 || size.h === 0) return;
     const s = search.current;
-    const key = `${split.word}|${size.w}x${size.h}`;
+    const key = `${words}|${size.w}x${size.h}`;
     if (s.key !== key) {
       // A new window or split: start the search again from the whole range.
       search.current = { key, lo: MIN_W, hi: MAX_W, passes: 0 };
@@ -164,13 +270,13 @@ function FitView({ split, lang, onExit }: { split: SplitResponse; lang: Language
     if (s.hi - s.lo > W_TOLERANCE && s.passes < MAX_PASSES) setLayoutW(Math.round((s.lo + s.hi) / 2));
     else if (layoutW !== s.hi) setLayoutW(s.hi);
     else setScale(Math.min(size.w / layoutW, size.h / height, 1));
-  }, [split, size, layoutW]);
+  }, [words, splits, size, layoutW]);
 
   const shown = scale ?? 1;
   return (
     <div role="dialog" aria-label={text.fullScreen} className="fixed inset-0 z-[100] flex flex-col bg-background">
       <div className="flex items-center gap-4 border-b border-rule px-4 py-2">
-        <span className="font-tile text-lg font-bold tracking-widest uppercase text-text">{split.word}</span>
+        <span className="font-tile text-lg font-bold tracking-widest uppercase text-text">{splits.map((x) => x.word).join(" · ")}</span>
         <Button type="button" variant="default" size="sm" onClick={onExit} className="ml-auto">
           {text.closeFullScreen}
         </Button>
@@ -188,7 +294,11 @@ function FitView({ split, lang, onExit }: { split: SplitResponse; lang: Language
             visibility: scale === null ? "hidden" : "visible",
           }}
         >
-          <SplitGroups split={split} lang={lang} layoutWidth={layoutW} />
+          <div className="space-y-10">
+            {splits.map((split, i) => (
+              <SplitGroups key={i} split={split} lang={lang} layoutWidth={layoutW} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
