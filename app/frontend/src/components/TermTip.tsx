@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Popover } from "radix-ui";
-import { glossary, splitDefinition } from "@/lib/glossary";
+import { MARK_LABEL, MARK_PAINT } from "@/components/mark-style";
+import { MARK_KINDS, type MarkKind, glossary, lookupMark, splitDefinition } from "@/lib/glossary";
 
 export const TERM_UNDERLINE = "cursor-help underline decoration-accent decoration-dotted decoration-1 underline-offset-4";
 
@@ -21,7 +22,8 @@ type Opener = "hover" | "focus" | "key" | "tap";
  * closes it. Every other glossary term in the definition is itself a term with its own card, so cards nest: hover
  * "Game", then "Guess Limit" in its card. The pointer may move from a term into its card and on into a nested card
  * without closing them (React counts a portal as inside its parent). Enter or Space on a term opens its card with the
- * focus in it, so the keyboard can reach the nested terms; Escape closes the innermost card and returns the focus.
+ * focus in it, so the keyboard can reach the nested terms. A bold Mark name in a definition (the Mark entry's
+ * **Correct**, **Present**, **Absent**) is drawn as that Mark's coloured label, with its own card, as <Mark> draws it; Escape closes the innermost card and returns the focus.
  */
 export function TermTip({
   term,
@@ -129,6 +131,8 @@ export function TermTip({
                 <TermTip key={i} term={part.term} definition={glossary().get(part.term.toLowerCase())!.definition}>
                   {part.text}
                 </TermTip>
+              ) : part.kind === "bold" && isMarkKind(part.text) && !nested.includes(lookupMark(part.text.toLowerCase()).name) ? (
+                <MarkTip key={i} kind={part.text.toLowerCase() as MarkKind} />
               ) : part.kind === "bold" ? (
                 <strong key={i} className="font-medium">
                   {part.text}
@@ -141,5 +145,17 @@ export function TermTip({
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+const isMarkKind = (text: string) => (MARK_KINDS as readonly string[]).includes(text.toLowerCase());
+
+/** A Mark's coloured label with its own card, inside another card. */
+function MarkTip({ kind }: { kind: MarkKind }) {
+  const { name, definition } = lookupMark(kind);
+  return (
+    <TermTip term={name} definition={definition} className={`${MARK_LABEL} ${MARK_PAINT[kind]}`}>
+      {name}
+    </TermTip>
   );
 }
