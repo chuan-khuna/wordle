@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { FIELD_LABEL } from "@/components/controls/Field";
 import { Label } from "@/components/ui/label";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ export function cleanWord(text: string): string {
  * - The next tile to fill shows a caret while the row is focused.
  * - `error` (for example the API's "not on the Guess List") shows under the row and turns the tiles red; the row
  *   shakes once when a message appears (not with `prefers-reduced-motion`).
+ * - `hideLabel` drops the visible label and keeps `label` as the input's `aria-label`, for a word labelled by a `Field` beside it.
  * - `onBackspaceEmpty` runs on Backspace with nothing typed (the State input pulls the last Guess back).
  */
 export function WordRow({
@@ -69,9 +71,11 @@ export function WordRow({
 
   return (
     <div className={className}>
-      <Label htmlFor={id} className={hideLabel ? "sr-only" : "mb-1.5 block text-sm font-normal text-meta"}>
-        {label}
-      </Label>
+      {!hideLabel && (
+        <Label htmlFor={id} className={cn(FIELD_LABEL, "mb-1.5 block")}>
+          {label}
+        </Label>
+      )}
       <div
         className="relative inline-block cursor-text"
         onMouseDown={(e) => {
@@ -91,6 +95,7 @@ export function WordRow({
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
+          aria-label={hideLabel ? label : undefined}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           className="sr-only text-base"

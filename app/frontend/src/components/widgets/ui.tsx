@@ -1,11 +1,18 @@
 import type { ReactNode } from "react";
+import { ControlPanel } from "@/components/controls/ControlPanel";
 
-/** Every Widget is a figure in the text: hairline rules above and below, a small caption-style title, UI sans. */
-export function WidgetFrame({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * Every Widget is a figure in the text: hairline rules above and below, a small caption-style title, UI sans (its
+ * content is a `ControlPanel`). `hideTitle` leaves the title out where the page has already said it (the /openers page's
+ * heading); the section keeps it as its name.
+ */
+export function WidgetFrame({ title, hideTitle, children }: { title: string; hideTitle?: boolean; children: ReactNode }) {
   return (
-    <section aria-label={title} className="not-prose my-figure border-y border-rule py-6 font-sans text-sm">
-      <h3 className="eyebrow mb-4">{title}</h3>
-      {children}
+    <section aria-label={title} className="not-prose my-figure border-y border-rule py-6">
+      <ControlPanel plain>
+        {!hideTitle && <h3 className="eyebrow mb-4">{title}</h3>}
+        {children}
+      </ControlPanel>
     </section>
   );
 }

@@ -8,6 +8,7 @@ import { type BarColumn, addWord, barColumn, columnHeading } from "@/lib/widgets
 import { type OpenerLookup, lookupOpener, sortLookups } from "@/lib/widgets/opener-lookup";
 import { OPENER_PRESETS, presetFor } from "@/lib/widgets/opener-presets";
 import { DEFAULT_STRATEGY, POOL_NAMES, STRATEGIES, strategyById, strategyFor } from "@/lib/wordle/strategies";
+import { Field } from "@/components/controls/Field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,8 @@ interface Props {
   highlight?: string;
   controls?: boolean;
   tabs?: boolean;
+  /** Leave out the frame's title, for a page whose heading already says it (the /openers page). Not a URL param. */
+  hideTitle?: boolean;
   id?: string;
 }
 
@@ -61,7 +64,7 @@ interface Props {
  * Props: `strategy` (default `bits-guesses-all`), `answersOnly` (chart only Answer List Openers, default false),
  * `highlight` (comma separated words), `controls` (show the Strategy picker, the highlight field and the Answer List
  * toggle, default true), `tabs` (a tab row that sets the highlight words to a preset list; with no `highlight` it starts
- * on the first, default false), `id` (URL params `id.strategy`, ...). Each URL param of the same name overrides its prop.
+ * on the first, default false), `hideTitle` (no frame title), `id` (URL params `id.strategy`, ...). Each URL param of the same name overrides its prop.
  */
 export function OpenerDistribution(props: Props) {
   return (
@@ -77,6 +80,7 @@ function Distribution({
   highlight: highlightProp = "",
   controls: controlsProp = true,
   tabs: tabsProp = false,
+  hideTitle,
   id,
 }: Props) {
   const uid = useId();
@@ -99,15 +103,12 @@ function Distribution({
   const { data, error, loading } = useLoad(`guess-counts:${strategy}`, (signal) => getGuessCounts(strategy, signal));
 
   return (
-    <WidgetFrame title="Opener Distribution">
+    <WidgetFrame title="Opener Distribution" hideTitle={hideTitle}>
       {controls && (
         <div className="mb-3 grid gap-3">
           <StrategyPicker value={picked} onChange={(next) => setStrategy(strategyFor(next.by, next.pool, next.scope).id)} />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
-            <div>
-              <Label htmlFor={`${uid}-highlight`} className="mb-1 block text-sm font-normal text-meta">
-                Highlight words, comma separated
-              </Label>
+            <Field label="Highlight words, comma separated" htmlFor={`${uid}-highlight`}>
               <Input
                 id={`${uid}-highlight`}
                 value={highlightText}
@@ -117,7 +118,7 @@ function Distribution({
                 spellCheck={false}
                 className="font-mono"
               />
-            </div>
+            </Field>
             <div className="flex items-end">
               <Label htmlFor={`${uid}-answers`} className="h-9 cursor-pointer gap-2 text-sm font-normal text-text">
                 <input

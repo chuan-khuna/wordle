@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Maximize2, Plus, X } from "lucide-react";
+import { ControlPanel } from "@/components/controls/ControlPanel";
+import { Field } from "@/components/controls/Field";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { followPath } from "@/lib/i18n/paths";
@@ -94,7 +95,7 @@ function Split({ lang }: { lang: Language }) {
   return (
     <div className="space-y-8">
       {/* One toolbar: the fields, then the actions, which line up with the middle of the tiles (with Compare on, Full screen drops to a row of its own below `xl`, where the fields fill the row). */}
-      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+      <ControlPanel plain className="flex flex-wrap items-start gap-x-6 gap-y-3">
         <OpenerInput uid={`${uid}-opener`} label={text.openerLabel} value={first.g} onChange={setOpener} state={first} lang={lang} />
         {comparing && (
           <OpenerInput
@@ -121,7 +122,7 @@ function Split({ lang }: { lang: Language }) {
             {text.fullScreen}
           </Button>
         </div>
-      </div>
+      </ControlPanel>
       {/* The two splits sit side by side from `xl`; each SplitGroups measures its own column. */}
       <div className={comparing ? "grid grid-cols-1 gap-x-10 gap-y-10 xl:grid-cols-2" : undefined}>
         {first.data && <OpenerResult split={first.data} other={comparing ? second.data : null} lang={lang} showSplit={!fitted} />}
@@ -154,19 +155,18 @@ function OpenerInput({
   const { g, check, failed, waiting } = state;
   return (
     <div className="space-y-1">
-      <Label htmlFor={uid} className="eyebrow flex h-6 items-center text-meta">
-        {label}
-      </Label>
-      <div className="flex items-start gap-2">
-        <WordRow id={uid} label={label} hideLabel value={value} onChange={onChange} error={check.error} />
-        {onRemove && (
-          <div className="flex h-12 items-center sm:h-14">
-            <Button type="button" variant="ghost" size="icon-sm" aria-label={text.removeCompare} onClick={onRemove}>
-              <X aria-hidden="true" />
-            </Button>
-          </div>
-        )}
-      </div>
+      <Field label={label} htmlFor={uid} className="gap-1" labelClassName="flex h-6 items-center">
+        <div className="flex items-start gap-2">
+          <WordRow id={uid} label={label} hideLabel value={value} onChange={onChange} error={check.error} />
+          {onRemove && (
+            <div className="flex h-12 items-center sm:h-14">
+              <Button type="button" variant="ghost" size="icon-sm" aria-label={text.removeCompare} onClick={onRemove}>
+                <X aria-hidden="true" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </Field>
       <div aria-live="polite" className="min-h-6 text-sm">
         {g.length < WORD_LENGTH && <p className="text-meta">{text.typeOpener}</p>}
         {waiting && <p className="text-meta">{text.splitting}</p>}

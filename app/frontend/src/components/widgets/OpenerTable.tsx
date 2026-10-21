@@ -4,7 +4,7 @@ import { Suspense, useId, useMemo, useState } from "react";
 import { type Opener, getOpeners } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field } from "@/components/controls/Field";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { WidgetFrame } from "./ui";
 import { useLoad } from "./useLoad";
@@ -80,10 +80,7 @@ function OpenerRows({ top: topProp = 20, highlight: highlightProp = "", id }: { 
 
   return (
     <WidgetFrame title="Opener table">
-      <div className="max-w-40">
-        <Label htmlFor={`${uid}-top`} className="mb-1 block text-sm font-normal text-meta">
-          Rows to show
-        </Label>
+      <Field label="Rows to show" htmlFor={`${uid}-top`} className="max-w-40">
         <Input
           id={`${uid}-top`}
           type="number"
@@ -94,7 +91,7 @@ function OpenerRows({ top: topProp = 20, highlight: highlightProp = "", id }: { 
           onChange={(e) => setTopText(e.target.value)}
           className="font-mono"
         />
-      </div>
+      </Field>
 
       <div aria-live="polite" className="mt-3 min-h-6 text-sm">
         {loading && <p className="text-meta">Loading the Opener leaderboard…</p>}

@@ -1,8 +1,10 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import { RadioGroup } from "radix-ui";
 import { Suspense, useEffect, useId, useState } from "react";
+import { ControlPanel } from "@/components/controls/ControlPanel";
+import { Field } from "@/components/controls/Field";
+import { SegmentedControl } from "@/components/controls/SegmentedControl";
 import { Button } from "@/components/ui/button";
 import { type SolveResponse, type SplitResponse, getSolve, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
@@ -19,6 +21,9 @@ import { useWidgetParam } from "./useWidgetParam";
 
 /** Article 08's Answer (the Step-through Game shows WATCH there too). */
 const DEFAULT_ANSWER = "watch";
+
+/** The label of a word field with tiles: level with the tiles from `sm`, not the middle of the field (error and hint sit under them). */
+const WORD_LABEL = "sm:h-14";
 
 type Result = { key: string; data: SolveResponse | null; error: string | null };
 
@@ -96,8 +101,10 @@ function Game({ lang }: { lang: Language }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
-        <WordRow id={`${uid}-answer`} label={text.answerLabel} value={a} onChange={setAnswer} error={answerError} />
+      <ControlPanel plain className="space-y-4">
+        <Field layout="inline" label={text.answerLabel} htmlFor={`${uid}-answer`} labelClassName={WORD_LABEL}>
+          <WordRow id={`${uid}-answer`} label={text.answerLabel} hideLabel value={a} onChange={setAnswer} error={answerError} />
+        </Field>
         <StrategyPicker
           lang={lang}
           value={{ pool, scope, by }}
@@ -107,37 +114,40 @@ function Game({ lang }: { lang: Language }) {
             setBy(next.by);
           }}
         />
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-          <WordRow
-            id={`${uid}-opener`}
-            label={text.openerLabel}
-            value={custom ? o : best}
-            onChange={(word) => {
-              setCustom(true);
-              setOpener(word);
-            }}
-            error={openerError}
-            hint={custom ? undefined : best ? text.bestOpenerHint : undefined}
-          />
-          {custom && (
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => {
-                setCustom(false);
-                setOpener("");
+        <Field layout="inline" label={text.openerLabel} htmlFor={`${uid}-opener`} labelClassName={WORD_LABEL} className="sm:items-start">
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+            <WordRow
+              id={`${uid}-opener`}
+              label={text.openerLabel}
+              hideLabel
+              value={custom ? o : best}
+              onChange={(word) => {
+                setCustom(true);
+                setOpener(word);
               }}
-            >
-              {text.useBestOpener}
-            </Button>
-          )}
-        </div>
-        <div aria-live="polite" className="min-h-6 text-sm">
+              error={openerError}
+              hint={custom ? undefined : best ? text.bestOpenerHint : undefined}
+            />
+            {custom && (
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => {
+                  setCustom(false);
+                  setOpener("");
+                }}
+              >
+                {text.useBestOpener}
+              </Button>
+            )}
+          </div>
+        </Field>
+        <div aria-live="polite" className="min-h-6">
           {a.length < WORD_LENGTH && <p className="text-meta">{text.typeAnswer}</p>}
           {a.length === WORD_LENGTH && custom && o.length < WORD_LENGTH && <p className="text-meta">{text.typeOpener}</p>}
           {ready && !current && <p className="text-meta">{text.solverPlaying}</p>}
         </div>
-      </div>
+      </ControlPanel>
 
       {data && shown && (
         <>
@@ -179,13 +189,13 @@ function GuessStrip({
   step: number;
   go: (n: number) => void;
   lang: Language;
-  view: string;
-  setView: (v: string) => void;
+  view: "split" | "path";
+  setView: (v: "split" | "path") => void;
 }) {
   const text = pageText(lang);
   const total = data.guesses;
   return (
-    <div className="sticky top-0 z-10 -mx-gutter border-b border-rule bg-background px-gutter py-2 sm:-mx-gutter-wide sm:px-gutter-wide">
+    <ControlPanel plain className="sticky top-0 z-10 -mx-gutter border-b border-rule bg-background px-gutter py-2 sm:-mx-gutter-wide sm:px-gutter-wide">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <Button disabled={step <= 1} onClick={() => go(step - 1)} aria-label={text.prevGuess}>
@@ -216,25 +226,16 @@ function GuessStrip({
         <span className="text-sm text-meta" aria-live="polite">
           {text.guessOf(step, total)}
         </span>
-        <RadioGroup.Root
-          aria-label={text.viewLabel}
-          orientation="horizontal"
+        <SegmentedControl
+          label={text.viewLabel}
           value={view}
-          onValueChange={setView}
-          className="inline-flex gap-0.5 rounded-sm border border-rule p-0.5 sm:ml-auto"
-        >
-          {(["split", "path"] as const).map((v) => (
-            <RadioGroup.Item
-              key={v}
-              value={v}
-              className="cursor-pointer rounded-xs px-2.5 py-1 text-sm whitespace-nowrap text-meta hover:bg-highlight-low hover:text-text data-[state=checked]:bg-highlight-med data-[state=checked]:text-text"
-            >
-              {v === "split" ? text.viewSplit : text.viewPath}
-            </RadioGroup.Item>
-          ))}
-        </RadioGroup.Root>
+          onChange={setView}
+          options={["split", "path"] as const}
+          names={{ split: text.viewSplit, path: text.viewPath }}
+          className="sm:ml-auto"
+        />
       </div>
-    </div>
+    </ControlPanel>
   );
 }
 

@@ -21,7 +21,7 @@ export function OpenersView({ lang = DEFAULT_LANGUAGE }: { lang?: Language }) {
           {text.sentenceEnd}
         </p>
       </header>
-      <OpenerDistribution tabs />
+      <OpenerDistribution tabs hideTitle />
     </div>
   );
 }
