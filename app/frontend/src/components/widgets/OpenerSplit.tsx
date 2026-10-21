@@ -366,27 +366,30 @@ function FitView({ splits, lang, onExit }: { splits: SplitResponse[]; lang: Lang
     <div role="dialog" aria-label={text.fullScreen} className="fixed inset-0 z-[100] flex flex-col bg-background">
       <div className="flex items-center gap-4 border-b border-rule px-4 py-2">
         <span className="font-tile text-lg font-bold tracking-widest uppercase text-text">{splits.map((x) => x.word).join(" · ")}</span>
-        <Button type="button" variant="default" size="sm" onClick={onExit} className="ml-auto">
-          {text.closeFullScreen}
+        <Button type="button" variant="ghost" size="icon-sm" onClick={onExit} aria-label={text.closeFullScreen} title={text.closeFullScreen} className="ml-auto">
+          <X />
         </Button>
       </div>
-      <div ref={area} className="relative min-h-0 flex-1 overflow-hidden">
-        <div
-          ref={inner}
-          data-scale={scale ?? undefined}
-          className="absolute top-0"
-          style={{
-            width: layoutW,
-            left: Math.max(0, (size.w - layoutW * shown) / 2),
-            transform: `scale(${shown})`,
-            transformOrigin: "top left",
-            visibility: scale === null ? "hidden" : "visible",
-          }}
-        >
-          <div className="grid gap-x-12" style={{ gridTemplateColumns: `repeat(${splits.length}, minmax(0, 1fr))` }}>
-            {splits.map((split, i) => (
-              <SplitGroups key={i} split={split} lang={lang} layoutWidth={columnW} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />
-            ))}
+      {/* The page's margin around the scaled split; the area measured for the fit is inside it. */}
+      <div className="min-h-0 flex-1 px-6 py-4 sm:px-10 sm:py-6">
+        <div ref={area} className="relative h-full overflow-hidden">
+          <div
+            ref={inner}
+            data-scale={scale ?? undefined}
+            className="absolute top-0"
+            style={{
+              width: layoutW,
+              left: Math.max(0, (size.w - layoutW * shown) / 2),
+              transform: `scale(${shown})`,
+              transformOrigin: "top left",
+              visibility: scale === null ? "hidden" : "visible",
+            }}
+          >
+            <div className="grid gap-x-12" style={{ gridTemplateColumns: `repeat(${splits.length}, minmax(0, 1fr))` }}>
+              {splits.map((split, i) => (
+                <SplitGroups key={i} split={split} lang={lang} layoutWidth={columnW} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />
+              ))}
+            </div>
           </div>
         </div>
       </div>
