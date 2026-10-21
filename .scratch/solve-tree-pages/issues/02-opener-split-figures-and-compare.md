@@ -10,7 +10,11 @@
 - [x] Expected Information and Expected Candidates are formatted as elsewhere on the site (as in the Feedback Split explorer's chart title).
 - [x] "Compare" adds a second Opener input and split. A remove control takes it away. The `compare` URL param holds the second Opener.
 - [x] Each Opener's input reports its own errors without clearing the other's split.
-- [x] The two splits are stacked one above the other on every width.
+- [x] Both Opener inputs sit together at the top; the two splits are in two columns on wide screens and stacked on narrow ones.
 - [x] Page text for the figures and Compare exists in English and Thai.
 - [x] `bun run screenshot` includes a compare view.
 - [x] `web-frontend.md` describes the figures and Compare.
+
+## Comments
+
+The layout was changed at the user's request after this ticket was done: the inputs moved together to the top, and the two splits sit in two columns from `xl` (stacked below it), instead of stacked on every width.

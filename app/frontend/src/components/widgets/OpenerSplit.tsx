@@ -87,51 +87,46 @@ function Split({ lang }: { lang: Language }) {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+        <OpenerInput uid={`${uid}-opener`} label={text.openerLabel} value={first.g} onChange={setOpener} state={first} lang={lang} />
+        {comparing && (
+          <OpenerInput
+            uid={`${uid}-compare`}
+            label={text.comparedOpenerLabel}
+            value={second.g}
+            onChange={setCompare}
+            state={second}
+            lang={lang}
+            onRemove={() => setComparing(false)}
+          />
+        )}
         {!comparing && (
-          <Button type="button" variant="default" onClick={() => setComparing(true)}>
+          <Button type="button" variant="default" onClick={() => setComparing(true)} className="self-end">
             {text.compare}
           </Button>
         )}
-        <Button type="button" variant="default" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="hidden lg:inline-flex aria-pressed:bg-highlight-med">
+        <Button type="button" variant="default" aria-pressed={fit === "1"} onClick={() => setFit(fit === "1" ? "" : "1")} className="hidden self-end lg:inline-flex aria-pressed:bg-highlight-med">
           {text.fullScreen}
         </Button>
       </div>
-      <OpenerPanel
-        uid={`${uid}-opener`}
-        label={text.openerLabel}
-        value={first.g}
-        onChange={setOpener}
-        state={first}
-        lang={lang}
-        showSplit={!fitted}
-      />
-      {comparing && (
-        <OpenerPanel
-          uid={`${uid}-compare`}
-          label={text.comparedOpenerLabel}
-          value={second.g}
-          onChange={setCompare}
-          state={second}
-          lang={lang}
-          showSplit={!fitted}
-          onRemove={() => setComparing(false)}
-        />
-      )}
+      {/* The two splits sit side by side from `xl`; each SplitGroups measures its own column. */}
+      <div className={comparing ? "grid grid-cols-1 gap-x-10 gap-y-10 xl:grid-cols-2" : undefined}>
+        {first.data && <OpenerResult split={first.data} lang={lang} showSplit={!fitted} />}
+        {comparing && second.data && <OpenerResult split={second.data} lang={lang} showSplit={!fitted} />}
+      </div>
       {fitted && fittedSplits.length > 0 && <FitView splits={fittedSplits} lang={lang} onExit={() => setFit("")} />}
     </div>
   );
 }
 
-/** One Opener: its input (with its own error), status line, the five figures and its `SplitGroups`. */
-function OpenerPanel({
+/** One Opener's input (with its own error), its Remove button if any, and its status line. */
+function OpenerInput({
   uid,
   label,
   value,
   onChange,
   state,
   lang,
-  showSplit,
   onRemove,
 }: {
   uid: string;
@@ -140,14 +135,13 @@ function OpenerPanel({
   onChange: (word: string) => void;
   state: ReturnType<typeof useOpenerSplit>;
   lang: Language;
-  showSplit: boolean;
   onRemove?: () => void;
 }) {
   const text = pageText(lang);
-  const { g, check, data, failed, waiting } = state;
+  const { g, check, failed, waiting } = state;
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <WordRow id={uid} label={label} value={value} onChange={onChange} error={check.error} />
         {onRemove && (
           <Button type="button" variant="default" onClick={onRemove}>
@@ -164,8 +158,16 @@ function OpenerPanel({
           </p>
         )}
       </div>
-      {data && <SplitFigures split={data} lang={lang} />}
-      {data && showSplit && <SplitGroups split={data} lang={lang} wordLink={(answer) => followPath(lang, { answer, opener: data.word })} />}
+    </div>
+  );
+}
+
+/** One Opener's five figures and its `SplitGroups` (a column of the page when Compare is on). */
+function OpenerResult({ split, lang, showSplit }: { split: SplitResponse; lang: Language; showSplit: boolean }) {
+  return (
+    <section className="min-w-0 space-y-4">
+      <SplitFigures split={split} lang={lang} />
+      {showSplit && <SplitGroups split={split} lang={lang} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />}
     </section>
   );
 }
@@ -211,11 +213,13 @@ const MAX_W = 8000;
 /** The search stops when its bracket is this narrow, or after this many passes. */
 const W_TOLERANCE = 6;
 const MAX_PASSES = 16;
+/** The gap between the two columns of a Compare in fit mode, in layout pixels (`gap-x-12`). */
+const FIT_GAP = 48;
 
 /**
  * Fit mode: a full-window overlay (above the sidebar) with a small bar (the Opener, or both with Compare on, and an Exit
- * button; Escape also exits) and the whole split (both splits stacked, laid out and scaled together) scaled to fill the rest of the window with no scrolling, like the video's single shot.
- * The split's height H(W) falls as its layout width W grows, and the best W is where H/W equals the window's height over its
+ * button; Escape also exits) and the whole split (both splits side by side in two equal columns, laid out at one width and scaled together) scaled to fill the rest of the window with no scrolling, like the video's single shot.
+ * The split's height H(W) (the taller column's, with Compare) falls as its layout width W grows, and the best W is where H/W equals the window's height over its
  * width. That is found by bisection, each pass laying the blocks out at W (column counts follow W, not the container; the
  * layout effect re-runs before paint) and reading the height. It then scales by min(width / W, height / H, 1). Searched again
  * when the window or the split changes.
@@ -275,6 +279,8 @@ function FitView({ splits, lang, onExit }: { splits: SplitResponse[]; lang: Lang
   }, [words, splits, size, layoutW]);
 
   const shown = scale ?? 1;
+  // Each split's column: the layout width less the gaps (3rem = 48px), shared equally.
+  const columnW = (layoutW - FIT_GAP * (splits.length - 1)) / splits.length;
   return (
     <div role="dialog" aria-label={text.fullScreen} className="fixed inset-0 z-[100] flex flex-col bg-background">
       <div className="flex items-center gap-4 border-b border-rule px-4 py-2">
@@ -296,9 +302,9 @@ function FitView({ splits, lang, onExit }: { splits: SplitResponse[]; lang: Lang
             visibility: scale === null ? "hidden" : "visible",
           }}
         >
-          <div className="space-y-10">
+          <div className="grid gap-x-12" style={{ gridTemplateColumns: `repeat(${splits.length}, minmax(0, 1fr))` }}>
             {splits.map((split, i) => (
-              <SplitGroups key={i} split={split} lang={lang} layoutWidth={layoutW} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />
+              <SplitGroups key={i} split={split} lang={lang} layoutWidth={columnW} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />
             ))}
           </div>
         </div>

@@ -26,7 +26,7 @@ Two new pages under **Explore** in the sidebar, after Opener Distribution, in En
 - **Opener Split page** (`/opener-split`, `/th/opener-split`): learn to choose an Opener.
   - The reader types an Opener, any Guess List word, default `salet`. It shows `SplitGroups` over the whole Answer List with these figures: number of groups, largest group, number of single-word groups, Expected Information and Expected Candidates.
   - **No Strategy picker**: an Opener's split of the Answer List does not depend on the Strategy.
-  - A "Compare" button adds a second Opener, shown below the first with its own figures.
+  - A "Compare" button adds a second Opener with its own figures. Both inputs sit together at the top; the two splits are in two columns on wide screens and stacked on narrow ones.
   - Hovering or tapping a word offers "Follow this Answer", a link to the Follow an Answer page with that Answer and this Opener.
   - There is no drilling into groups: that is the other page's job.
 - **Follow an Answer page** (`/follow`, `/th/follow`): see the Solver home in on one Answer.
@@ -52,7 +52,7 @@ Every input is a URL param, so a view can be shared. Page text lives in the type
 10. As a reader, I want bigger groups drawn as bigger blocks with bigger heads, so that the shape of the split stands out as it does in the video.
 11. As a reader, I want the words in a group in alphabetical order, so that I can find a word quickly.
 12. As a reader, I want the number of groups, the largest group, the number of single-word groups, the Expected Information and the Expected Candidates beside the split, so that I can put numbers on what I see.
-13. As a reader, I want to compare two Openers one above the other, so that I can see why a good Opener beats a bad one.
+13. As a reader, I want to compare two Openers side by side (stacked on a narrow screen), so that I can see why a good Opener beats a bad one.
 14. As a reader, I want to remove the second Opener, so that I can go back to one split.
 15. As a reader, I want the Opener (and the compared Opener) in the URL, so that I can share exactly what I am looking at.
 16. As a reader, I want to hover or tap a word and follow it as the Answer, so that I can go from "where does this word land" to "how does the Solver find it".
