@@ -170,3 +170,7 @@ _Avoid_: demo, playground, component
 **Margin note**:
 A short aside printed in the margin of an Article, beside the text it comments on.
 _Avoid_: sidenote, footnote, aside, marginalia, callout
+
+**Translation**:
+An Article, or the Series and its Parts, written in another language, such as Thai. It says the same thing as the English original, with the same Prerequisites, Part and Widgets. The original is always English.
+_Avoid_: localisation, version, edition, Thai Article
