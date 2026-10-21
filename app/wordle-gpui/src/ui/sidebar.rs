@@ -183,7 +183,8 @@ fn heading(t: &Theme, text: &'static str) -> impl IntoElement {
     div().px_3().pt_3().pb_1().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child(text)
 }
 
-fn mini_tile(letter: char, fill: u32, border: u32, text: u32) -> Div {
+/// A small lettered tile, as in the Guesses list (and the solver's Path).
+pub(super) fn mini_tile(letter: char, fill: u32, border: u32, text: u32) -> Div {
     div()
         .size(px(24.))
         .flex()

@@ -6,6 +6,9 @@
 //!
 //! In Solver mode it works from the State entered by hand instead of the Game's.
 //!
+//! The Path records the Guesses so far; clicking a step shows the panel as it was after that many
+//! Guesses, and a new Guess goes back to the latest.
+//!
 //! Before the first Guess it also shows what `summary.json` of the Guess Count Matrices knows under
 //! the panel's Strategy (`solver/opener_results.rs`): each Suggestion's Average Guess Count, and the
 //! charted word's Average Guess Count, Losses and Guess Distribution, or a note saying why there
@@ -19,6 +22,7 @@ use std::sync::Arc;
 
 use gpui::{Context, Div, FontWeight, Pixels, SharedString, Window, div, prelude::*, px, relative, rgb, size, uniform_list};
 use wordle_gpui::engine::feedback::Mark;
+use wordle_gpui::engine::game::Guess;
 use wordle_gpui::solver::assist::Assist;
 use wordle_gpui::solver::matrix::default_dir;
 use wordle_gpui::solver::opener_results::{self, Lookup, OpenerResult, SummaryFile};
@@ -26,6 +30,7 @@ use wordle_gpui::solver::strategy::{self, Distribution, Matrix, MatrixSet, Rank,
 use wordle_gpui::engine::words::{WORD_LENGTH, word_lists};
 
 use super::WordleApp;
+use super::sidebar::mini_tile;
 use super::widgets::{self, caret, separator};
 use crate::overlays::commands::Command;
 use crate::theme::Theme;
@@ -87,6 +92,12 @@ pub struct SolverState {
     summary: Option<Arc<SummaryFile>>,
     /// Counts summary reads, so a slow old one can't replace a newer one.
     summary_serial: u32,
+    /// The Guesses the panel last saw: the Path, recorded on every refresh.
+    path: Vec<Guess>,
+    /// The Candidates left at each step of the Path: before any Guess, then after each one.
+    path_left: Vec<usize>,
+    /// The step of the Path the panel shows (that many Guesses made), or `None` to follow the latest.
+    step: Option<usize>,
 }
 
 impl Default for SolverState {
@@ -106,7 +117,17 @@ impl Default for SolverState {
             candidates_open: true,
             summary: None,
             summary_serial: 0,
+            path: Vec::new(),
+            path_left: Vec::new(),
+            step: None,
         }
+    }
+}
+
+impl SolverState {
+    /// The Guesses up to the step the panel shows: the whole Path unless an earlier step was picked.
+    fn viewed(&self) -> &[Guess] {
+        &self.path[..self.step.unwrap_or(self.path.len()).min(self.path.len())]
     }
 }
 
@@ -152,8 +173,13 @@ impl WordleApp {
         if !self.solver.open {
             return;
         }
-        let state = self.shown_guesses().iter().map(|guess| (guess.word.as_str(), guess.feedback.as_slice()));
-        self.solver.candidates = strategy::candidates(state);
+        // A changed Path (a new Guess, a new Game, a Mark clicked in Solver mode) goes back to the latest step.
+        if self.solver.path != self.shown_guesses() {
+            self.solver.path = self.shown_guesses().to_vec();
+            self.solver.step = None;
+            self.solver.path_left = (0..=self.solver.path.len()).map(|step| strategy::candidates(state_of(&self.solver.path[..step])).len()).collect();
+        }
+        self.solver.candidates = strategy::candidates(state_of(self.solver.viewed()));
         self.solver.serial += 1;
 
         let set = self.solver.set;
@@ -171,7 +197,7 @@ impl WordleApp {
         let serial = self.solver.serial;
         let candidates = self.solver.candidates.clone();
         // The Opener comes from the whole Guess Pool; Search applies from the second Guess on.
-        let mode = self.solver.mode.for_guess(self.shown_guesses().len());
+        let mode = self.solver.mode.for_guess(self.solver.viewed().len());
         let by = self.solver.by;
         let ranking = cx.background_spawn(async move { strategy::suggest(&matrix, &candidates, mode, by, SUGGESTIONS) });
         cx.spawn(async move |this, cx| {
@@ -239,7 +265,18 @@ impl WordleApp {
     /// What the summary says about `word` under the panel's Strategy, given the Guesses so far.
     fn opener_lookup<'a>(&'a self, word: &'a str) -> Lookup<'a> {
         let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by);
-        opener_results::lookup(self.solver.summary.as_deref(), strategy, word, self.shown_guesses().len())
+        opener_results::lookup(self.solver.summary.as_deref(), strategy, word, self.solver.viewed().len())
+    }
+
+    /// Show the solver as it was after `step` Guesses of the Path, charting the Guess made next
+    /// (if any). The last step follows the latest again.
+    fn show_step(&mut self, step: usize, cx: &mut Context<Self>) {
+        self.solver.step = (step < self.solver.path.len()).then_some(step);
+        if let Some(next) = self.solver.path.get(step) {
+            self.solver.selected = Some(next.word.clone());
+        }
+        self.refresh_solver(cx);
+        cx.notify();
     }
 
     fn set_matrix_set(&mut self, set: MatrixSet, cx: &mut Context<Self>) {
@@ -320,7 +357,7 @@ impl WordleApp {
 
     pub(super) fn render_solver(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = self.theme;
-        let opener = self.shown_guesses().is_empty();
+        let opener = self.solver.viewed().is_empty();
         let strategy = Strategy::named(self.solver.set, self.solver.mode, self.solver.by);
 
         let settings = div()
@@ -377,7 +414,11 @@ impl WordleApp {
             .text_xs()
             .font_weight(FontWeight::BOLD)
             .text_color(rgb(t.muted))
-            .child(if opener { "BEST OPENER" } else { "BEST GUESS" });
+            .child(match self.solver.step {
+                _ if opener => "BEST OPENER".to_string(),
+                Some(step) => format!("BEST GUESS AFTER GUESS {step}"),
+                None => "BEST GUESS".to_string(),
+            });
 
         div()
             .id("solver")
@@ -393,6 +434,7 @@ impl WordleApp {
             .child(div().px_3().pt_3().pb_2().text_xs().font_weight(FontWeight::BOLD).text_color(rgb(t.muted)).child("SOLVER"))
             .child(settings)
             .child(separator(t).mx_3().my_2())
+            .when(!self.solver.path.is_empty(), |panel| panel.child(self.render_path(cx)).child(separator(t).mx_3().my_2()))
             .child(self.render_candidates(cx))
             .child(separator(t).mx_3().my_2())
             .child(status)
@@ -454,6 +496,60 @@ impl WordleApp {
                 div().w(px(40.)).text_right().text_xs().text_color(rgb(t.accent)).child(format!("{:.3}", result.average_guess_count))
             }))
             .child(div().w(px(64.)).text_right().text_xs().text_color(rgb(t.muted)).child(format!("≈{} left", format_left(suggestion.expected_left))))
+    }
+
+    /// The Path: Start, then each Guess with its Feedback and the Candidates left after it. Clicking
+    /// a step shows the solver as it was there; the step shown is highlighted.
+    fn render_path(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let t = self.theme;
+        let path = &self.solver.path;
+        let shown = self.solver.step.unwrap_or(path.len());
+        let rows = (0..=path.len()).map(|step| {
+            let label = match step {
+                0 => div().h(px(24.)).flex().items_center().text_sm().text_color(rgb(t.text)).child("Start"),
+                _ => div().flex().gap_1().children(path[step - 1].word.chars().zip(&path[step - 1].feedback).map(|(letter, mark)| {
+                    let (fill, text) = t.mark(*mark);
+                    mini_tile(letter, fill, fill, text)
+                })),
+            };
+            let left = self.solver.path_left.get(step).copied().unwrap_or(0);
+            div()
+                .id(SharedString::from(format!("path-{step}")))
+                .flex()
+                .items_center()
+                .gap_2()
+                .p_1()
+                .rounded_md()
+                .cursor_pointer()
+                .when(step == shown, |row| row.bg(rgb(t.overlay)))
+                .hover(|style| style.bg(rgb(t.overlay)))
+                .on_click(cx.listener(move |this, _, _, cx| this.show_step(step, cx)))
+                .child(div().w(px(16.)).text_xs().text_color(rgb(t.muted)).child(if step == 0 { String::new() } else { step.to_string() }))
+                .child(label)
+                .child(div().ml_auto().text_xs().text_color(rgb(t.muted)).child(format!("{} left", group_thousands(left))))
+        });
+        div()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .px_3()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .text_xs()
+                    .font_weight(FontWeight::BOLD)
+                    .text_color(rgb(t.muted))
+                    .child("PATH")
+                    .when(self.solver.step.is_some(), |heading| {
+                        heading.child(widgets::button(t, "solver-path-latest", "Back to latest").on_click(cx.listener(|this, _, _, cx| {
+                            let latest = this.solver.path.len();
+                            this.show_step(latest, cx);
+                        })))
+                    }),
+            )
+            .children(rows)
     }
 
     /// Every current Candidate, in Answer List order, in a grid of cells that scrolls once it is
@@ -561,8 +657,8 @@ impl WordleApp {
             .items_center()
             .justify_between()
             .child(div().font_family(widgets::MONO_FONT).font_weight(FontWeight::BOLD).text_color(rgb(t.heading)).child(chart.word.to_uppercase()))
-            // Not while the precompute view hides the board.
-            .when(self.precompute.is_none() && self.assist.as_ref().map_or(!self.game.is_over(), Assist::can_type), |header| {
+            // Not while the precompute view hides the board, nor at an earlier step of the Path.
+            .when(self.precompute.is_none() && self.solver.step.is_none() && self.assist.as_ref().map_or(!self.game.is_over(), Assist::can_type), |header| {
                 header.child(widgets::button(t, "solver-type", "Type it").on_click(cx.listener(move |this, _, _, cx| this.type_solver_word(word.clone(), cx))))
             });
         let title = div()
@@ -693,6 +789,11 @@ fn segmented<T: Copy + PartialEq + std::fmt::Debug + 'static, const N: usize>(
 /// A Feedback as five small tiles in the theme's Mark colours.
 fn pattern(t: &Theme, marks: [Mark; WORD_LENGTH]) -> Div {
     div().flex().flex_none().gap(px(2.)).children(marks.into_iter().map(|mark| div().size(px(12.)).rounded(px(2.)).bg(rgb(t.mark(mark).0))))
+}
+
+/// Guesses as the State `strategy::candidates` takes.
+fn state_of(guesses: &[Guess]) -> impl Iterator<Item = (&str, &[Mark])> + Clone {
+    guesses.iter().map(|guess| (guess.word.as_str(), guess.feedback.as_slice()))
 }
 
 fn note(text: String, colour: u32) -> Div {
