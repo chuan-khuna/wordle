@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
-import { articleLink, articlePath, homePath, languageOf, openersPath, pathIn } from "@/lib/i18n/paths";
+import { articleLink, articlePath, homePath, languageOf, openerSplitPath, openersPath, pathIn } from "@/lib/i18n/paths";
 
 test("pathIn swaps English paths to Thai", () => {
   expect(pathIn("/", "th")).toBe("/th");
   expect(pathIn("/articles/rules", "th")).toBe("/th/articles/rules");
   expect(pathIn("/openers", "th")).toBe("/th/openers");
+  expect(pathIn("/opener-split", "th")).toBe("/th/opener-split");
 });
 
 test("pathIn swaps Thai paths to English", () => {
@@ -40,6 +41,8 @@ test("the named helpers build each page's path, English by default", () => {
   expect(articlePath("rules")).toBe("/articles/rules");
   expect(articlePath("rules", "th")).toBe("/th/articles/rules");
   expect(openersPath("th")).toBe("/th/openers");
+  expect(openerSplitPath()).toBe("/opener-split");
+  expect(openerSplitPath("th")).toBe("/th/opener-split");
 });
 
 test("articleLink points an untranslated Article at its English page", () => {

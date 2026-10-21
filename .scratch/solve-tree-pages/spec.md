@@ -16,12 +16,13 @@ Two new pages under **Explore** in the sidebar, after Opener Distribution, in En
 
 - **`SplitGroups`**: the Feedback Split of one Guess over one Candidate Set, with every word shown.
   - Each Feedback is a block headed by the Guess with that Feedback's five Marks and the group's word count. Nothing else goes in the head: no bar and no percentage.
-  - Under the head, every word of the group as plain Tiles (no Mark colours), in alphabetical order.
+  - Under the head, every word of the group as plain text (no Tiles, no Mark colours), in alphabetical order.
   - A block is about √n columns wide (n = its word count), never wider than the space available.
   - Blocks flow left to right and wrap, biggest first; ties go by lower Feedback Code.
   - The head's Tiles get smaller as the group gets smaller, as in the video.
   - The Win group (`22222`) is a block like any other.
-  - It can highlight one group (outlined) and one word (a strong Tile).
+  - It can highlight one group (outlined) and one word (in strong text).
+  - On desktop, a "Full screen" toggle (URL param `fit`) opens the whole split in a full-window view, laid out to the window's shape and scaled so every block fits with no scrolling, like the video's single shot. An Exit button or Escape closes it.
 - **Opener Split page** (`/opener-split`, `/th/opener-split`): learn to choose an Opener.
   - The reader types an Opener, any Guess List word, default `salet`. It shows `SplitGroups` over the whole Answer List with these figures: number of groups, largest group, number of single-word groups, Expected Information and Expected Candidates.
   - **No Strategy picker**: an Opener's split of the Answer List does not depend on the Strategy.
@@ -78,7 +79,7 @@ Every input is a URL param, so a view can be shared. Page text lives in the type
 
 ## Implementation Decisions
 
-- **Glossary**: **Solve Tree** was added to `GLOSSARY.md`. No other new term: "following an Answer" is the Game a Strategy plays for that Answer. The Candidate word Tiles carry no Marks: Marks belong to the Guess only.
+- **Glossary**: **Solve Tree** was added to `GLOSSARY.md`. No other new term: "following an Answer" is the Game a Strategy plays for that Answer. The Candidate words are plain text with no Marks: Marks belong to the Guess only.
 - **Backend**: `GET /api/solve` gets an optional `opener` param.
   - When given, it must be a Guess Pool word, or the response is 400. It becomes Guess 1, and the following Guesses come from the Strategy as before.
   - Its alternatives at step 1 are still the Strategy's top Suggestions, so the table shows how the chosen Opener compares.
@@ -94,7 +95,7 @@ Every input is a URL param, so a view can be shared. Page text lives in the type
   - the single-word group count;
   - turning `/api/solve` steps into one State per row;
   - finding the Answer's group in a row.
-- **`SplitGroups` component**: props are the split response, an optional highlighted Feedback Code and an optional highlighted word, plus a callback (or link builder) for a word, so that the Opener Split page can offer "Follow this Answer". Tiles reuse the existing `Tile` component at its smallest sizes.
+- **`SplitGroups` component**: props are the split response, an optional highlighted Feedback Code and an optional highlighted word, plus a callback (or link builder) for a word, so that the Opener Split page can offer "Follow this Answer". The head Tiles reuse the existing `Tile` component; the words are plain text.
 - **Pages**: each page is a view component taking the language, as the Opener Distribution page does, rendered by both route groups. Inputs use the existing `WordRow` word input and `useWidgetParam`-style URL params.
   - Opener Split params: `opener`, `compare`.
   - Follow an Answer params: `answer`, `pool`, `scope`, `by`, `opener`, `step`.
@@ -127,5 +128,5 @@ Every input is a URL param, so a view can be shared. Page text lives in the type
 
 ## Further Notes
 
-- The Opener Split page with Compare on shows about 4,600 words as Tiles. If rendering is slow, render each word as one element with letter spans rather than five full `Tile` components. Look out for this when building `SplitGroups`.
+- The Opener Split page with Compare on shows about 4,600 words. Each word is one plain-text element, so rendering stays light. Look out for this when building `SplitGroups`.
 - Building a whole Guess List / All words Solve Tree in Python takes about 8.5 s per Opener. This is why every view here is computed one node at a time from existing endpoints.

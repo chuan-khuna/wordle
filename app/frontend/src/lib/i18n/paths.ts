@@ -26,6 +26,8 @@ export const articlePath = (slug: string, lang: Language = DEFAULT_LANGUAGE) => 
 export const homePath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/", lang);
 /** The path of the Opener Distribution page. */
 export const openersPath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/openers", lang);
+/** The path of the Opener Split page. */
+export const openerSplitPath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/opener-split", lang);
 /**
  * Where a link to an Article goes from a page in `lang`: its page in that language, or the English page when it has no Translation
  * (a Thai route is not generated for it).

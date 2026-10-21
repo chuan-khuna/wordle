@@ -42,12 +42,12 @@ const { values, positionals } = parseArgs({
 /** A WidgetFrame: every Widget and every <Boards> is a labelled section whose first child is its eyebrow title. */
 const FIGURE = "section[aria-label]:has(> h3.eyebrow)";
 
-/** The home page, every Article, and the Opener Distribution page, then the Thai pages (`/th`, `/th/openers` and every Article that has a Translation). */
+/** The home page, every Article, the Opener Distribution and Opener Split pages, then the Thai pages (`/th`, `/th/openers`, `/th/opener-split` and every Article that has a Translation). */
 function allPaths(): string[] {
   const files = readdirSync(path.join(root, "content/articles")).filter((f) => f.endsWith(".mdx"));
   const thaiDir = path.join(root, "content/th/articles");
   const thai = existsSync(thaiDir) ? readdirSync(thaiDir).filter((f) => f.endsWith(".mdx")).sort().map((f) => `/th/articles/${f.replace(/^\d{2}-/, "").replace(/\.mdx$/, "")}`) : [];
-  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/th", ...thai, "/th/openers"];
+  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/opener-split", "/th", ...thai, "/th/openers", "/th/opener-split"];
 }
 
 /** "Feedback Split explorer" -> "feedback-split-explorer". */

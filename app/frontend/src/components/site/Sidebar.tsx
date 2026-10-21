@@ -11,14 +11,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatNumber } from "@/lib/content/parts";
-import { articleLink, homePath, openersPath } from "@/lib/i18n/paths";
+import { articleLink, homePath, openerSplitPath, openersPath } from "@/lib/i18n/paths";
 
 type Item = { slug: string; title: string; number: number; translated: boolean };
 type Group = { id: string; number: number; title: string; articles: Item[] };
 
 /**
  * The site-wide sidebar: the site title (home) at the top with the language toggle and the theme menu (a palette icon) beside it, then the Articles
- * grouped under their Part titles, then an Explore heading linking to the Opener Distribution page. A sticky full-height column from `lg`; below that a compact top bar whose button opens
+ * grouped under their Part titles, then an Explore heading linking to the Opener Distribution and Opener Split pages. A sticky full-height column from `lg`; below that a compact top bar whose button opens
  * the menu, beside the theme menu button. One markup, so CSS only decides what is shown.
  */
 export function Sidebar({ title, parts, lang = DEFAULT_LANGUAGE, translatedSlugs = [] }: { title: string; parts: Group[]; lang?: Language; translatedSlugs?: string[] }) {
@@ -79,15 +79,21 @@ export function Sidebar({ title, parts, lang = DEFAULT_LANGUAGE, translatedSlugs
             <h2 id="nav-explore" className="eyebrow mb-2">
               {text.explore}
             </h2>
-            <Link
-              href={openersPath(lang)}
-              aria-current={pathname === openersPath(lang) ? "page" : undefined}
-              className={`block border-l py-1 pl-3 text-sm ${
-                pathname === openersPath(lang) ? "border-text font-medium text-text" : "border-rule text-meta hover:border-rule-strong hover:text-text"
-              }`}
-            >
-              {text.openerDistribution}
-            </Link>
+            {[
+              { href: openersPath(lang), label: text.openerDistribution },
+              { href: openerSplitPath(lang), label: text.openerSplit },
+            ].map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={pathname === href ? "page" : undefined}
+                className={`block border-l py-1 pl-3 text-sm ${
+                  pathname === href ? "border-text font-medium text-text" : "border-rule text-meta hover:border-rule-strong hover:text-text"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
           </section>
         </nav>
         </CollapsibleContent>

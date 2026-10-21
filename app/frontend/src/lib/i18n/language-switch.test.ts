@@ -6,6 +6,7 @@ const translated = ["rules"];
 test("English to Thai for the home page, the openers page and a translated Article", () => {
   expect(switchTarget("/", "th", translated)).toBe("/th");
   expect(switchTarget("/openers", "th", translated)).toBe("/th/openers");
+  expect(switchTarget("/opener-split", "th", translated)).toBe("/th/opener-split");
   expect(switchTarget("/articles/rules", "th", translated)).toBe("/th/articles/rules");
 });
 
@@ -18,6 +19,7 @@ test("an English Article without a Translation, and a page with no Thai twin, ha
 test("Thai to English always has a target", () => {
   expect(switchTarget("/th", "en", [])).toBe("/");
   expect(switchTarget("/th/openers", "en", [])).toBe("/openers");
+  expect(switchTarget("/th/opener-split", "en", [])).toBe("/opener-split");
   expect(switchTarget("/th/articles/rules", "en", [])).toBe("/articles/rules");
 });
 

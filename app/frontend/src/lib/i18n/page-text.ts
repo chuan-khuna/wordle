@@ -10,9 +10,24 @@ export type PageText = {
   buildsOnThis: string;
   /** Accessible name of the previous / next Article nav. */
   prevNext: string;
-  /** The sidebar's heading above the Opener Distribution link. */
+  /** The sidebar's heading above the Explore links. */
   explore: string;
   openerDistribution: string;
+  /** The Opener Split page: its link under Explore, title, intro and help text. */
+  openerSplit: string;
+  openerSplitIntro: string;
+  openerSplitHelp: string;
+  /** The label of the Opener input, and what the page says before a full word is typed and while it splits. */
+  openerLabel: string;
+  typeOpener: string;
+  splitting: string;
+  /** The "Full screen" toggle on the Opener Split page (shown from the `lg` breakpoint). */
+  fullScreen: string;
+  closeFullScreen: string;
+  /** The accessible name of the list of blocks (the Guess's name), of one block's Feedback, and a group's size in its head. */
+  splitGroupsLabel: (guess: string) => string;
+  feedbackLabel: string;
+  words: (count: number) => string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
   /** "Watch from 4:10": a link into the Series video. */
@@ -47,6 +62,17 @@ export const EN: PageText = {
   prevNext: "Previous and next Article",
   explore: "Explore",
   openerDistribution: "Opener Distribution",
+  openerSplit: "Opener Split",
+  openerSplitIntro: "Pick an Opener and see the whole Answer List fall apart into one block for each Feedback it can get, the biggest block first.",
+  openerSplitHelp: "Each block is headed by the Opener with that Feedback's Marks and the number of words left. Type any Guess List word as the Opener.",
+  openerLabel: "Opener",
+  typeOpener: "Type a five-letter Opener.",
+  splitting: "Splitting the Answer List…",
+  splitGroupsLabel: (g) => `Feedback Split of ${g} over the Answer List`,
+  fullScreen: "Full screen",
+  closeFullScreen: "Close",
+  feedbackLabel: "Feedback",
+  words: (n) => `${n} word${n === 1 ? "" : "s"}`,
   howItWorks: "How it works",
   watchFrom: (t) => `Watch from ${t}`,
   openersIntro: "Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.",
@@ -74,6 +100,17 @@ export const TH: PageText = {
   prevNext: "Article ก่อนหน้าและถัดไป",
   explore: "สำรวจ",
   openerDistribution: "Opener Distribution",
+  openerSplit: "Opener Split",
+  openerSplitIntro: "เลือก Opener แล้วดู Answer List ทั้งหมดแตกออกเป็นบล็อกตาม Feedback ที่เป็นไปได้ โดยบล็อกที่ใหญ่ที่สุดมาก่อน",
+  openerSplitHelp: "หัวของแต่ละบล็อกคือ Opener พร้อม Marks ของ Feedback นั้นและจำนวนคำที่เหลือ พิมพ์คำใดก็ได้ใน Guess List เป็น Opener",
+  openerLabel: "Opener",
+  typeOpener: "พิมพ์ Opener ห้าตัวอักษร",
+  splitting: "กำลังแบ่ง Answer List…",
+  splitGroupsLabel: (g) => `Feedback Split ของ ${g} บน Answer List`,
+  fullScreen: "เต็มจอ",
+  closeFullScreen: "ปิด",
+  feedbackLabel: "Feedback",
+  words: (n) => `${n} คำ`,
   howItWorks: "ดูว่าทำงานอย่างไร",
   watchFrom: (t) => `ดูตั้งแต่ ${t}`,
   openersIntro: "ลองใช้ทุกคำใน Guess List เป็น Opener ให้ Solver เล่นแต่ละ Game จนจบ แล้วนับว่ามี Opener กี่คำที่ได้ Average Guess Count ในแต่ละช่วง",
