@@ -112,6 +112,10 @@ _Avoid_: score, metric, objective
 The rule the Solver uses to pick each Guess: one Guess Pool, one Search Scope and one Ranking, such as the Guess List, All words and highest Expected Information.
 _Avoid_: algorithm, heuristic, policy
 
+**Solve Tree**:
+Every Game one Strategy plays from one Opener, drawn as a tree: each Guess branches into one group per Feedback it got, and each branch ends at an Answer.
+_Avoid_: decision tree, game tree, strategy tree
+
 ## Using the app
 
 **Play**:
