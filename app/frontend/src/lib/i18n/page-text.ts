@@ -24,6 +24,8 @@ export type PageText = {
   /** The "Full screen" toggle on the Opener Split page (shown from the `lg` breakpoint). */
   fullScreen: string;
   closeFullScreen: string;
+  /** The link in the card of a word on the Opener Split page, to the Follow an Answer page. */
+  followThisAnswer: string;
   /** Compare: the button that adds a second Opener, the second input's label, and the control that removes it. */
   compare: string;
   comparedOpenerLabel: string;
@@ -125,6 +127,7 @@ export const EN: PageText = {
   splitGroupsLabel: (g) => `Feedback Split of ${g} over the Answer List`,
   fullScreen: "Full screen",
   closeFullScreen: "Close",
+  followThisAnswer: "Follow this Answer",
   compare: "Compare",
   comparedOpenerLabel: "Compared Opener",
   removeCompare: "Remove",
@@ -206,6 +209,7 @@ export const TH: PageText = {
   splitGroupsLabel: (g) => `Feedback Split ของ ${g} บน Answer List`,
   fullScreen: "เต็มจอ",
   closeFullScreen: "ปิด",
+  followThisAnswer: "ติดตาม Answer นี้",
   compare: "เปรียบเทียบ",
   comparedOpenerLabel: "Opener ที่เปรียบเทียบ",
   removeCompare: "ลบ",

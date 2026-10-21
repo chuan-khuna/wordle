@@ -45,6 +45,8 @@ test("the named helpers build each page's path, English by default", () => {
   expect(openerSplitPath("th")).toBe("/th/opener-split");
   expect(followPath()).toBe("/follow");
   expect(followPath("th")).toBe("/th/follow");
+  expect(followPath("en", { answer: "watch", opener: "salet" })).toBe("/follow?answer=watch&opener=salet");
+  expect(followPath("th", { answer: "watch", opener: "salet" })).toBe("/th/follow?answer=watch&opener=salet");
 });
 
 test("articleLink points an untranslated Article at its English page", () => {

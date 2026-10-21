@@ -4,12 +4,12 @@
 
 **Blocked by:** 01, 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `SplitGroups` takes a way to turn a word into an action or link. The Opener Split page uses it, and the Follow an Answer page does not.
-- [ ] Hovering a word (mouse) or tapping it (touch) shows the word and the link. Words are focusable, and Enter on a focused word does the same.
-- [ ] The link carries `answer` and `opener` and keeps the default Strategy. It is built with the language-aware path helper, so Thai pages link to the Thai page.
-- [ ] On the compare view each split links with its own Opener.
-- [ ] The word the reader picked stays highlighted until another is picked.
-- [ ] Page text exists in English and Thai.
-- [ ] `web-frontend.md` describes the link.
+- [x] `SplitGroups` takes a way to turn a word into an action or link. The Opener Split page uses it, and the Follow an Answer page does not.
+- [x] Hovering a word (mouse) or tapping it (touch) shows the word and the link. Words are focusable, and Enter on a focused word does the same.
+- [x] The link carries `answer` and `opener` and keeps the default Strategy. It is built with the language-aware path helper, so Thai pages link to the Thai page.
+- [x] On the compare view each split links with its own Opener.
+- [x] The word the reader picked stays highlighted until another is picked.
+- [x] Page text exists in English and Thai.
+- [x] `web-frontend.md` describes the link.

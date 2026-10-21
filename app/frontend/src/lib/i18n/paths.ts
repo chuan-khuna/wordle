@@ -28,8 +28,11 @@ export const homePath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/", lang)
 export const openersPath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/openers", lang);
 /** The path of the Opener Split page. */
 export const openerSplitPath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/opener-split", lang);
-/** The path of the Follow an Answer page. */
-export const followPath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/follow", lang);
+/** The path of the Follow an Answer page, with `params` (the page's URL params, such as `answer` and `opener`) as its query string. */
+export const followPath = (lang: Language = DEFAULT_LANGUAGE, params: Record<string, string> = {}) => {
+  const query = new URLSearchParams(params).toString();
+  return pathIn("/follow", lang) + (query && `?${query}`);
+};
 /**
  * Where a link to an Article goes from a page in `lang`: its page in that language, or the English page when it has no Translation
  * (a Thai route is not generated for it).

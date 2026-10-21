@@ -4,6 +4,7 @@ import { Suspense, useEffect, useId, useLayoutEffect, useRef, useState, useSyncE
 import { Button } from "@/components/ui/button";
 import { type SplitResponse, postSplit } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
+import { followPath } from "@/lib/i18n/paths";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatLeft } from "@/lib/widgets/split-chart";
 import { singleWordGroups } from "@/lib/widgets/split-groups";
@@ -164,7 +165,7 @@ function OpenerPanel({
         )}
       </div>
       {data && <SplitFigures split={data} lang={lang} />}
-      {data && showSplit && <SplitGroups split={data} lang={lang} />}
+      {data && showSplit && <SplitGroups split={data} lang={lang} wordLink={(answer) => followPath(lang, { answer, opener: data.word })} />}
     </section>
   );
 }
@@ -230,7 +231,8 @@ function FitView({ splits, lang, onExit }: { splits: SplitResponse[]; lang: Lang
   const words = splits.map((x) => x.word).join(" ");
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onExit();
+    // Radix prevents default when Escape closes a word's card, so that Escape closes only the card.
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !e.defaultPrevented && onExit();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
@@ -296,7 +298,7 @@ function FitView({ splits, lang, onExit }: { splits: SplitResponse[]; lang: Lang
         >
           <div className="space-y-10">
             {splits.map((split, i) => (
-              <SplitGroups key={i} split={split} lang={lang} layoutWidth={layoutW} />
+              <SplitGroups key={i} split={split} lang={lang} layoutWidth={layoutW} wordLink={(answer) => followPath(lang, { answer, opener: split.word })} />
             ))}
           </div>
         </div>
