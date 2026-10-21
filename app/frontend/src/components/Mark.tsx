@@ -13,7 +13,7 @@ const PAINT = {
 const LABEL = "cursor-help rounded-md px-1.5 py-0.5 align-baseline font-mono text-xs leading-none font-semibold uppercase tracking-caps whitespace-nowrap";
 
 /**
- * A Mark's name in prose, on that Mark's tile colours, with the Mark's definition from GLOSSARY.md on
+ * A Mark's name in prose, on that Mark's tile colours, with the Mark's definition from `content/glossary.json` on
  * hover, keyboard focus or tap (the same tooltip as <Term>). `<Mark kind="correct" />` shows "Correct";
  * children replace the text: `<Mark kind="present">Present letters</Mark>`. An unknown kind throws, which fails the build.
  */

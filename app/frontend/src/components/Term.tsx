@@ -2,7 +2,7 @@ import { TermTip } from "@/components/TermTip";
 import { lookupTerm } from "@/lib/glossary";
 
 /**
- * A glossary term with its definition from GLOSSARY.md, shown on hover, keyboard focus or tap (see TermTip).
+ * A glossary term with its definition from `content/glossary.json`, shown on hover, keyboard focus or tap (see TermTip).
  * `<Term>Candidate Set</Term>`, or `<Term of="Candidate">candidates</Term>` when the text differs.
  * An unknown term throws, which fails the build.
  */
