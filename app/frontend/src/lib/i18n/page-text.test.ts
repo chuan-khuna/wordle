@@ -16,10 +16,10 @@ test("every language has a table with every English key", () => {
 
 test("the Thai table is Thai: no English sentence leaks, no ครับ/ค่ะ, glossary terms stay English", () => {
   const thai = /[\u0E00-\u0E7F]/;
-  const strings: Record<string, string> = { ...TH, part: TH.part(2), watchFrom: TH.watchFrom("4:10"), splitGroupsLabel: TH.splitGroupsLabel("salet"), words: TH.words(5), figuresLabel: TH.figuresLabel("salet"), aboutChoice: TH.aboutChoice("Guess Pool") };
+  const strings: Record<string, string> = { ...TH, part: TH.part(2), watchFrom: TH.watchFrom("4:10"), splitGroupsLabel: TH.splitGroupsLabel("salet"), words: TH.words(5), figuresLabel: TH.figuresLabel("salet"), aboutChoice: TH.aboutChoice("Guess Pool"), guessStripLabel: TH.guessStripLabel("watch"), jumpToGuess: TH.jumpToGuess(2, "moist"), guessOf: TH.guessOf(2, 4), rowHeading: TH.rowHeading(2, "moist", 27), winHeading: TH.winHeading(4, "watch") };
   for (const [key, sample] of Object.entries(strings)) {
     // Glossary terms and the "EN" tag are English by design; every other string must contain Thai.
-    if (!["series", "part", "openerDistribution", "openerSplit", "openerLabel", "feedbackLabel", "expectedInformationFigure", "expectedCandidatesFigure", "bits", "enTag", "sentenceEnd", "guessPoolLabel", "searchScopeLabel", "rankingLabel", "strategyLabel"].includes(key)) {
+    if (!["series", "part", "openerDistribution", "openerSplit", "follow", "answerLabel", "openerLabel", "feedbackLabel", "expectedInformationFigure", "expectedCandidatesFigure", "bits", "enTag", "sentenceEnd", "guessPoolLabel", "searchScopeLabel", "rankingLabel", "strategyLabel"].includes(key)) {
       expect(thai.test(sample), key).toBe(true);
     }
     expect(/ครับ|ค่ะ/.test(sample), key).toBe(false);

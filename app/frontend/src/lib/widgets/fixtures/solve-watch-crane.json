@@ -1,0 +1,191 @@
+{
+ "answer": "watch",
+ "solved": true,
+ "guesses": 4,
+ "steps": [
+  {
+   "number": 1,
+   "guess": "crane",
+   "marks": "10100",
+   "code": 90,
+   "candidates_before": 2315,
+   "candidates_after": 27,
+   "alternatives": [
+    {
+     "word": "tarse",
+     "bits": 5.946725224504698,
+     "expected_candidates": 66.04449244060476,
+     "groups": 147,
+     "largest_group": 227,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "tiare",
+     "bits": 5.931203413440987,
+     "expected_candidates": 60.93347732181425,
+     "groups": 142,
+     "largest_group": 194,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "soare",
+     "bits": 5.885960110378857,
+     "expected_candidates": 62.30107991360691,
+     "groups": 127,
+     "largest_group": 183,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "roate",
+     "bits": 5.882779324291971,
+     "expected_candidates": 60.42462203023758,
+     "groups": 126,
+     "largest_group": 195,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "raise",
+     "bits": 5.877909690821482,
+     "expected_candidates": 61.00086393088553,
+     "groups": 132,
+     "largest_group": 168,
+     "is_candidate": true,
+     "win_chance": 0.00043196544276457883
+    }
+   ]
+  },
+  {
+   "number": 2,
+   "guess": "moist",
+   "marks": "00001",
+   "code": 1,
+   "candidates_before": 27,
+   "candidates_after": 6,
+   "alternatives": [
+    {
+     "word": "moist",
+     "bits": 3.930270372293453,
+     "expected_candidates": 2.4074074074074074,
+     "groups": 19,
+     "largest_group": 6,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "lathi",
+     "bits": 3.9265716511782727,
+     "expected_candidates": 2.185185185185185,
+     "groups": 18,
+     "largest_group": 5,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "liths",
+     "bits": 3.9265716511782727,
+     "expected_candidates": 2.185185185185185,
+     "groups": 18,
+     "largest_group": 5,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "motif",
+     "bits": 3.9265716511782727,
+     "expected_candidates": 2.185185185185185,
+     "groups": 18,
+     "largest_group": 5,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "motis",
+     "bits": 3.9265716511782727,
+     "expected_candidates": 2.185185185185185,
+     "groups": 18,
+     "largest_group": 5,
+     "is_candidate": false,
+     "win_chance": 0.0
+    }
+   ]
+  },
+  {
+   "number": 3,
+   "guess": "blowy",
+   "marks": "00010",
+   "code": 3,
+   "candidates_before": 6,
+   "candidates_after": 1,
+   "alternatives": [
+    {
+     "word": "blowy",
+     "bits": 2.2516291673878226,
+     "expected_candidates": 1.3333333333333333,
+     "groups": 5,
+     "largest_group": 2,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "blype",
+     "bits": 2.2516291673878226,
+     "expected_candidates": 1.3333333333333333,
+     "groups": 5,
+     "largest_group": 2,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "bylaw",
+     "bits": 2.2516291673878226,
+     "expected_candidates": 1.3333333333333333,
+     "groups": 5,
+     "largest_group": 2,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "hable",
+     "bits": 2.2516291673878226,
+     "expected_candidates": 1.3333333333333333,
+     "groups": 5,
+     "largest_group": 2,
+     "is_candidate": false,
+     "win_chance": 0.0
+    },
+    {
+     "word": "halwa",
+     "bits": 2.2516291673878226,
+     "expected_candidates": 1.3333333333333333,
+     "groups": 5,
+     "largest_group": 2,
+     "is_candidate": false,
+     "win_chance": 0.0
+    }
+   ]
+  },
+  {
+   "number": 4,
+   "guess": "watch",
+   "marks": "22222",
+   "code": 242,
+   "candidates_before": 1,
+   "candidates_after": 1,
+   "alternatives": [
+    {
+     "word": "watch",
+     "bits": 0.0,
+     "expected_candidates": 1.0,
+     "groups": 1,
+     "largest_group": 1,
+     "is_candidate": true,
+     "win_chance": 1.0
+    }
+   ]
+  }
+ ]
+}

@@ -7,6 +7,7 @@ test("English to Thai for the home page, the openers page and a translated Artic
   expect(switchTarget("/", "th", translated)).toBe("/th");
   expect(switchTarget("/openers", "th", translated)).toBe("/th/openers");
   expect(switchTarget("/opener-split", "th", translated)).toBe("/th/opener-split");
+  expect(switchTarget("/follow", "th", translated)).toBe("/th/follow");
   expect(switchTarget("/articles/rules", "th", translated)).toBe("/th/articles/rules");
 });
 
@@ -20,6 +21,7 @@ test("Thai to English always has a target", () => {
   expect(switchTarget("/th", "en", [])).toBe("/");
   expect(switchTarget("/th/openers", "en", [])).toBe("/openers");
   expect(switchTarget("/th/opener-split", "en", [])).toBe("/opener-split");
+  expect(switchTarget("/th/follow", "en", [])).toBe("/follow");
   expect(switchTarget("/th/articles/rules", "en", [])).toBe("/articles/rules");
 });
 

@@ -1,0 +1,172 @@
+{
+ "word": "moist",
+ "bits": 3.930270372293453,
+ "expected_candidates": 2.4074074074074074,
+ "groups": 19,
+ "largest_group": 6,
+ "is_candidate": false,
+ "win_chance": 0.0,
+ "candidates": 27,
+ "split": [
+  {
+   "marks": "00001",
+   "code": 1,
+   "count": 6,
+   "words": [
+    "batch",
+    "hatch",
+    "latch",
+    "patch",
+    "tacky",
+    "watch"
+   ]
+  },
+  {
+   "marks": "02000",
+   "code": 54,
+   "count": 3,
+   "words": [
+    "focal",
+    "local",
+    "vocal"
+   ]
+  },
+  {
+   "marks": "00010",
+   "code": 3,
+   "count": 2,
+   "words": [
+    "saucy",
+    "scuba"
+   ]
+  },
+  {
+   "marks": "01012",
+   "code": 32,
+   "count": 1,
+   "words": [
+    "ascot"
+   ]
+  },
+  {
+   "marks": "00101",
+   "code": 10,
+   "count": 1,
+   "words": [
+    "attic"
+   ]
+  },
+  {
+   "marks": "00110",
+   "code": 12,
+   "count": 1,
+   "words": [
+    "basic"
+   ]
+  },
+  {
+   "marks": "01000",
+   "code": 27,
+   "count": 1,
+   "words": [
+    "havoc"
+   ]
+  },
+  {
+   "marks": "00200",
+   "code": 18,
+   "count": 1,
+   "words": [
+    "iliac"
+   ]
+  },
+  {
+   "marks": "00100",
+   "code": 9,
+   "count": 1,
+   "words": [
+    "lilac"
+   ]
+  },
+  {
+   "marks": "20000",
+   "code": 162,
+   "count": 1,
+   "words": [
+    "macaw"
+   ]
+  },
+  {
+   "marks": "21000",
+   "code": 189,
+   "count": 1,
+   "words": [
+    "macho"
+   ]
+  },
+  {
+   "marks": "20100",
+   "code": 171,
+   "count": 1,
+   "words": [
+    "magic"
+   ]
+  },
+  {
+   "marks": "20001",
+   "code": 163,
+   "count": 1,
+   "words": [
+    "match"
+   ]
+  },
+  {
+   "marks": "22000",
+   "code": 216,
+   "count": 1,
+   "words": [
+    "mocha"
+   ]
+  },
+  {
+   "marks": "01001",
+   "code": 28,
+   "count": 1,
+   "words": [
+    "octal"
+   ]
+  },
+  {
+   "marks": "10010",
+   "code": 84,
+   "count": 1,
+   "words": [
+    "sumac"
+   ]
+  },
+  {
+   "marks": "00102",
+   "code": 11,
+   "count": 1,
+   "words": [
+    "tacit"
+   ]
+  },
+  {
+   "marks": "00000",
+   "code": 0,
+   "count": 1,
+   "words": [
+    "wacky"
+   ]
+  },
+  {
+   "marks": "00002",
+   "code": 2,
+   "count": 1,
+   "words": [
+    "yacht"
+   ]
+  }
+ ]
+}

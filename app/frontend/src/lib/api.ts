@@ -109,8 +109,9 @@ export const postSplit = (guess: string, state: { guess: string; feedback: strin
     signal,
   });
 
-export const getSolve = (answer: string, pool: Pool, scope: Scope, by: Rank, signal?: AbortSignal) =>
-  api<SolveResponse>(`/api/solve?answer=${answer}&pool=${pool}&scope=${scope}&by=${by}`, { signal });
+/** `opener`, when given, is Guess 1 in place of the Strategy's best Opener (it must be on the Guess Pool). */
+export const getSolve = (answer: string, pool: Pool, scope: Scope, by: Rank, signal?: AbortSignal, opener?: string) =>
+  api<SolveResponse>(`/api/solve?answer=${answer}&pool=${pool}&scope=${scope}&by=${by}${opener ? `&opener=${opener}` : ""}`, { signal });
 
 export interface Opener {
   rank: number;

@@ -40,6 +40,32 @@ export type PageText = {
   splitGroupsLabel: (guess: string) => string;
   feedbackLabel: string;
   words: (count: number) => string;
+  /** The Follow an Answer page: its link under Explore, title, intro and help text. */
+  follow: string;
+  followIntro: string;
+  followHelp: string;
+  /** The Answer input's label, and what the page says before a full Answer is typed and while the Solver plays. */
+  answerLabel: string;
+  typeAnswer: string;
+  solverPlaying: string;
+  /** Quiet help under the Opener input while it holds the Strategy's best Opener, and the button that goes back to it. */
+  bestOpenerHint: string;
+  useBestOpener: string;
+  /** The strip of Guesses (its accessible name), one Guess in it (a button that jumps to its row), the current row, and the Prev / Next buttons. */
+  guessStripLabel: (answer: string) => string;
+  jumpToGuess: (number: number, guess: string) => string;
+  prev: string;
+  next: string;
+  prevGuess: string;
+  nextGuess: string;
+  /** "Guess 2 of 4" under the strip, and a row's heading: the Guess over the Candidate Set before it, or the Win. */
+  guessOf: (number: number, total: number) => string;
+  rowHeading: (number: number, guess: string, candidates: number) => string;
+  winHeading: (number: number, guess: string) => string;
+  /** The Solver's Game did not end in a Win within the Guess Limit of the API. */
+  notSolved: string;
+  /** What a Follow an Answer row says while its split loads. */
+  splittingCandidates: string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
   /** "Watch from 4:10": a link into the Series video. */
@@ -111,6 +137,25 @@ export const EN: PageText = {
   bits: "bits",
   feedbackLabel: "Feedback",
   words: (n) => `${n} word${n === 1 ? "" : "s"}`,
+  follow: "Follow an Answer",
+  followIntro: "Pick an Answer and watch the Solver home in on it. Each row splits the words still possible after the Guesses before it; the Answer's block is outlined.",
+  followHelp: "Choose a Strategy, and an Opener if you do not want the Strategy's best. Step through the Guesses with Prev and Next, or click a Guess in the strip.",
+  answerLabel: "Answer",
+  typeAnswer: "Type a five-letter Answer.",
+  solverPlaying: "The Solver is playing…",
+  bestOpenerHint: "The Strategy's best Opener. Type another word to change it.",
+  useBestOpener: "Best Opener",
+  guessStripLabel: (a) => `Guesses for ${a}`,
+  jumpToGuess: (n, g) => `Guess ${n}: ${g}`,
+  prev: "Prev",
+  next: "Next",
+  prevGuess: "Previous Guess",
+  nextGuess: "Next Guess",
+  guessOf: (n, total) => `Guess ${n} of ${total}`,
+  rowHeading: (n, g, c) => `Guess ${n}: ${g.toUpperCase()} over ${c} ${c === 1 ? "Candidate" : "Candidates"}`,
+  winHeading: (n, g) => `Guess ${n}: ${g.toUpperCase()} is the Win`,
+  notSolved: "The Solver did not find the Answer.",
+  splittingCandidates: "Splitting the Candidates…",
   howItWorks: "How it works",
   watchFrom: (t) => `Watch from ${t}`,
   openersIntro: "Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.",
@@ -173,6 +218,25 @@ export const TH: PageText = {
   bits: "bits",
   feedbackLabel: "Feedback",
   words: (n) => `${n} คำ`,
+  follow: "Follow an Answer",
+  followIntro: "เลือก Answer แล้วดู Solver ค่อย ๆ จำกัดวงเข้าหาคำนั้น แต่ละแถวแบ่งคำที่ยังเป็นไปได้หลัง Guess ก่อนหน้า และบล็อกของ Answer จะมีกรอบ",
+  followHelp: "เลือก Strategy และเลือก Opener เองได้ถ้าไม่ต้องการ Opener ที่ดีที่สุดของ Strategy นั้น กด Prev และ Next เพื่อไล่ดู Guess หรือคลิก Guess ในแถบด้านบน",
+  answerLabel: "Answer",
+  typeAnswer: "พิมพ์ Answer ห้าตัวอักษร",
+  solverPlaying: "Solver กำลังเล่น…",
+  bestOpenerHint: "Opener ที่ดีที่สุดของ Strategy นี้ พิมพ์คำอื่นเพื่อเปลี่ยน",
+  useBestOpener: "Opener ที่ดีที่สุด",
+  guessStripLabel: (a) => `Guess สำหรับ ${a}`,
+  jumpToGuess: (n, g) => `Guess ที่ ${n}: ${g}`,
+  prev: "ก่อนหน้า",
+  next: "ถัดไป",
+  prevGuess: "Guess ก่อนหน้า",
+  nextGuess: "Guess ถัดไป",
+  guessOf: (n, total) => `Guess ที่ ${n} จาก ${total}`,
+  rowHeading: (n, g, c) => `Guess ที่ ${n}: ${g.toUpperCase()} บน ${c} Candidate`,
+  winHeading: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} คือ Win`,
+  notSolved: "Solver หา Answer ไม่เจอ",
+  splittingCandidates: "กำลังแบ่ง Candidates…",
   howItWorks: "ดูว่าทำงานอย่างไร",
   watchFrom: (t) => `ดูตั้งแต่ ${t}`,
   openersIntro: "ลองใช้ทุกคำใน Guess List เป็น Opener ให้ Solver เล่นแต่ละ Game จนจบ แล้วนับว่ามี Opener กี่คำที่ได้ Average Guess Count ในแต่ละช่วง",

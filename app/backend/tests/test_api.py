@@ -137,6 +137,39 @@ def test_solve_ranks_the_opener_over_the_whole_guess_pool(client):
     assert all(s["alternatives"][0]["is_candidate"] for s in steps[1:])
 
 
+def test_solve_without_opener_is_the_same_game_as_before(client):
+    plain = client.get("/api/solve", params={"answer": "watch"}).json()
+    best = client.get("/api/solve", params={"answer": "watch", "opener": plain["steps"][0]["guess"]}).json()
+    assert best == plain
+
+
+def test_solve_opener_becomes_guess_one_and_the_game_is_won(client):
+    plain = client.get("/api/solve", params={"answer": "watch"}).json()
+    body = client.get("/api/solve", params={"answer": "watch", "opener": "crane"}).json()
+    assert body["steps"][0]["guess"] == "crane" and body["solved"]
+    assert body["steps"][-1]["marks"] == "22222" and body["steps"][-1]["guess"] == "watch"
+    # Step 1's alternatives are still the Strategy's top Suggestions, not ranked around the Opener.
+    assert body["steps"][0]["alternatives"] == plain["steps"][0]["alternatives"]
+    assert body["steps"][0]["alternatives"][0]["word"] != "crane"
+    assert body["steps"][0]["candidates_before"] == 2315
+    for a, b in zip(body["steps"], body["steps"][1:]):
+        assert a["candidates_after"] == b["candidates_before"]
+
+
+def test_solve_opener_equal_to_the_answer_is_a_one_guess_game(client):
+    body = client.get("/api/solve", params={"answer": "crane", "opener": "CRANE"}).json()
+    assert body["guesses"] == 1 and body["solved"] and body["steps"][0]["marks"] == "22222"
+
+
+def test_solve_opener_must_be_on_the_guess_pool(client):
+    # AAHED is a Guess List word but not an Answer List word, so it is off the Answer List Guess Pool.
+    off_pool = [{"opener": "zzzzz"}, {"opener": "aahed", "pool": "answers"}]
+    for extra in off_pool:
+        response = client.get("/api/solve", params={"answer": "crane", **extra})
+        assert response.status_code == 400 and "Guess Pool" in response.json()["detail"]
+    assert client.get("/api/solve", params={"answer": "crane", "opener": "aahed"}).status_code == 200
+
+
 def test_rank_switches_to_candidates_only_at_two_candidates():
     # The package's Solver.rank does not; the backend's WebSolver does.
     solver = WebSolver.load(DEFAULT_DIR)

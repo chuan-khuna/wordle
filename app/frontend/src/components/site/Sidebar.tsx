@@ -11,14 +11,14 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatNumber } from "@/lib/content/parts";
-import { articleLink, homePath, openerSplitPath, openersPath } from "@/lib/i18n/paths";
+import { articleLink, followPath, homePath, openerSplitPath, openersPath } from "@/lib/i18n/paths";
 
 type Item = { slug: string; title: string; number: number; translated: boolean };
 type Group = { id: string; number: number; title: string; articles: Item[] };
 
 /**
  * The site-wide sidebar: the site title (home) at the top with the language toggle and the theme menu (a palette icon) beside it, then the Articles
- * grouped under their Part titles, then an Explore heading linking to the Opener Distribution and Opener Split pages. A sticky full-height column from `lg`; below that a compact top bar whose button opens
+ * grouped under their Part titles, then an Explore heading linking to the Opener Distribution, Opener Split and Follow an Answer pages. A sticky full-height column from `lg`; below that a compact top bar whose button opens
  * the menu, beside the theme menu button. One markup, so CSS only decides what is shown.
  */
 export function Sidebar({ title, parts, lang = DEFAULT_LANGUAGE, translatedSlugs = [] }: { title: string; parts: Group[]; lang?: Language; translatedSlugs?: string[] }) {
@@ -82,6 +82,7 @@ export function Sidebar({ title, parts, lang = DEFAULT_LANGUAGE, translatedSlugs
             {[
               { href: openersPath(lang), label: text.openerDistribution },
               { href: openerSplitPath(lang), label: text.openerSplit },
+              { href: followPath(lang), label: text.follow },
             ].map(({ href, label }) => (
               <Link
                 key={href}

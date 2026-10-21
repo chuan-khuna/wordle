@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { columnCount, headSize, orderSplitGroups, singleWordGroups } from "@/lib/widgets/split-groups";
+import type { SolveResponse, SplitResponse } from "@/lib/api";
+import solveFixture from "@/lib/widgets/fixtures/solve-watch-crane.json";
+import splitFixture from "@/lib/widgets/fixtures/split-moist-after-crane.json";
+import { answerGroup, columnCount, headSize, orderSplitGroups, singleWordGroups, statesPerRow } from "@/lib/widgets/split-groups";
 
 const group = (code: number, count: number, words: string[] = []) => ({ marks: String(code), code, count, words });
 
@@ -46,4 +49,36 @@ test("singleWordGroups counts the groups of exactly one word", () => {
   expect(singleWordGroups([group(1, 5), group(2, 1), group(3, 1), group(4, 2)])).toBe(2);
   expect(singleWordGroups([group(1, 5)])).toBe(0);
   expect(singleWordGroups([])).toBe(0);
+});
+
+// Recorded from the running backend: `GET /api/solve?answer=watch&opener=crane`, and `POST /api/split` for row 2.
+const solve = solveFixture as unknown as SolveResponse;
+const row2 = splitFixture as unknown as SplitResponse;
+
+test("statesPerRow: row k holds the Guesses before Guess k, with their Feedback", () => {
+  const states = statesPerRow(solve);
+  expect(states).toHaveLength(solve.guesses);
+  expect(states[0]).toEqual([]);
+  expect(states[1]).toEqual([{ guess: "crane", feedback: "10100" }]);
+  expect(states[3]).toEqual([
+    { guess: "crane", feedback: "10100" },
+    { guess: "moist", feedback: "00001" },
+    { guess: "blowy", feedback: "00010" },
+  ]);
+});
+
+test("statesPerRow: a one-Guess Game has one empty State", () => {
+  expect(statesPerRow({ steps: [solve.steps[0]] })).toEqual([[]]);
+});
+
+test("answerGroup finds the group holding the Answer, and its Feedback is the Guess's Feedback", () => {
+  const group = answerGroup(row2, "watch");
+  expect(group?.marks).toBe(solve.steps[1].marks);
+  expect(group?.code).toBe(solve.steps[1].code);
+  expect(group?.words).toContain("watch");
+  expect(group?.count).toBe(solve.steps[1].candidates_after);
+});
+
+test("answerGroup is undefined when no group holds the word", () => {
+  expect(answerGroup(row2, "zzzzz")).toBeUndefined();
 });
