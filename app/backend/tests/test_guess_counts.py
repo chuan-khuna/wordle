@@ -2,7 +2,7 @@ import pytest
 
 from wordle.solver.strategy import STRATEGIES
 
-# The API reads the summary `just precompute-guess-counts` wrote; these tests put a small one of their own in place.
+# The API reads the summary `just precompute guess-counts` wrote; these tests put a small one of their own in place.
 # The summary itself is tested in packages/wordle/tests.
 
 
@@ -95,7 +95,7 @@ def test_missing_summary_is_503_and_the_rest_still_works(client):
     state.guess_counts = None
     try:
         response = client.get("/api/guess-counts")
-        assert response.status_code == 503 and "just precompute-guess-counts" in response.json()["detail"]
+        assert response.status_code == 503 and "just precompute guess-counts" in response.json()["detail"]
         assert client.get("/api/feedback", params={"guess": "crane", "answer": "crane"}).status_code == 200
     finally:
         state.guess_counts = before

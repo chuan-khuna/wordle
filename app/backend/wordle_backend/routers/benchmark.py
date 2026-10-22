@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api")
 def get_openers(request: Request, top: int = 20) -> dict:
     """The Opener leaderboard (precomputed): the best first Guesses by Expected Information."""
     if request.app.state.openers is None:
-        raise NotPrecomputed(f"{OPENERS_FILE} is missing. Run `just precompute-benchmark` first.")
+        raise NotPrecomputed(f"{OPENERS_FILE} is missing. Run `just precompute benchmark` first.")
     openers = request.app.state.openers["openers"]
     return {"total": len(openers), "openers": openers[: check_top(top)]}
 
@@ -21,5 +21,5 @@ def get_openers(request: Request, top: int = 20) -> dict:
 def get_benchmark(request: Request) -> dict:
     """The Guess Distribution and Average Guess Count of each Benchmark Strategy (precomputed)."""
     if request.app.state.benchmark is None:
-        raise NotPrecomputed(f"{BENCHMARK_FILE} is missing. Run `just precompute-benchmark` first.")
+        raise NotPrecomputed(f"{BENCHMARK_FILE} is missing. Run `just precompute benchmark` first.")
     return request.app.state.benchmark

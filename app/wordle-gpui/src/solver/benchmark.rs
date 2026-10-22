@@ -1,5 +1,5 @@
 //! The Benchmark and the Opener leaderboard, the same two files as the Python package's
-//! `wordle/solver/benchmark.py` writes (`just precompute-benchmark`), byte for byte, in the same
+//! `wordle/solver/benchmark.py` writes (`just precompute benchmark`), byte for byte, in the same
 //! folder: `precompute-cache/benchmark/`, which the website's backend reads.
 //!
 //! - `benchmark.json`: for each of the eight Strategies, every Answer played from that Strategy's own

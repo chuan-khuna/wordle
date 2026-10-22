@@ -76,7 +76,7 @@
 <h2 id="overview">1. What's in the repo</h2>
 <p>There are four programs. They share one set of word lists and one folder of precomputed files:</p>
 <div class="cards">
-  <div class="card"><h3>Python package</h3><p><code>packages/wordle/</code>: the game engine, the Solver, the terminal game and every <code>just precompute-*</code> command.</p></div>
+  <div class="card"><h3>Python package</h3><p><code>packages/wordle/</code>: the game engine, the Solver, the terminal game and every <code>just precompute</code> command.</p></div>
   <div class="card"><h3>gpui desktop app</h3><p><code>app/wordle-gpui/</code>: the same game and Solver in Rust, with a window. It also runs the precompute, much faster.</p></div>
   <div class="card"><h3>Web backend</h3><p><code>app/backend/</code>: FastAPI on port 8000. It reuses the Python package and reads <code>precompute-cache/</code>.</p></div>
   <div class="card"><h3>Web frontend</h3><p><code>app/frontend/</code>: Next.js on port 3000. It sends <code>/api</code> calls on to the backend.</p></div>
@@ -91,7 +91,7 @@
     <tr><td><a href="https://git-scm.com">git</a></td><td class="num">any recent</td><td>Cloning the repo</td></tr>
     <tr><td><a href="https://docs.astral.sh/uv/">uv</a></td><td class="num">0.11.27</td><td>Everything in Python: the package, the precompute commands and the backend. It installs the pinned Python 3.14 (<code>.python-version</code>) for you. Never call <code>python</code>, <code>pip</code> or <code>venv</code> directly.</td></tr>
     <tr><td><a href="https://rustup.rs">Rust</a> (cargo)</td><td class="num">1.99.1</td><td>The gpui desktop app, which is the recommended way to precompute (edition 2024, so Rust 1.85 or newer). On macOS the Command Line Tools are enough: gpui compiles its Metal shaders when the app starts, so you don't need the full Xcode.</td></tr>
-    <tr><td><a href="https://just.systems">just</a></td><td class="num">1.46.0</td><td>Running the recipes (<code>just web</code>, <code>just precompute</code>, …). It works on macOS, Linux and Windows (PowerShell).</td></tr>
+    <tr><td><a href="https://just.systems">just</a></td><td class="num">1.46.0</td><td>Running the recipes (<code>just web</code>, <code>just precompute feedback</code>, …). It works on macOS, Linux and Windows (PowerShell).</td></tr>
     <tr><td><a href="https://bun.sh">bun</a></td><td class="num">1.4.0</td><td>The web frontend's packages and dev server</td></tr>
     <tr><td><a href="https://nodejs.org">Node.js / npm</a></td><td class="num">Node 24.15.0, npm 11.12.1</td><td>Optional: only where bun can't do the job</td></tr>
   </tbody>
@@ -107,7 +107,7 @@ cd wordle
 uv sync                          <span class="c"># Python workspace: the wordle package and pytest</span>
 (cd app/frontend &amp;&amp; bun install) <span class="c"># web frontend packages</span>
 just wordle                      <span class="c"># play once in the terminal, to check Python works</span></code></pre>
-<p>The backend is a uv project of its own (<code>app/backend/pyproject.toml</code>). <code>uv run</code> syncs it the first time you run <code>just backend</code> or <code>just web</code>, so it needs no step here. The first <code>cargo</code> build of the desktop app compiles gpui, which takes a few minutes.</p>
+<p>The backend is a uv project of its own (<code>app/backend/pyproject.toml</code>). <code>uv run</code> syncs it the first time you run <code>just web backend</code> or <code>just web</code>, so it needs no step here. The first <code>cargo</code> build of the desktop app compiles gpui, which takes a few minutes.</p>
 
 <h2 id="cache">4. How <code>precompute-cache/</code> is laid out</h2>
 <p>The Solver never works out Feedback while it runs: it looks each one up in matrices that were computed ahead of time. All precomputed data goes in one folder at the repo root, <code>precompute-cache/</code>. Every tool reads and writes the same files there: the Python commands, the gpui app and the backend.</p>
@@ -147,15 +147,15 @@ just wordle                      <span class="c"># play once in the terminal, to
 </table>
 </div>
 <div class="callout">
-  <p><strong>The backup in git.</strong> <code>precompute-cache/</code> is gitignored, but an xz copy of the finished <code>guess-counts/</code> and <code>benchmark/</code> folders is committed in <code>data/precompute/</code> (about 29 MB). <code>just restore-cache</code> unpacks it and <code>just backup-cache</code> refreshes it. <code>feedback/</code> is left out of the backup because it rebuilds in about a second.</p>
+  <p><strong>The backup in git.</strong> <code>precompute-cache/</code> is gitignored, but an xz copy of the finished <code>guess-counts/</code> and <code>benchmark/</code> folders is committed in <code>data/precompute/</code> (about 29 MB). <code>just cache restore</code> unpacks it and <code>just cache backup</code> refreshes it. <code>feedback/</code> is left out of the backup because it rebuilds in about a second.</p>
 </div>
 
 <h2 id="precompute">5. Running the precompute: Python or Rust</h2>
 
 <h3>The quick way: restore, don't recompute</h3>
 <p>You don't need to recompute the Guess Count Matrices on a new machine:</p>
-<pre><code>just precompute --threads 8 --yes  <span class="c"># Feedback matrices, about a second</span>
-just restore-cache --yes           <span class="c"># guess-counts/ and benchmark/ from data/precompute/</span></code></pre>
+<pre><code>just precompute feedback --threads 8 --yes  <span class="c"># Feedback matrices, about a second</span>
+just cache restore --yes                   <span class="c"># guess-counts/ and benchmark/ from data/precompute/</span></code></pre>
 
 <h3>Computing it yourself</h3>
 <p>Python and Rust write the <em>same files, byte for byte</em>. The only difference is the <code>tool</code> field in <code>manifest.json</code>. So you can stop a run in one tool and resume it in the other. What differs is speed:</p>
@@ -163,9 +163,9 @@ just restore-cache --yes           <span class="c"># guess-counts/ and benchmark
 <table>
   <thead><tr><th>Step</th><th>Python (<code>just …</code>)</th><th>Rust (gpui app menu)</th></tr></thead>
   <tbody>
-    <tr><td>Feedback matrices</td><td><code>just precompute</code>: about 1 s</td><td><em>Precompute matrices…</em>: about 1 s</td></tr>
-    <tr><td>Guess Count Matrices, all 8 Strategies</td><td><code>just precompute-guess-counts</code>: <strong>many hours</strong>. The two Guess List, All words Strategies take 5 to 9 s per Opener on one thread, and threads help only about 3× because of the GIL.</td><td><em>Precompute guess counts…</em>: <strong>about half an hour</strong> on 8 threads</td></tr>
-    <tr><td>Benchmark and Opener leaderboard</td><td><code>just precompute-benchmark</code>: about 12 s on 8 threads</td><td><em>Precompute benchmark</em>: under 1 s. It also <strong>runs by itself</strong> when a guess-counts run finishes.</td></tr>
+    <tr><td>Feedback matrices</td><td><code>just precompute feedback</code>: about 1 s</td><td><em>Precompute matrices…</em>: about 1 s</td></tr>
+    <tr><td>Guess Count Matrices, all 8 Strategies</td><td><code>just precompute guess-counts</code>: <strong>many hours</strong>. The two Guess List, All words Strategies take 5 to 9 s per Opener on one thread, and threads help only about 3× because of the GIL.</td><td><em>Precompute guess counts…</em>: <strong>about half an hour</strong> on 8 threads</td></tr>
+    <tr><td>Benchmark and Opener leaderboard</td><td><code>just precompute benchmark</code>: about 12 s on 8 threads</td><td><em>Precompute benchmark</em>: under 1 s. It also <strong>runs by itself</strong> when a guess-counts run finishes.</td></tr>
   </tbody>
 </table>
 </div>
@@ -183,11 +183,11 @@ just restore-cache --yes           <span class="c"># guess-counts/ and benchmark
 
 <h3>The Python commands</h3>
 <p>Each one asks for a thread count, and asks before it overwrites anything. Flags skip the questions:</p>
-<pre><code>just precompute --threads 8 --yes
-just precompute-guess-counts --threads 8 --strategy bits-guesses-all --opener salet  <span class="c"># a quick check</span>
-just precompute-guess-counts --threads 8 --yes      <span class="c"># resume every Strategy (--fresh starts over)</span>
-just precompute-benchmark --threads 8 --yes</code></pre>
-<p>After a full run, use <code>just backup-cache</code> to refresh the committed copy in <code>data/precompute/</code>. It refuses if a matrix is unfinished.</p>
+<pre><code>just precompute feedback --threads 8 --yes
+just precompute guess-counts --threads 8 --strategy bits-guesses-all --opener salet  <span class="c"># a quick check</span>
+just precompute guess-counts --threads 8 --yes  <span class="c"># resume every Strategy (--fresh starts over)</span>
+just precompute benchmark --threads 8 --yes</code></pre>
+<p>After a full run, use <code>just cache backup</code> to refresh the committed copy in <code>data/precompute/</code>. It refuses if a matrix is unfinished.</p>
 
 <h2 id="web">6. Starting the web app</h2>
 <p>First make sure <code>precompute-cache/feedback/</code> exists (step 5); the backend won't start without it. Then:</p>
@@ -195,24 +195,25 @@ just precompute-benchmark --threads 8 --yes</code></pre>
 <p>Open <a href="http://localhost:3000">http://localhost:3000</a>. The frontend rewrites <code>/api/*</code> to the backend, so the browser only ever talks to port 3000.</p>
 <p>Settings live in one <code>.env</code> at the project root: <code>cp .env.example .env</code>. It lists each variable (<code>BACKEND_URL</code> for the frontend, <code>CORS_ORIGINS</code> for the backend); <code>just</code> loads it into every recipe, and a variable set in the shell wins. Without it the defaults apply.</p>
 <p>To run the two separately, for example to restart one or change a port:</p>
-<pre><code>just backend                       <span class="c"># FastAPI on http://127.0.0.1:8000; extra args go to uvicorn, e.g. --reload</span>
-just frontend                      <span class="c"># Next.js dev server on http://localhost:3000; e.g. --port 3001</span>
-BACKEND_URL=http://127.0.0.1:8001 just frontend   <span class="c"># if the backend runs elsewhere</span></code></pre>
+<pre><code>just web backend                  <span class="c"># FastAPI on http://127.0.0.1:8000; extra args go to uvicorn, e.g. --reload</span>
+just web frontend                 <span class="c"># Next.js dev server on http://localhost:3000; e.g. --port 3001</span>
+BACKEND_URL=http://127.0.0.1:8001 just web frontend   <span class="c"># if the backend runs elsewhere</span></code></pre>
 <p>The Benchmark, Opener leaderboard and Opener Distribution pages need <code>benchmark/</code> and <code>guess-counts/summary.json</code>. Without them, the rest of the site still works.</p>
 
 <h2 id="tests">7. Running the tests</h2>
-<pre><code>just test                          <span class="c"># Python package (pytest)</span>
-just test-gpui                     <span class="c"># gpui app (cargo test)</span>
-just test-backend                  <span class="c"># web backend (pytest)</span>
+<pre><code>just test                          <span class="c"># all three below</span>
+just test python                   <span class="c"># Python package (pytest)</span>
+just test gpui                     <span class="c"># gpui app (cargo test)</span>
+just test backend                  <span class="c"># web backend (pytest)</span>
 (cd app/frontend &amp;&amp; bun test &amp;&amp; bun run typecheck)</code></pre>
 <p>Several Rust tests compare the app's output with Python's, byte for byte, whenever the Python files are there: the Feedback matrices, the Guess Count rows and summary, and the Benchmark. To point them at a folder Python wrote, set <code>WORDLE_PYTHON_GUESS_COUNTS</code> or <code>WORDLE_PYTHON_BENCHMARK</code>.</p>
 
 <h2 id="trouble">8. When something goes wrong</h2>
 <ul>
-  <li><strong>The backend says the matrices are missing:</strong> run <code>just precompute</code>.</li>
-  <li><strong>"manifest.json was written by format version 1":</strong> an old Guess Count folder. Run <code>just migrate-guess-counts</code>.</li>
+  <li><strong>The backend says the matrices are missing:</strong> run <code>just precompute feedback</code>.</li>
+  <li><strong>"manifest.json was written by format version 1":</strong> an old Guess Count folder. Run <code>just precompute migrate</code>.</li>
   <li><strong>"Can't resume &lt;id&gt;":</strong> the matrix doesn't match the current word lists or Strategy definitions. Restore it from the backup, or start it over (<code>--fresh</code>, or delete <code>precompute-cache/guess-counts/</code>).</li>
-  <li><strong>Port 3000 or 8000 is already in use:</strong> pass <code>--port</code> to <code>just frontend</code> or <code>just backend</code>, and set <code>BACKEND_URL</code> to match (in <code>.env</code>, or before the command).</li>
+  <li><strong>Port 3000 or 8000 is already in use:</strong> pass <code>--port</code> to <code>just web frontend</code> or <code>just web backend</code>, and set <code>BACKEND_URL</code> to match (in <code>.env</code>, or before the command).</li>
 </ul>
 <p>For how each part is built, start at <a href="INDEX.md">INDEX.md</a>. The terms (Candidate, Guess Pool, Search Scope, Strategy, Opener…) are defined in <a href="../../GLOSSARY.md">GLOSSARY.md</a>.</p>
 

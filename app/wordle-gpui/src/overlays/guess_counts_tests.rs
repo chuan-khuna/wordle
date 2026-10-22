@@ -93,8 +93,8 @@ fn the_end_note_says_where_the_files_went_and_how_long_it_took() {
     assert_eq!(end_note(&built(true), Duration::from_millis(4200), 1), "Stopped guess counts after 4.2s: 14,855 rows kept in precompute-cache/guess-counts/. Run it again to resume");
     let mismatch = Err(BuildError::Mismatch { strategy: "bits-guesses-all", reason: "there is no manifest.json".into() });
     assert_eq!(end_note(&mismatch, Duration::ZERO, 8), "Can't resume bits-guesses-all: there is no manifest.json. Delete precompute-cache/guess-counts/ to start it over");
-    let version_1 = Err(BuildError::Folder("manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`".into()));
-    assert_eq!(end_note(&version_1, Duration::ZERO, 8), "Can't use precompute-cache/guess-counts/: manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`");
+    let version_1 = Err(BuildError::Folder("manifest.json was written by format version 1; migrate it with `just precompute migrate`".into()));
+    assert_eq!(end_note(&version_1, Duration::ZERO, 8), "Can't use precompute-cache/guess-counts/: manifest.json was written by format version 1; migrate it with `just precompute migrate`");
 }
 
 #[test]

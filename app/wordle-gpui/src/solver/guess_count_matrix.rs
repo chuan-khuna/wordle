@@ -11,7 +11,7 @@
 //!   yet. Rows are written in place, whole, once their Opener is fully played.
 //! - `manifest.json`: the word lists (`rows` per Guess Pool, `columns`) and each Strategy's
 //!   definition and path; a matrix with rows is resumed only if it matches. A folder of format
-//!   version 1 (flat `<old id>.npy` files) is refused: `just migrate-guess-counts` turns it into
+//!   version 1 (flat `<old id>.npy` files) is refused: `just precompute migrate` turns it into
 //!   version 2.
 //! - `summary.json` and `<ranking>/<pool>-<scope>.ranking.csv`: every complete Opener of a Strategy's
 //!   rows ranked by Average Guess Count, then Expected Information as a first Guess, then
@@ -39,7 +39,7 @@ pub const MANIFEST_FILE: &str = "manifest.json";
 pub const SUMMARY_FILE: &str = "summary.json";
 pub const FORMAT_VERSION: u64 = 2;
 /// The command that turns a version 1 folder into version 2 (in the Python package).
-pub const MIGRATE_COMMAND: &str = "just migrate-guess-counts";
+pub const MIGRATE_COMMAND: &str = "just precompute migrate";
 /// Who wrote the manifest: the one field that differs from the Python command's.
 pub const TOOL: &str = "wordle-gpui Precompute guess counts (rust)";
 /// How often finished rows are flushed to disk during a run.

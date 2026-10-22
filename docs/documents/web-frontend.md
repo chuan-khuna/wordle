@@ -75,7 +75,7 @@ Versions (current when the app was made, all at least 7 days old): Next 16.4, Re
 
 | Command | What it does |
 | --- | --- |
-| `just frontend` | Dev server on http://localhost:3000 (takes `next dev` options, e.g. `--port 3001`) |
+| `just web frontend` | Dev server on http://localhost:3000 (takes `next dev` options, e.g. `--port 3001`) |
 | `just web` | Backend (port 8000) and frontend (port 3000) together; Ctrl-C stops both |
 | `bun run build` | Production build |
 | `bun run lint` | ESLint |
@@ -84,11 +84,11 @@ Versions (current when the app was made, all at least 7 days old): Next 16.4, Re
 | `bun run shots` | Curated shots of the Explore pages' features in action into `screenshots/shots/<page>/` (git-ignored), against a running site (`just web`): each page's shots are a list in its own file in `scripts/shots/` (`openers.ts`, `opener-split.ts`, `follow.ts`; a shot is a `path`, an optional `act` such as a hover or click, and a `crop` built from the helpers in `lib.ts`), run by `run.ts`. Each crop grows to take in, whole, the text, SVG and images within 64 px of it (a heading above, a legend below; nothing fixed or sticky, nothing taller than 64 px), then gets a 24 px margin, with everything outside the grown box painted the page background so no neighbour shows cut off. Openers: highlighted-word cards, a block's tooltip, a bar's list, the Myths tab, Answer List only, a badge's glossary card. Opener Split: stat card and blocks, the head stats card, Follow this Answer, Bars, Compare, Full screen. Follow: a split row, the Answer's path, a node's head card, a Loss (WATCH under Expected Information, Answer List, Candidates only takes 8 Guesses). Takes page names (`openers follow`), or a page with a query (`"follow?view=path&opener=slate"`) for one shot of exactly that URL (the whole page, or the window when Full screen covers it); `--theme <id|all>`, `--mobile`, `--width`/`--height`, `--url`, `--out` |
 | `bun test` | Unit tests (`src/lib/**/*.test.ts`, next to each module); the cross-check against `/api/feedback` runs when the backend is up |
 
-Run `just precompute` and `just precompute-benchmark` once first: the backend will not start without the matrices, and answers 503 for the Benchmark and Openers without their files.
+Run `just precompute feedback` and `just precompute benchmark` once first: the backend will not start without the matrices, and answers 503 for the Benchmark and Openers without their files.
 
 ## The API proxy
 
-`next.config.ts` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`, so the browser only talks to Next and no CORS is needed. `BACKEND_URL` is read when the server starts and defaults to `http://127.0.0.1:8000`; set it to point at another backend (`BACKEND_URL=http://backend:8000 just frontend`, or in the project's one `.env` at the root: copy `.env.example`; `just` loads it into every recipe and `next.config.ts` reads it too, so `bun run dev` alone sees it; a variable set in the shell wins). Try it: `curl 'http://localhost:3000/api/feedback?guess=crane&answer=speed'`.
+`next.config.ts` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`, so the browser only talks to Next and no CORS is needed. `BACKEND_URL` is read when the server starts and defaults to `http://127.0.0.1:8000`; set it to point at another backend (`BACKEND_URL=http://backend:8000 just web frontend`, or in the project's one `.env` at the root: copy `.env.example`; `just` loads it into every recipe and `next.config.ts` reads it too, so `bun run dev` alone sees it; a variable set in the shell wins). Try it: `curl 'http://localhost:3000/api/feedback?guess=crane&answer=speed'`.
 
 ## Themes
 
@@ -419,7 +419,7 @@ The Strategy is chosen with `StrategyPicker` (see Opener Distribution); each cho
 
 ### Opener table and Benchmark chart (Widgets 5 and 6)
 
-Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api/benchmark`); a 503 from a backend that was not precomputed shows its message (including "Run `just precompute-benchmark` first.") as the error.
+Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api/benchmark`); a 503 from a backend that was not precomputed shows its message (including "Run `just precompute benchmark` first.") as the error.
 
 **Opener table** (`OpenerTable`). Props: `top` (default 20, 1 to 500), `highlight` (comma separated words, e.g. `"crane,slate"`), `id`. URL params `top`, `highlight` (`op.top` with `id="op"`) override the props. A table of rank, Opener, bits, Expected Candidates, groups, largest group and Candidate?. Every heading is a button that sorts by that column (click again to reverse; `aria-sort` is set). Highlighted words are emphasised and listed even when they rank below `top`; when `highlight` is set the Widget fetches all 500 rows. The table scrolls horizontally inside its card at phone width. A "Rows to show" input edits `top`.
 
@@ -427,7 +427,7 @@ Both load their data once with the `useLoad` hook (`GET /api/openers`, `GET /api
 
 ### Opener Distribution (Widget 7)
 
-`OpenerDistribution` (`components/widgets/OpenerDistribution.tsx`) charts the [Guess Count Matrix](guess-count-matrix.md) for one Strategy: how many Openers have each Average Guess Count, rounded to two decimals. It loads `GET /api/guess-counts?strategy=<id>` once per Strategy with `useLoad`; a 503 shows the API's message (it says to run `just precompute-guess-counts` or `just restore-cache`). When `complete_rows` is below `total_rows` it charts what there is and says "N of 14,855 Openers played" (2,315 for an Answer List Strategy: `total_rows` is the size of its Guess Pool). It is registered in `mdx-components.tsx`, so Articles can embed it.
+`OpenerDistribution` (`components/widgets/OpenerDistribution.tsx`) charts the [Guess Count Matrix](guess-count-matrix.md) for one Strategy: how many Openers have each Average Guess Count, rounded to two decimals. It loads `GET /api/guess-counts?strategy=<id>` once per Strategy with `useLoad`; a 503 shows the API's message (it says to run `just precompute guess-counts` or `just cache restore`). When `complete_rows` is below `total_rows` it charts what there is and says "N of 14,855 Openers played" (2,315 for an Answer List Strategy: `total_rows` is the size of its Guess Pool). It is registered in `mdx-components.tsx`, so Articles can embed it.
 
 **Props and URL params** (all overridden by the URL param of the same name, `od.strategy` with `id="od"`): `strategy` (one of the eight ids, default `bits-guesses-all`; an id the API does not know, an old version 1 id such as `bits-all` included, shows its 400 message), `answersOnly` (chart only Answer List Openers, default false; URL value `true`), `highlight` (a comma separated word list, the one field for highlighting and searching; non-five-letter words are ignored, and there is no `find`), `controls` (default true; false hides every control and leaves the props and URL params in force, the stat cards and the bar list stay), `tabs` (default false; URL value `true`, see Highlight tabs), `id`.
 

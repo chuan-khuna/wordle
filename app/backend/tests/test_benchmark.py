@@ -8,7 +8,7 @@ from wordle.solver.strategy import STRATEGIES
 
 SUBSET = list(load_word_lists().answers[::200])  # 12 Answers
 
-# The API reads the files `just precompute-benchmark` wrote; these tests put small ones of their own in place.
+# The API reads the files `just precompute benchmark` wrote; these tests put small ones of their own in place.
 # The Benchmark itself is tested in packages/wordle/tests/test_benchmark.py.
 
 
@@ -56,7 +56,7 @@ def test_missing_files_are_503_and_the_rest_still_works(client):
     try:
         for url in ("/api/benchmark", "/api/openers"):
             response = client.get(url)
-            assert response.status_code == 503 and "just precompute-benchmark" in response.json()["detail"]
+            assert response.status_code == 503 and "just precompute benchmark" in response.json()["detail"]
         assert client.get("/api/feedback", params={"guess": "crane", "answer": "crane"}).status_code == 200
     finally:
         state.benchmark, state.openers = before

@@ -1,4 +1,4 @@
-"""`just precompute`, `just precompute-guess-counts`, `just migrate-guess-counts` and `just precompute-benchmark`: ask a few questions, then act."""
+"""`just precompute feedback`, `just precompute guess-counts`, `just precompute migrate` and `just precompute benchmark`: ask a few questions, then act."""
 
 import argparse
 import json
@@ -68,7 +68,7 @@ def precompute_matrix() -> None:
     print(f"Done in {elapsed:.1f}s with {threads} thread{'s' if threads > 1 else ''}.")
 
 
-TOP = 5  # Openers shown per Strategy at the end of `just precompute-guess-counts`
+TOP = 5  # Openers shown per Strategy at the end of `just precompute guess-counts`
 
 
 def precompute_guess_counts() -> None:

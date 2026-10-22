@@ -8,7 +8,7 @@ Ticket 04 stores each Guess Count Matrix as a `.npy` file. Before resume (ticket
 
 | Who | Reads | Writes | Needs |
 |---|---|---|---|
-| Python command (`just precompute-guess-counts`) | the matrix | rows in place, from several threads | resume from unfinished rows |
+| Python command (`just precompute guess-counts`) | the matrix | rows in place, from several threads | resume from unfinished rows |
 | gpui app (Precompute guess counts…) | the matrix (to resume) | rows in place, from several threads | no heavy dependencies; the crate writes `.npy` by hand today |
 | gpui Solver panel | `summary.json` only | none | nothing |
 | Website / static build | `summary.json` only (ticket 08) | none | small download |

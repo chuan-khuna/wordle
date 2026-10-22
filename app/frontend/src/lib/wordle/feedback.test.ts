@@ -40,7 +40,7 @@ describe("state format", () => {
   });
 });
 
-// Cross-check against the running backend (skipped when it is not up): `just backend`.
+// Cross-check against the running backend (skipped when it is not up): `just web backend`.
 const API = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 const up = await fetch(`${API}/api/feedback?guess=crane&answer=crane`).then((r) => r.ok, () => false);
 

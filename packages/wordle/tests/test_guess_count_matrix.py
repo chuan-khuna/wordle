@@ -273,7 +273,7 @@ def write_version_1_folder(tmp_path, solver):
 def test_a_version_1_folder_is_a_mismatch(solver, tmp_path):
     before = write_version_1_folder(tmp_path, solver)
     for reason in (folder_mismatch(tmp_path), mismatch(tmp_path, HOW, solver)):
-        assert "format version 1" in reason and "just migrate-guess-counts" in reason
+        assert "format version 1" in reason and "just precompute migrate" in reason
     with pytest.raises(ManifestMismatch, match="migrate"):
         build(tmp_path, (HOW,), ["salet"], solver)
     assert {path.name: path.read_bytes() for path in (tmp_path / "guess-counts").iterdir()} == before  # nothing was written
@@ -283,7 +283,7 @@ def test_a_version_1_folder_is_a_mismatch(solver, tmp_path):
 
 def test_the_command_refuses_a_version_1_folder(monkeypatch, solver, tmp_path):
     write_version_1_folder(tmp_path, solver)
-    with pytest.raises(SystemExit, match="just migrate-guess-counts"):
+    with pytest.raises(SystemExit, match="just precompute migrate"):
         run_command(monkeypatch, solver, tmp_path, "--yes")
 
 

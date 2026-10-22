@@ -16,13 +16,13 @@ def get_guess_counts(request: Request, strategy: str = DEFAULT_STRATEGY) -> dict
     """The Openers with a finished row, best first: Average Guess Count, Losses and whether each is an Answer (precomputed)."""
     summary = request.app.state.guess_counts
     if summary is None:
-        raise NotPrecomputed(f"{SUBDIR}/{SUMMARY_FILE} is missing. Run `just precompute-guess-counts` (or `just restore-cache`) first.")
+        raise NotPrecomputed(f"{SUBDIR}/{SUMMARY_FILE} is missing. Run `just precompute guess-counts` (or `just cache restore`) first.")
     how = next((how for how in STRATEGIES if how.id == strategy), None)
     if how is None:
         raise BadRequest(f"strategy {strategy!r} must be one of {', '.join(how.id for how in STRATEGIES)}")
     entry = summary.get(strategy)
     if entry is None:
-        raise NotPrecomputed(f"{strategy} is not in {SUBDIR}/{SUMMARY_FILE}. Run `just precompute-guess-counts` first.")
+        raise NotPrecomputed(f"{strategy} is not in {SUBDIR}/{SUMMARY_FILE}. Run `just precompute guess-counts` first.")
     return {
         "strategy": {"id": entry["id"], "name": entry["name"]},
         "complete_rows": entry["complete_rows"],

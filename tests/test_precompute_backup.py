@@ -1,4 +1,4 @@
-"""Tests for `src/precompute_backup.py` (`just backup-cache` and `just restore-cache`), on small temporary folders."""
+"""Tests for `src/precompute_backup.py` (`just cache backup` and `just cache restore`), on small temporary folders."""
 
 import argparse
 import importlib.util

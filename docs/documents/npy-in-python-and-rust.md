@@ -18,7 +18,7 @@ Both tools share the folders, so either reads and resumes what the other wrote (
 
 ```sh
 uv run python -c 'from pathlib import Path; from wordle.solver import guess_count_matrix as g; g.build(Path("/tmp/py"), openers=["salet", "crane", "aback", "zonal"], threads=4)'
-WORDLE_PYTHON_GUESS_COUNTS=/tmp/py/guess-counts just test-gpui
+WORDLE_PYTHON_GUESS_COUNTS=/tmp/py/guess-counts just test gpui
 ```
 
 ## One file, byte by byte
@@ -133,7 +133,7 @@ What the gpui app's writer (gpui ticket 02, moved to version 2 by eight-strategi
 - **Layout (format version 2):** one file per Strategy at `guess-counts/<ranking>/<pool>-<scope>.npy` (the Strategy's `path`; the `global` Search Scope is written `all`), with one row per word of its Guess Pool.
 - **`.npy`:** the header from `npy_bytes(rows, 2315, …)` with 2,315 rows for an Answer List Strategy and 14,855 for a Guess List one, cells `u8`, rows and columns as above. Create the file full of zeros at full size, and write a finished row at offset `128 + row × 2315`, zeroing it first if it held values. A row is finished when none of its cells is 0.
 - **Cell values:** the Guess Count of the Game played with no Guess Limit, 13 when the safety limit of 12 Guesses is hit. Never 0.
-- **`manifest.json`:** compact JSON (`separators=(",", ":")`) plus a newline, with keys `format_version` (2), `tool`, `safety_limit` (12), `strategies` (`id → {name, pool, scope, ranked_by, path}`), `rows` (`{"answers": [...], "guesses": [...]}`, each sorted), `columns`. Write it to a temporary file and rename it over the old one. A manifest with `format_version` 1 is a mismatch whose reason points at `just migrate-guess-counts` (in Rust `folder_mismatch`, which stops `build` with `BuildError::Folder` before anything is written); it is never read as version 2. Only `tool` differs between writers (`wordle precompute-guess-counts (python)` or `wordle-gpui Precompute guess counts (rust)`).
+- **`manifest.json`:** compact JSON (`separators=(",", ":")`) plus a newline, with keys `format_version` (2), `tool`, `safety_limit` (12), `strategies` (`id → {name, pool, scope, ranked_by, path}`), `rows` (`{"answers": [...], "guesses": [...]}`, each sorted), `columns`. Write it to a temporary file and rename it over the old one. A manifest with `format_version` 1 is a mismatch whose reason points at `just precompute migrate` (in Rust `folder_mismatch`, which stops `build` with `BuildError::Folder` before anything is written); it is never read as version 2. Only `tool` differs between writers (`wordle precompute-guess-counts (python)` or `wordle-gpui Precompute guess counts (rust)`).
 - **`summary.json` and `<ranking>/<pool>-<scope>.ranking.csv`:** written from the matrices, each Strategy's Openers from its own rows only. Two Python details a port would otherwise miss: the CSV's `is_answer` column is `True`/`False` (Python's `str(bool)`), and floats are Python's shortest round-trip `repr` (`3.52829373650108`). `serde_json` prints the same, and so does Rust's `{}` except for whole numbers (`3` where Python writes `3.0`); the gpui app uses `serde_json` for both files. A third: `bits` must be summed in numpy's pairwise order (blocks of up to 128 values in eight running sums), not left to right, or about half the values differ in the last digit; `strategy::numpy_sum` does this.
 
 ## Checking it yourself
@@ -141,5 +141,5 @@ What the gpui app's writer (gpui ticket 02, moved to version 2 by eight-strategi
 ```sh
 xxd -l 128 precompute-cache/feedback/guesses_vs_answers.npy           # the header
 od -A d -t u1 -j 128 -N 16 precompute-cache/guess-counts/bits/guesses-candidates.npy   # the first cells of row 0
-just test && just test-gpui                                           # the guards above
+just test python && just test gpui                                    # the guards above
 ```

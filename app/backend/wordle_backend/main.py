@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     if missing:
         raise RuntimeError(
             f"Feedback matrices missing in {DEFAULT_DIR} ({', '.join(missing)}). "
-            "Run `just precompute` first."
+            "Run `just precompute feedback` first."
         )
     app.state.solver = WebSolver.load(DEFAULT_DIR)
     # The Benchmark files are optional: without them only those two endpoints answer 503.

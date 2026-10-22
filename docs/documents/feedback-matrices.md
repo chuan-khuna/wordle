@@ -111,7 +111,7 @@ The matrices are dense and have no column names, so a table format (CSV, Parquet
 
 ## Generating
 
-`just precompute` (or `uv run src/precompute.py`) asks how many threads to use (1, 2, 4 or 8; about 4.4 s with one, 1.2 s with eight) and whether to overwrite existing files, then writes both files to `precompute-cache/feedback/` at the repo root, which is gitignored (`precompute-cache/` holds every precomputed file, shared by the package, the backend and the gpui app). `--threads N`, `--out DIR` and `--yes` skip the questions. `matrix.load()` builds them if they are missing. The vectorised scoring follows the same two-pass rule as [feedback-scoring.md](feedback-scoring.md); `packages/wordle/tests/test_matrix.py` checks it against `wordle.engine.feedback.feedback`.
+`just precompute feedback` (or `uv run src/precompute.py`) asks how many threads to use (1, 2, 4 or 8; about 4.4 s with one, 1.2 s with eight) and whether to overwrite existing files, then writes both files to `precompute-cache/feedback/` at the repo root, which is gitignored (`precompute-cache/` holds every precomputed file, shared by the package, the backend and the gpui app). `--threads N`, `--out DIR` and `--yes` skip the questions. `matrix.load()` builds them if they are missing. The vectorised scoring follows the same two-pass rule as [feedback-scoring.md](feedback-scoring.md); `packages/wordle/tests/test_matrix.py` checks it against `wordle.engine.feedback.feedback`.
 
 ## The gpui app builds them too
 
@@ -119,4 +119,4 @@ The Rust app writes the same files from its command palette (**Precompute matric
 
 ## The web backend builds them too
 
-`app/backend/` reads the files `just precompute` writes in `precompute-cache/feedback/`; it does not build them. See [web-backend.md](web-backend.md).
+`app/backend/` reads the files `just precompute feedback` writes in `precompute-cache/feedback/`; it does not build them. See [web-backend.md](web-backend.md).

@@ -343,7 +343,7 @@ fn a_version_1_folder_is_refused_before_anything_is_written() {
     let dir = temp_dir("version-1");
     write_version_1_folder(&dir);
     let before = files(&dir);
-    let reason = "manifest.json was written by format version 1; migrate it with `just migrate-guess-counts`";
+    let reason = "manifest.json was written by format version 1; migrate it with `just precompute migrate`";
     assert_eq!(folder_mismatch(&dir).as_deref(), Some(reason));
     assert_eq!(mismatch(&dir, strategy("bits-answers-all"), feedback()).as_deref(), Some(reason));
     // Even a Strategy with no rows yet: the version 1 manifest must not be overwritten before it is migrated.

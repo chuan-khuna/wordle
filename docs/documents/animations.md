@@ -20,10 +20,10 @@ src/animations/
 ## Running
 
 ```sh
-just animation-inspect what_is_wordle         # storyboard PNGs and layout problems, no video
-just animation-inspect what_is_wordle -t 47   # the frame at 47 s
-just animation-present what_is_wordle         # render and open as slides in the browser
-just animation-present what_is_wordle --pdf   # also a PDF, one page per slide
+just animate inspect what_is_wordle         # storyboard PNGs and layout problems, no video
+just animate inspect what_is_wordle -t 47   # the frame at 47 s
+just animate present what_is_wordle         # render and open as slides in the browser
+just animate present what_is_wordle --pdf   # also a PDF, one page per slide
 ```
 
 Both recipes write to `build/animations/<name>/`, which is gitignored. `animation-present` writes `<name>.mp4` and `<name>.html`. The HTML page plays the video and stops at the end of each section. Keys: → or Space for the next slide, ← to go back, F for full screen, Shift+P for the presenter view (with each slide's notes). The page and the video must stay side by side.

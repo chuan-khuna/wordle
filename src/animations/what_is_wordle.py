@@ -1,4 +1,4 @@
-"""What is Wordle? A slide-by-slide animation of the rules, for `just animation-present what_is_wordle`.
+"""What is Wordle? A slide-by-slide animation of the rules, for `just animate present what_is_wordle`.
 
 Each `next_section` is a slide: `manimgx present` stops at its end until the presenter
 goes on. The Feedback on every Tile comes from the game's own `feedback`, so the

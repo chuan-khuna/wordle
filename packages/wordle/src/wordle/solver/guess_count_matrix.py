@@ -21,7 +21,7 @@ written before any row. A matrix with rows is resumed only if the manifest match
 the current word lists and Strategy; otherwise `build` raises `ManifestMismatch`
 and the caller starts over with `fresh=True`. A folder written by format version 1
 (flat `<strategy id>.npy` files, every matrix 14,855 rows) is a mismatch too, to
-migrate with `just migrate-guess-counts` rather than read as version 2.
+migrate with `just precompute migrate` rather than read as version 2.
 
 `summary.json` ranks, for each Strategy, every Opener whose row is complete by
 its Average Guess Count over all Answers, then by Expected Information as a first
@@ -50,7 +50,7 @@ SUBDIR = "guess-counts"
 SUMMARY_FILE = "summary.json"
 MANIFEST_FILE = "manifest.json"
 FORMAT_VERSION = 2
-MIGRATE_COMMAND = "just migrate-guess-counts"  # turns a version 1 folder into version 2
+MIGRATE_COMMAND = "just precompute migrate"  # turns a version 1 folder into version 2
 TOOL = "wordle precompute-guess-counts (python)"
 FLUSH_SECONDS = 10  # how often finished rows are flushed to disk during a run
 RANKING_COLUMNS = (

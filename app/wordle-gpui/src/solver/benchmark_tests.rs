@@ -69,7 +69,7 @@ fn the_leaderboard_is_ranked_by_bits() {
 }
 
 /// The Python command's folder to compare with: `WORDLE_PYTHON_BENCHMARK` if set, or else
-/// `precompute-cache/benchmark/`, if both files are there (`just precompute-benchmark` writes them).
+/// `precompute-cache/benchmark/`, if both files are there (`just precompute benchmark` writes them).
 fn python_reference() -> Option<PathBuf> {
     let dir = std::env::var_os("WORDLE_PYTHON_BENCHMARK").map_or_else(default_dir, PathBuf::from);
     (dir.join(BENCHMARK_FILE).exists() && dir.join(OPENERS_FILE).exists()).then_some(dir)
@@ -78,7 +78,7 @@ fn python_reference() -> Option<PathBuf> {
 #[test]
 fn the_files_equal_the_python_commands_files() {
     let Some(reference) = python_reference() else {
-        eprintln!("skipped: no benchmark written by `just precompute-benchmark`");
+        eprintln!("skipped: no benchmark written by `just precompute benchmark`");
         return;
     };
     let dir = temp_dir("python");

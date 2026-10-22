@@ -1,10 +1,10 @@
-"""`just backup-cache` and `just restore-cache`: keep the slow precomputed files in git, xz-compressed.
+"""`just cache backup` and `just cache restore`: keep the slow precomputed files in git, xz-compressed.
 
 `precompute-cache/` is gitignored and is where every tool reads and writes. `backup` compresses each of its
 folders (except the Feedback matrices, which take about a second to build again) into `data/precompute/`, one
 `<file>.xz` per file, subfolders kept (`guess-counts/bits/<file>.xz`), so the folder can be committed. `restore`
 puts them back into `precompute-cache/`. A backup of a version 1 Guess Count Matrix folder (flat files) restores
-as it was; `just migrate-guess-counts` then turns it into version 2.
+as it was; `just precompute migrate` then turns it into version 2.
 """
 
 import argparse
@@ -19,7 +19,7 @@ import questionary
 ROOT = Path(__file__).resolve().parent.parent
 CACHE_DIR = ROOT / "precompute-cache"
 BACKUP_DIR = ROOT / "data" / "precompute"
-SKIPPED = ("feedback",)  # Feedback matrices: `just precompute` rebuilds them in about a second
+SKIPPED = ("feedback",)  # Feedback matrices: `just precompute feedback` rebuilds them in about a second
 SUFFIX = ".xz"
 PRESET = 6  # xz's default; 9 made the Guess Count Matrices only about 3% smaller
 
@@ -109,7 +109,7 @@ def restore(args: argparse.Namespace) -> None:
             with lzma.open(packed, "rb") as raw, file.open("wb") as out:
                 shutil.copyfileobj(raw, out)
             print(f"{file.relative_to(ROOT)} ({size(file)})")
-    print("Done. The Feedback matrices are not backed up: run `just precompute` (or the gpui app's Precompute matrices…).")
+    print("Done. The Feedback matrices are not backed up: run `just precompute feedback` (or the gpui app's Precompute matrices…).")
 
 
 def main() -> None:
