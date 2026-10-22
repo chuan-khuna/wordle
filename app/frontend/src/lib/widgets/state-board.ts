@@ -1,5 +1,5 @@
 /**
- * The pure logic of the State input (components/widgets/StateBoard.tsx), after the gpui app's Solver mode
+ * The pure logic of the State input (components/widgets/_components/StateBoard.tsx), after the gpui app's Solver mode
  * (app/wordle-gpui/src/solver/assist.rs): rows of Guesses whose Marks are clicked in, and a Guess being typed.
  * Whether a typed word is on the Guess List is checked by the caller (the API); `enterGuess` only adds it.
  */

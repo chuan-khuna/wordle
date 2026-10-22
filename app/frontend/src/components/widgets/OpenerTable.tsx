@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field } from "@/components/controls/Field";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { WidgetFrame } from "./ui";
-import { useLoad } from "./useLoad";
-import { useWidgetParam } from "./useWidgetParam";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { useLoad } from "./_components/useLoad";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 type SortKey = "rank" | "word" | "bits" | "expected_candidates" | "groups" | "largest_group" | "is_candidate";
 
@@ -48,7 +49,7 @@ export function parseHighlight(text: string): Set<string> {
  */
 export function OpenerTable(props: { top?: number; highlight?: string; id?: string }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Opener table">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.OpenerTable}>Loading…</WidgetFrame>}>
       <OpenerRows {...props} />
     </Suspense>
   );
@@ -79,7 +80,7 @@ function OpenerRows({ top: topProp = 20, highlight: highlightProp = "", id }: { 
   }, [data, top, marked, sort]);
 
   return (
-    <WidgetFrame title="Opener table">
+    <WidgetFrame title={WIDGET_TITLES.OpenerTable}>
       <Field label="Rows to show" htmlFor={`${uid}-top`} className="max-w-40">
         <Input
           id={`${uid}-top`}

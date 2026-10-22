@@ -14,13 +14,13 @@ import { formatLeft } from "@/lib/widgets/split-chart";
 import { betterFigures, guessIsCandidate, singleWordGroups } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { cn } from "@/lib/utils";
-import { FitOverlay, useLg } from "./FitOverlay";
-import { SplitBars } from "./SplitBars";
-import { SplitGroups } from "./SplitGroups";
-import { WordListBadge } from "./WordListBadge";
-import { WordRow, cleanWord } from "./WordRow";
-import { useGuessCheck } from "./useGuessCheck";
-import { useParamInitial, useParamSync, useWidgetParam } from "./useWidgetParam";
+import { FitOverlay, useLg } from "./_components/FitOverlay";
+import { SplitBars } from "./_components/SplitBars";
+import { SplitGroups } from "./_components/SplitGroups";
+import { WordListBadge } from "./_components/WordListBadge";
+import { WordRow, cleanWord } from "./_components/WordRow";
+import { useGuessCheck } from "./_components/useGuessCheck";
+import { useParamInitial, useParamSync, useWidgetParam } from "./_components/useWidgetParam";
 
 const DEFAULT_OPENER = "salet";
 

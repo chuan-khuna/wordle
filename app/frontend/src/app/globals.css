@@ -255,9 +255,15 @@ body {
   clear: right;
 }
 
-/* An Article heading reached from the Table of contents stops a little below the top of the window. */
-.article-body :is(h2, h3)[id] {
+/* An Article heading or Widget reached from the Table of contents stops a little below the top of the window. The
+   Widget's anchor (rehype-toc-anchors.mjs) is an empty block right before it, below any Margin note, as the Widget is. */
+.article-body :is(h2, h3)[id],
+.widget-anchor {
   scroll-margin-top: 2rem;
+}
+.widget-anchor {
+  display: block;
+  clear: right;
 }
 
 /* Table of contents. Hidden until the window has room for it, the gap and the Article with its margin, so it

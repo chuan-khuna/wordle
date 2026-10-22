@@ -6,11 +6,12 @@ import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
 import { POOLS, RANKS, SCOPES } from "@/lib/wordle/strategies";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { StrategyPicker } from "./StrategyPicker";
-import { Tile } from "./Tile";
-import { WidgetFrame } from "./ui";
-import { WordRow, cleanWord } from "./WordRow";
-import { useWidgetParam } from "./useWidgetParam";
+import { StrategyPicker } from "./_components/StrategyPicker";
+import { Tile } from "./_components/Tile";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { WordRow, cleanWord } from "./_components/WordRow";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 type Result = { key: string; data: SolveResponse | null; error: string | null };
 
@@ -34,7 +35,7 @@ export function StepThroughGame(props: {
   id?: string;
 }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Step-through Game">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.StepThroughGame}>Loading…</WidgetFrame>}>
       <Game {...props} />
     </Suspense>
   );
@@ -101,7 +102,7 @@ function Game({ answer: answerProp = "", pool: poolProp = "guesses", scope: scop
   };
 
   return (
-    <WidgetFrame title="Step-through Game">
+    <WidgetFrame title={WIDGET_TITLES.StepThroughGame}>
       <div onKeyDown={onKeyDown}>
         {/* The Answer's five tiles need their own line: in a quarter-width cell they ran under the first option. */}
         <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={current?.error} />

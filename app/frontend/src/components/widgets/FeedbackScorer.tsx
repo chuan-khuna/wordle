@@ -3,11 +3,12 @@
 import { Suspense, useEffect, useId, useState } from "react";
 import { getFeedback } from "@/lib/api";
 import { MARK_NAMES, WORD_LENGTH, marksToString, traceFeedback } from "@/lib/wordle/feedback";
-import { Tile } from "./Tile";
-import { WidgetFrame } from "./ui";
-import { WordRow, cleanWord } from "./WordRow";
-import { useGuessCheck } from "./useGuessCheck";
-import { useWidgetParam } from "./useWidgetParam";
+import { Tile } from "./_components/Tile";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { WordRow, cleanWord } from "./_components/WordRow";
+import { useGuessCheck } from "./_components/useGuessCheck";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 type Check = { key: string; error: string | null; marks: string | null };
 
@@ -19,7 +20,7 @@ type Check = { key: string; error: string | null; marks: string | null };
  */
 export function FeedbackScorer(props: { guess?: string; answer?: string; id?: string }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Feedback scorer">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.FeedbackScorer}>Loading…</WidgetFrame>}>
       <Scorer {...props} />
     </Suspense>
   );
@@ -62,7 +63,7 @@ function Scorer({ guess: guessProp = "", answer: answerProp = "", id }: { guess?
   const localMarks = trace ? marksToString(trace.marks) : null;
 
   return (
-    <WidgetFrame title="Feedback scorer">
+    <WidgetFrame title={WIDGET_TITLES.FeedbackScorer}>
       <div className="grid gap-3 sm:grid-cols-2">
         <WordRow id={`${uid}-g`} label="Guess" value={g} onChange={setGuess} error={guessCheck.error} />
         <WordRow id={`${uid}-a`} label="Answer" value={a} onChange={setAnswer} error={answerCheck.error} />

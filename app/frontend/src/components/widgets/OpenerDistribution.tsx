@@ -16,11 +16,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { parseHighlight } from "./OpenerTable";
-import { StrategyPicker } from "./StrategyPicker";
-import { WidgetFrame } from "./ui";
-import { WordListBadge } from "./WordListBadge";
-import { useLoad } from "./useLoad";
-import { useWidgetParam } from "./useWidgetParam";
+import { StrategyPicker } from "./_components/StrategyPicker";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { WordListBadge } from "./_components/WordListBadge";
+import { useLoad } from "./_components/useLoad";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 
 // Chart geometry in SVG user units. Each bar is at least BAR_WIDTH wide, so a phone scrolls the frame sideways.
@@ -71,7 +72,7 @@ interface Props {
  */
 export function OpenerDistribution(props: Props) {
   return (
-    <Suspense fallback={<WidgetFrame title="Opener Distribution">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.OpenerDistribution}>Loading…</WidgetFrame>}>
       <Distribution {...props} />
     </Suspense>
   );
@@ -106,7 +107,7 @@ function Distribution({
   const { data, error, loading } = useLoad(`guess-counts:${strategy}`, (signal) => getGuessCounts(strategy, signal));
 
   return (
-    <WidgetFrame title="Opener Distribution" hideTitle={hideTitle}>
+    <WidgetFrame title={WIDGET_TITLES.OpenerDistribution} hideTitle={hideTitle}>
       {controls && (
         <div className="mb-3 grid gap-3">
           <StrategyPicker value={picked} onChange={(next) => setStrategy(strategyFor(next.by, next.pool, next.scope).id)} />

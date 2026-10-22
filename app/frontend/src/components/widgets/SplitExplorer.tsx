@@ -5,12 +5,13 @@ import { type SplitResponse, postSplit } from "@/lib/api";
 import { WORD_LENGTH } from "@/lib/wordle/feedback";
 import { rowsFromState } from "@/lib/widgets/state-board";
 import { formatState } from "@/lib/widgets/widget-state";
-import { SplitBars } from "./SplitBars";
-import { StateBoard } from "./StateBoard";
-import { WidgetFrame } from "./ui";
-import { WordRow, cleanWord } from "./WordRow";
-import { useGuessCheck } from "./useGuessCheck";
-import { useWidgetParam } from "./useWidgetParam";
+import { SplitBars } from "./_components/SplitBars";
+import { StateBoard } from "./_components/StateBoard";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { WordRow, cleanWord } from "./_components/WordRow";
+import { useGuessCheck } from "./_components/useGuessCheck";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 type Result = { key: string; data: SplitResponse | null; error: string | null };
 
@@ -23,7 +24,7 @@ type Result = { key: string; data: SplitResponse | null; error: string | null };
  */
 export function SplitExplorer(props: { guess?: string; state?: string; id?: string }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Feedback Split explorer">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.SplitExplorer}>Loading…</WidgetFrame>}>
       <Explorer {...props} />
     </Suspense>
   );
@@ -67,7 +68,7 @@ function Explorer({ guess: guessProp = "", state: stateProp = "", id }: { guess?
   const data = current?.data ?? null;
 
   return (
-    <WidgetFrame title="Feedback Split explorer">
+    <WidgetFrame title={WIDGET_TITLES.SplitExplorer}>
       <div className="grid gap-x-8 gap-y-5 sm:grid-cols-[auto_1fr]">
         <WordRow id={`${uid}-g`} label="Guess" value={g} onChange={setGuess} error={check.error} />
         <div>

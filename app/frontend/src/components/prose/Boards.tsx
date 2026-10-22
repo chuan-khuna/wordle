@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { scoreFeedback, WORD_LENGTH } from "@/lib/wordle/feedback";
 import { guessList } from "@/lib/wordle/words";
-import { Tile } from "../widgets/Tile";
-import { WidgetFrame } from "../widgets/ui";
+import { Tile } from "../widgets/_components/Tile";
+import { WidgetFrame } from "../widgets/_components/ui";
 import { Word } from "./Word";
 
 // Six Guesses, as in the game (wordle.engine.game.MAX_GUESSES). A board marks where they run out.

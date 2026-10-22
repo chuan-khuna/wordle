@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { EnTag } from "@/components/site/EnTag";
 import { TableOfContents } from "@/components/site/TableOfContents";
 import { content } from "@/lib/content/content";
-import { articleHeadings } from "@/lib/content/headings";
+import { articleToc } from "@/lib/content/toc";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatNumber } from "@/lib/content/parts";
@@ -30,13 +30,13 @@ export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: str
   const next = articles[at + 1];
   const prerequisites = article.prerequisites.map((p) => articles.find((a) => a.slug === p)!);
   const builtOnBy = backlinks(slug);
-  const headings = articleHeadings(article.fileName, lang);
+  const toc = articleToc(article.fileName, lang);
   /** The "EN" tag after a link to an Article that has no Translation, so the reader knows it opens in English. */
   const tag = (a: { translated: boolean }) => !a.translated && <EnTag label={text.englishOnly}>{text.enTag}</EnTag>;
 
   return (
-    <div className={headings.length > 0 ? "article-with-toc" : undefined}>
-    {headings.length > 0 && <TableOfContents headings={headings} label={text.onThisPage} />}
+    <div className={toc.length > 0 ? "article-with-toc" : undefined}>
+    {toc.length > 0 && <TableOfContents entries={toc} label={text.onThisPage} />}
     <article className="article relative min-w-0 space-y-12">
         <header className="max-w-measure space-y-4">
           <p className="eyebrow">

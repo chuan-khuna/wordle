@@ -10,9 +10,10 @@ import { type BenchmarkStrategy, getBenchmark, type Pool, type Scope } from "@/l
 import { POOL_NAMES, RANKING_NAMES, SCOPE_NAMES, STRATEGIES, STRATEGY_GROUPS, type StrategyInfo, shortName, strategyById } from "@/lib/wordle/strategies";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./ui";
-import { useLoad } from "./useLoad";
-import { useWidgetParam } from "./useWidgetParam";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { CHART_CLASS, CHART_THEME, WidgetFrame } from "./_components/ui";
+import { useLoad } from "./_components/useLoad";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 /**
  * One theme role per Guess Pool and Search Scope; Expected Information takes it as it is, Expected Candidates a
@@ -123,7 +124,7 @@ export function toggleStrategy(order: readonly string[], shown: readonly string[
  */
 export function BenchmarkChart(props: { strategies?: string; id?: string }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Benchmark chart">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.BenchmarkChart}>Loading…</WidgetFrame>}>
       <Benchmark {...props} />
     </Suspense>
   );
@@ -144,7 +145,7 @@ function Benchmark({ strategies: prop = DEFAULT_STRATEGIES, id }: { strategies?:
   );
 
   return (
-    <WidgetFrame title="Benchmark chart">
+    <WidgetFrame title={WIDGET_TITLES.BenchmarkChart}>
       <Tabs
         value={comparisonFor(shownIds)?.id ?? ""}
         onValueChange={(v) => setText(COMPARISONS.find((c) => c.id === v)?.ids.join(",") ?? text)}

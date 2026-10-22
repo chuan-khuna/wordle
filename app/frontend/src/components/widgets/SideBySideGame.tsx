@@ -7,10 +7,11 @@ import { MAX_BOARDS, MIN_BOARDS, beatsFor, nextStrategy, parseAnswers, parseBoar
 import { RANKING_NAMES, STRATEGY_GROUPS, shortName, strategyById } from "@/lib/wordle/strategies";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tile } from "./Tile";
-import { WidgetFrame } from "./ui";
-import { WordRow } from "./WordRow";
-import { useWidgetParam } from "./useWidgetParam";
+import { Tile } from "./_components/Tile";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { WordRow } from "./_components/WordRow";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 // Six Guesses, as in the game (wordle.engine.game.MAX_GUESSES). Each board marks where they run out.
 const GUESS_LIMIT = 6;
@@ -45,7 +46,7 @@ const useReducedMotion = () => useSyncExternalStore(subscribeMotion, () => windo
  */
 export function SideBySideGame(props: { answers?: string; strategies?: string; interval?: number; id?: string }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Side-by-side Game">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.SideBySideGame}>Loading…</WidgetFrame>}>
       <SideBySide {...props} />
     </Suspense>
   );
@@ -140,7 +141,7 @@ function SideBySide({
   };
 
   return (
-    <WidgetFrame title="Side-by-side Game">
+    <WidgetFrame title={WIDGET_TITLES.SideBySideGame}>
       <WordRow
         id={`${uid}-a`}
         label="Answer"

@@ -5,9 +5,10 @@ import { postCandidates } from "@/lib/api";
 import { marksToString } from "@/lib/wordle/feedback";
 import { rowsFromState } from "@/lib/widgets/state-board";
 import { type Row, formatState } from "@/lib/widgets/widget-state";
-import { StateBoard } from "./StateBoard";
-import { WidgetFrame } from "./ui";
-import { useParamInitial, useParamSync } from "./useWidgetParam";
+import { StateBoard } from "./_components/StateBoard";
+import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
+import { WidgetFrame } from "./_components/ui";
+import { useParamInitial, useParamSync } from "./_components/useWidgetParam";
 
 type Outcome = { count: number; words: string[] } | { error: string };
 type Result = { key: string; outcomes: Outcome[] };
@@ -21,7 +22,7 @@ type Result = { key: string; outcomes: Outcome[] };
  */
 export function CandidateFilter(props: { state?: string; id?: string }) {
   return (
-    <Suspense fallback={<WidgetFrame title="Candidate filter">Loading…</WidgetFrame>}>
+    <Suspense fallback={<WidgetFrame title={WIDGET_TITLES.CandidateFilter}>Loading…</WidgetFrame>}>
       <Filter {...props} />
     </Suspense>
   );
@@ -70,7 +71,7 @@ function Filter({ state: stateProp = "", id }: { state?: string; id?: string }) 
 
 
   return (
-    <WidgetFrame title="Candidate filter">
+    <WidgetFrame title={WIDGET_TITLES.CandidateFilter}>
       <StateBoard
         rows={rows}
         onChange={setRows}

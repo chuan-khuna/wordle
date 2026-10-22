@@ -12,13 +12,13 @@ import { pageText } from "@/lib/i18n/page-text";
 import { answerGroup, statesPerRow } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
 import { POOLS, RANKS, SCOPES } from "@/lib/wordle/strategies";
-import { FitOverlay, useLg } from "./FitOverlay";
-import { FollowPath } from "./FollowPath";
-import { SplitGroups } from "./SplitGroups";
-import { StrategyPicker } from "./StrategyPicker";
-import { Tile } from "./Tile";
-import { WordRow, cleanWord } from "./WordRow";
-import { useWidgetParam } from "./useWidgetParam";
+import { FitOverlay, useLg } from "./_components/FitOverlay";
+import { FollowPath } from "./_components/FollowPath";
+import { SplitGroups } from "./_components/SplitGroups";
+import { StrategyPicker } from "./_components/StrategyPicker";
+import { Tile } from "./_components/Tile";
+import { WordRow, cleanWord } from "./_components/WordRow";
+import { useWidgetParam } from "./_components/useWidgetParam";
 
 /** Article 08's Answer (the Step-through Game shows WATCH there too). */
 const DEFAULT_ANSWER = "watch";
