@@ -18,6 +18,7 @@ impl WordleApp {
             Command::ChangeTheme => Some(self.theme.name.into()),
             Command::Precompute if self.running_precompute() == Some(Kind::Matrices) => Some("running".into()),
             Command::PrecomputeGuessCounts if self.running_precompute() == Some(Kind::GuessCounts) => Some("running".into()),
+            Command::PrecomputeBenchmark if self.running_precompute() == Some(Kind::Benchmark) => Some("running".into()),
             _ => None,
         }
     }

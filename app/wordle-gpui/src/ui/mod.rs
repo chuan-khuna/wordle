@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 use gpui::{App, ClipboardItem, Context, FocusHandle, FontWeight, KeyBinding, KeyDownEvent, Keystroke, ScrollHandle, SharedString, UniformListScrollHandle, Window, actions, div, prelude::*, px, rgb};
 use wordle_gpui::engine::game::{Game, Guess, MAX_GUESSES, random_seed};
 use wordle_gpui::solver::assist::Assist;
-use wordle_gpui::solver::guess_count_matrix;
+use wordle_gpui::solver::{benchmark, guess_count_matrix};
 use wordle_gpui::solver::matrix;
 use wordle_gpui::solver::strategy::{Matrix, MatrixSet, Strategy};
 use wordle_gpui::engine::words::{WORD_LENGTH, word_lists};
@@ -317,17 +317,42 @@ impl WordleApp {
                 self.dismiss(cx);
                 self.show_status("Stop the guess counts first: they read the matrices", cx);
             }
+            Command::Precompute if self.running_precompute() == Some(Kind::Benchmark) => {
+                self.dismiss(cx);
+                self.show_status("Wait for the benchmark to finish: it reads the matrices", cx);
+            }
             Command::Precompute => self.open(Overlay::Precompute(ThreadPicker::default()), cx),
-            Command::PrecomputeGuessCounts if self.running_precompute() == Some(Kind::GuessCounts) => self.open(Overlay::StopGuessCounts, cx),
+            Command::PrecomputeGuessCounts if self.precompute.as_ref().is_some_and(|run| run.state().can_stop()) => self.open(Overlay::StopGuessCounts, cx),
             Command::PrecomputeGuessCounts if self.running_precompute() == Some(Kind::Matrices) => {
                 self.dismiss(cx);
                 self.show_status("Wait for the matrices to finish precomputing", cx);
             }
-            Command::PrecomputeGuessCounts if !matrix::default_dir().join(MatrixSet::ValidGuesses.file()).exists() => {
+            // A Guess Count run playing its Benchmark, or the Benchmark on its own.
+            Command::PrecomputeGuessCounts if self.running_precompute().is_some() => {
+                self.dismiss(cx);
+                self.show_status("Wait for the benchmark to finish: it takes seconds", cx);
+            }
+            Command::PrecomputeGuessCounts | Command::PrecomputeBenchmark if !matrix::default_dir().join(MatrixSet::ValidGuesses.file()).exists() => {
                 self.dismiss(cx);
                 self.show_status_for("The Feedback matrices are missing: run Precompute matrices… first", Duration::from_secs(5), cx);
             }
             Command::PrecomputeGuessCounts => self.open(Overlay::GuessCounts(GuessCountPicker::default()), cx),
+            Command::PrecomputeBenchmark if self.running_precompute() == Some(Kind::Benchmark) => {
+                self.dismiss(cx);
+                self.show_status("Already precomputing the benchmark", cx);
+            }
+            Command::PrecomputeBenchmark if self.running_precompute() == Some(Kind::GuessCounts) => {
+                self.dismiss(cx);
+                self.show_status("The guess counts run the benchmark when they finish", cx);
+            }
+            Command::PrecomputeBenchmark if self.running_precompute() == Some(Kind::Matrices) => {
+                self.dismiss(cx);
+                self.show_status("Wait for the matrices to finish precomputing", cx);
+            }
+            Command::PrecomputeBenchmark => {
+                self.dismiss(cx);
+                self.start_benchmark(ThreadPicker::default().threads(), cx);
+            }
             Command::ResetLayout => {
                 self.dismiss(cx);
                 self.assist = None;
@@ -371,8 +396,9 @@ impl WordleApp {
     }
 
     /// Fill the Guess Count Matrices of `strategies` on `threads` threads, off the window's thread
-    /// (see `solver/guess_count_matrix.rs`), resuming rows left unfinished. The precompute view
-    /// shows its progress and log.
+    /// (see `solver/guess_count_matrix.rs`), resuming rows left unfinished, then, if every row asked
+    /// for was filled, play the Benchmark (see `solver/benchmark.rs`). The precompute view shows its
+    /// progress and log.
     fn start_guess_counts(&mut self, threads: usize, strategies: Vec<&'static Strategy>, cx: &mut Context<Self>) {
         self.overlay = None;
         let stop = Arc::new(AtomicBool::new(false));
@@ -381,19 +407,29 @@ impl WordleApp {
         self.precompute = Some(run);
         let events = state.clone();
         let work = cx.background_spawn(async move {
+            let lock = || events.lock().expect("the precompute state lock");
             // One lock per finished row (a row takes about 0.1 s of a thread), none per Answer.
-            let report = move |event| events.lock().expect("the precompute state lock").apply_guess_counts(event, started.elapsed());
-            let result = Matrix::load(&matrix::default_dir(), MatrixSet::ValidGuesses).map_err(guess_count_matrix::BuildError::Io).and_then(|feedback| {
-                let options = guess_count_matrix::Options { threads, strategies, openers: None, events: &report, stop: &stop };
-                guess_count_matrix::build(&guess_count_matrix::default_dir(), &feedback, options)
-            });
-            (result, started.elapsed())
+            let report = |event| lock().apply_guess_counts(event, started.elapsed());
+            let feedback = match Matrix::load(&matrix::default_dir(), MatrixSet::ValidGuesses) {
+                Ok(feedback) => feedback,
+                Err(error) => {
+                    lock().finish_guess_counts(&Err(guess_count_matrix::BuildError::Io(error)), started.elapsed());
+                    return;
+                }
+            };
+            let options = guess_count_matrix::Options { threads, strategies, openers: None, events: &report, stop: &stop };
+            let result = guess_count_matrix::build(&guess_count_matrix::default_dir(), &feedback, options);
+            let play_benchmark = lock().finish_guess_counts(&result, started.elapsed());
+            if play_benchmark {
+                let report = |event| lock().apply_benchmark(event, started.elapsed());
+                let saved = benchmark::build(&benchmark::default_dir(), &feedback, threads, &report);
+                lock().finish_benchmark(&saved, started.elapsed());
+            }
         });
         self.redraw_while_running(cx);
         cx.spawn(async move |this, cx| {
-            let (result, elapsed) = work.await;
+            work.await;
             this.update(cx, |app, cx| {
-                state.lock().expect("the precompute state lock").finish_guess_counts(&result, elapsed);
                 if matches!(app.overlay, Some(Overlay::StopGuessCounts)) {
                     app.overlay = None;
                 }
@@ -404,6 +440,26 @@ impl WordleApp {
             .ok();
         })
         .detach();
+        cx.notify();
+    }
+
+    /// Play the Benchmark of every Strategy and rank the Opener leaderboard on `threads` threads, off
+    /// the window's thread, and save them for the website (see `solver/benchmark.rs`). The precompute
+    /// view shows it.
+    fn start_benchmark(&mut self, threads: usize, cx: &mut Context<Self>) {
+        let run = PrecomputeRun::new(RunState::benchmark(threads), None);
+        let (state, started) = (run.state.clone(), run.started);
+        self.precompute = Some(run);
+        let events = state.clone();
+        cx.background_spawn(async move {
+            let lock = || events.lock().expect("the precompute state lock");
+            lock().start_benchmark(started.elapsed());
+            let report = |event| lock().apply_benchmark(event, started.elapsed());
+            let saved = Matrix::load(&matrix::default_dir(), MatrixSet::ValidGuesses).and_then(|feedback| benchmark::build(&benchmark::default_dir(), &feedback, threads, &report));
+            lock().finish_benchmark(&saved, started.elapsed());
+        })
+        .detach();
+        self.redraw_while_running(cx);
         cx.notify();
     }
 

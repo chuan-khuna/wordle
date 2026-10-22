@@ -1,11 +1,12 @@
-//! The precompute view's state, testable without a window. While **Precompute matrices…** or
-//! **Precompute guess counts…** runs, and after it ends until the player goes back to the game, the
-//! window shows this view in place of the board (`ui/precompute_view.rs` draws it): an overall bar
-//! with the rate and the time left, a line per item (a matrix, or a Strategy's Guess Count Matrix)
-//! with its rows and whether it is waiting, running or finished, and a log.
+//! The precompute view's state, testable without a window. While **Precompute matrices…**,
+//! **Precompute guess counts…** or **Precompute benchmark** runs, and after it ends until the player
+//! goes back to the game, the window shows this view in place of the board (`ui/precompute_view.rs`
+//! draws it): an overall bar with the rate and the time left, a line per item (a matrix, a
+//! Strategy's Guess Count Matrix, or the Benchmark) with its rows and whether it is waiting, running
+//! or finished, and a log. A Guess Count run that finishes goes on to the Benchmark by itself.
 //!
-//! The library reports what happens as events (`matrix::Event`, `guess_count_matrix::Event`); the app
-//! applies them here, with the time since the run started. The log keeps the last `MAX_LOG_LINES`
+//! The library reports what happens as events (`matrix::Event`, `guess_count_matrix::Event`,
+//! `benchmark::Event`); the app applies them here, with the time since the run started. The log keeps the last `MAX_LOG_LINES`
 //! lines (a full Guess Count run writes one per Opener, 2 × (2 × 2,315 + 2 × 14,855)) and counts the ones it dropped.
 
 use std::collections::VecDeque;
@@ -13,6 +14,7 @@ use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use wordle_gpui::solver::benchmark::{self, BENCHMARK_FILE, OPENERS_FILE};
 use wordle_gpui::solver::guess_count_matrix::{self, BuildError, Built};
 use wordle_gpui::solver::matrix::{self, ANSWERS_FILE, GUESSES_FILE};
 use wordle_gpui::solver::strategy::{STRATEGIES, Strategy};
@@ -25,14 +27,19 @@ pub const MAX_LOG_LINES: usize = 1_000;
 
 pub const MATRICES_FOLDER: &str = "precompute-cache/feedback/";
 pub const GUESS_COUNTS_FOLDER: &str = "precompute-cache/guess-counts/";
+pub const BENCHMARK_FOLDER: &str = "precompute-cache/benchmark/";
+/// The Benchmark's item: its id in the item list.
+pub const BENCHMARK_ITEM: &str = "benchmark";
 
 /// Which precompute is running.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
     /// The two Feedback matrices.
     Matrices,
-    /// The Guess Count Matrices of the chosen Strategies.
+    /// The Guess Count Matrices of the chosen Strategies, then the Benchmark.
     GuessCounts,
+    /// The Benchmark of every Strategy and the Opener leaderboard, on its own.
+    Benchmark,
 }
 
 /// Where an item (a matrix, or a Strategy's pass) has got.
@@ -74,6 +81,9 @@ pub struct Item {
     pub phase: Phase,
     /// Rows finished before this item's pass started.
     base: usize,
+    /// Whether the overall bar counts it: the Benchmark that follows a Guess Count run counts
+    /// Strategies, not rows, so it has only its own line.
+    overall: bool,
 }
 
 /// What a log line is about, which picks its colour.
@@ -162,6 +172,8 @@ pub struct RunState {
     /// Log lines dropped to keep `MAX_LOG_LINES`.
     dropped: usize,
     pub stop_asked: bool,
+    /// Whether the Benchmark is being played (on its own, or after a Guess Count run).
+    benchmarking: bool,
     /// How it ended, and when.
     pub end: Option<(End, Duration)>,
     /// When the item going on started, and the rows done overall then: the rate is measured from it.
@@ -179,6 +191,7 @@ impl RunState {
             total: rows,
             phase: Phase::Waiting,
             base: 0,
+            overall: true,
         };
         let items = vec![item(GUESSES_FILE, "Guess List × Answer List", guess_rows), item(ANSWERS_FILE, "Answer List × Answer List", answer_rows)];
         let mut state = Self::new(Kind::Matrices, threads, items);
@@ -187,10 +200,11 @@ impl RunState {
     }
 
     /// A Precompute guess counts run of `strategies` on `threads` threads, one row per word of each
-    /// Strategy's Guess Pool.
+    /// Strategy's Guess Pool, then the Benchmark.
     pub fn guess_counts(threads: usize, strategies: &[&'static Strategy]) -> Self {
-        let item = |strategy: &&'static Strategy| Item { id: strategy.id.into(), detail: strategy.name.into(), done: 0, total: strategy.set.size(), phase: Phase::Waiting, base: 0 };
-        let items = strategies.iter().map(item).collect();
+        let item = |strategy: &&'static Strategy| Item { id: strategy.id.into(), detail: strategy.name.into(), done: 0, total: strategy.set.size(), phase: Phase::Waiting, base: 0, overall: true };
+        let mut items: Vec<Item> = strategies.iter().map(item).collect();
+        items.push(Item { overall: false, ..benchmark_item() });
         let mut state = Self::new(Kind::GuessCounts, threads, items);
         let ids: Vec<&str> = strategies.iter().map(|strategy| strategy.id).collect();
         state.push(Duration::ZERO, Tone::Info, format!("Precompute guess counts on {} into {GUESS_COUNTS_FOLDER}: {}", threads_label(threads), ids.join(", ")));
@@ -198,24 +212,38 @@ impl RunState {
         state
     }
 
+    /// A Precompute benchmark run on `threads` threads: one item, a step per Strategy.
+    pub fn benchmark(threads: usize) -> Self {
+        let mut state = Self::new(Kind::Benchmark, threads, vec![benchmark_item()]);
+        state.push(Duration::ZERO, Tone::Info, format!("Precompute benchmark on {} into {BENCHMARK_FOLDER}", threads_label(threads)));
+        state
+    }
+
     fn new(kind: Kind, threads: usize, items: Vec<Item>) -> Self {
-        Self { kind, threads, items, log: VecDeque::new(), dropped: 0, stop_asked: false, end: None, pass: None }
+        Self { kind, threads, items, log: VecDeque::new(), dropped: 0, stop_asked: false, benchmarking: false, end: None, pass: None }
     }
 
     pub fn title(&self) -> &'static str {
         match self.kind {
             Kind::Matrices => "Precompute matrices",
             Kind::GuessCounts => "Precompute guess counts",
+            Kind::Benchmark => "Precompute benchmark",
         }
+    }
+
+    /// What the overall bar counts.
+    fn unit(&self) -> &'static str {
+        if self.kind == Kind::Benchmark { "Strategies" } else { "rows" }
     }
 
     pub fn is_running(&self) -> bool {
         self.end.is_none()
     }
 
-    /// Only a Guess Count run can be stopped (the matrices take about a second).
+    /// Only a Guess Count run can be stopped, until its Benchmark starts (the matrices and the
+    /// Benchmark take seconds).
     pub fn can_stop(&self) -> bool {
-        self.kind == Kind::GuessCounts && self.is_running() && !self.stop_asked
+        self.kind == Kind::GuessCounts && self.is_running() && !self.stop_asked && !self.benchmarking
     }
 
     /// The log, oldest first.
@@ -240,13 +268,13 @@ impl RunState {
         self.items.iter_mut().find(|item| item.id == id)
     }
 
-    /// Rows done across every item, those finished before the run included.
+    /// Rows done across every item the overall bar counts, those finished before the run included.
     pub fn done(&self) -> usize {
-        self.items.iter().map(|item| item.done).sum()
+        self.items.iter().filter(|item| item.overall).map(|item| item.done).sum()
     }
 
     pub fn total(&self) -> usize {
-        self.items.iter().map(|item| item.total).sum()
+        self.items.iter().filter(|item| item.overall).map(|item| item.total).sum()
     }
 
     /// Done over total, 0 to 1.
@@ -279,7 +307,7 @@ impl RunState {
     /// The line beside the overall bar: "1,234 of 59,420 rows · 12.5 rows/s · about 18 min left",
     /// or once it has ended, "59,420 of 59,420 rows · 31 min 20s".
     pub fn progress_line(&self, now: Duration) -> String {
-        let mut parts = vec![format!("{} of {} rows", with_commas(self.done()), with_commas(self.total()))];
+        let mut parts = vec![format!("{} of {} {}", with_commas(self.done()), with_commas(self.total()), self.unit())];
         if self.is_running() {
             if let Some(rate) = self.rate(now) {
                 parts.push(rate_label(rate));
@@ -391,13 +419,59 @@ impl RunState {
         self.push(at, tone, text);
     }
 
-    /// The Guess Count run ended `at` since it started.
-    pub fn finish_guess_counts(&mut self, result: &Result<Built, BuildError>, at: Duration) {
+    /// The Guess Count Matrices are done, `at` since the run started. A run that finished goes on to
+    /// the Benchmark: true says to play it now (the run is still going); otherwise the run ends here.
+    pub fn finish_guess_counts(&mut self, result: &Result<Built, BuildError>, at: Duration) -> bool {
         let text = end_note(result, at, self.threads);
         match result {
             Ok(built) if built.stopped => self.end_with(End::Stopped, at, Tone::Warning, text),
-            Ok(_) => self.end_with(End::Finished, at, Tone::Success, text),
+            Ok(_) => {
+                self.push(at, Tone::Success, text);
+                self.start_benchmark(at);
+                return true;
+            }
             Err(_) => self.end_with(End::Failed, at, Tone::Error, text),
+        }
+        false
+    }
+
+    /// The Benchmark starts, `at` since the run started.
+    pub fn start_benchmark(&mut self, at: Duration) {
+        self.benchmarking = true;
+        if let Some(item) = self.item(BENCHMARK_ITEM) {
+            item.phase = Phase::Running;
+        }
+        self.start_pass(at);
+        self.push(at, Tone::Info, format!("Benchmark started: every Answer played by each of the {} Strategies from its own best Opener", STRATEGIES.len()));
+    }
+
+    /// Apply what the Benchmark reported, `at` since the run started.
+    pub fn apply_benchmark(&mut self, event: benchmark::Event, at: Duration) {
+        match event {
+            benchmark::Event::Played { benchmark, done } => {
+                if let Some(item) = self.item(BENCHMARK_ITEM) {
+                    item.done = item.done.max(done);
+                }
+                let losses = losses_label(benchmark.lost_answers.len());
+                self.push(at, Tone::Row, format!("{} {}: {:.3} Guesses on average, {losses}", benchmark.strategy.id, benchmark.opener, benchmark.average_guess_count));
+            }
+            benchmark::Event::Ranked { openers } => {
+                self.push(at, Tone::Info, format!("Ranked the {} best Openers by Expected Information", with_commas(openers)));
+            }
+        }
+    }
+
+    /// The Benchmark ended `at` since the run started, and with it the run.
+    pub fn finish_benchmark(&mut self, result: &io::Result<(PathBuf, PathBuf)>, at: Duration) {
+        match result {
+            Ok(_) => {
+                if let Some(item) = self.item(BENCHMARK_ITEM) {
+                    item.phase = Phase::Finished;
+                }
+                let text = format!("Saved {BENCHMARK_FILE} and {OPENERS_FILE} to {BENCHMARK_FOLDER} in {}", duration_label(at));
+                self.end_with(End::Finished, at, Tone::Success, text)
+            }
+            Err(error) => self.end_with(End::Failed, at, Tone::Error, format!("Couldn't save the benchmark: {error}")),
         }
     }
 
@@ -419,6 +493,19 @@ impl RunState {
             "enter" | "escape" if !self.is_running() => Outcome::BackToGame,
             _ => Outcome::None,
         }
+    }
+}
+
+/// The Benchmark's item: a step per Strategy.
+fn benchmark_item() -> Item {
+    Item {
+        id: BENCHMARK_ITEM.into(),
+        detail: format!("{BENCHMARK_FILE} and {OPENERS_FILE}, {} Strategies", STRATEGIES.len()),
+        done: 0,
+        total: STRATEGIES.len(),
+        phase: Phase::Waiting,
+        base: 0,
+        overall: true,
     }
 }
 

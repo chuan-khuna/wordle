@@ -87,6 +87,11 @@ impl<'a> Player<'a> {
         self.feedback.rows.binary_search(&word).ok()
     }
 
+    /// How many Answers there are: the columns of the matrix.
+    pub fn answers(&self) -> usize {
+        self.feedback.columns.len()
+    }
+
     /// How many Candidate Sets the cache holds, for every Strategy.
     pub fn cached(&self) -> usize {
         self.cache.values().map(HashMap::len).sum()

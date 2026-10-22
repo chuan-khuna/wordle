@@ -18,12 +18,13 @@ pub enum Command {
     ChangeTheme,
     Precompute,
     PrecomputeGuessCounts,
+    PrecomputeBenchmark,
     ResetLayout,
 }
 
 impl Command {
     /// In menu order.
-    pub const ALL: [Command; 13] = [
+    pub const ALL: [Command; 14] = [
         Command::Reset,
         Command::Restart,
         Command::PlaySeed,
@@ -36,6 +37,7 @@ impl Command {
         Command::ChangeTheme,
         Command::Precompute,
         Command::PrecomputeGuessCounts,
+        Command::PrecomputeBenchmark,
         Command::ResetLayout,
     ];
 
@@ -53,6 +55,7 @@ impl Command {
             Command::ChangeTheme => "Change theme…",
             Command::Precompute => "Precompute matrices…",
             Command::PrecomputeGuessCounts => "Precompute guess counts…",
+            Command::PrecomputeBenchmark => "Precompute benchmark",
             Command::ResetLayout => "Reset layout",
         }
     }
@@ -63,7 +66,7 @@ impl Command {
             Command::Reset | Command::Restart | Command::PlaySeed | Command::CopySeed => 0,
             Command::ToggleUnlimited | Command::ToggleLiveHints => 1,
             Command::ToggleSidebar | Command::ToggleSolver | Command::ToggleSolverMode | Command::ChangeTheme | Command::ResetLayout => 2,
-            Command::Precompute | Command::PrecomputeGuessCounts => 3,
+            Command::Precompute | Command::PrecomputeGuessCounts | Command::PrecomputeBenchmark => 3,
         }
     }
 

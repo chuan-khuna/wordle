@@ -1,6 +1,7 @@
-//! The precompute view: while **Precompute matrices…** or **Precompute guess counts…** runs, and
-//! after it ends until the player goes back, it takes the board's island. An overall bar with the
-//! rate and the time left, a line per matrix or Strategy, and the log, newest at the bottom. Its
+//! The precompute view: while **Precompute matrices…**, **Precompute guess counts…** or
+//! **Precompute benchmark** runs, and after it ends until the player goes back, it takes the board's
+//! island. An overall bar with the rate and the time left, a line per matrix, Strategy or the
+//! Benchmark, and the log, newest at the bottom. Its
 //! state is in `overlays/precompute_run.rs`; the game underneath is left as it was.
 
 use gpui::{Div, FontWeight, HighlightStyle, ScrollStrategy, StyledText, div, prelude::*, px, relative, rgb, uniform_list};

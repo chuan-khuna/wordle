@@ -120,6 +120,30 @@ impl Strategy {
     pub fn named(set: MatrixSet, mode: SearchMode, by: Rank) -> &'static Strategy {
         STRATEGIES.iter().find(|strategy| strategy.set == set && strategy.mode == mode && strategy.by == by).expect("STRATEGIES holds every combination")
     }
+
+    /// The Guess Pool in the Python package's words: "answers" or "guesses".
+    pub fn pool(&self) -> &'static str {
+        match self.set {
+            MatrixSet::Answers => "answers",
+            MatrixSet::ValidGuesses => "guesses",
+        }
+    }
+
+    /// The Search Scope in the Python package's words: "candidates" or "global".
+    pub fn scope(&self) -> &'static str {
+        match self.mode {
+            SearchMode::Candidates => "candidates",
+            SearchMode::Everything => "global",
+        }
+    }
+
+    /// The Ranking in the Python package's words: "bits" or "expected".
+    pub fn ranking(&self) -> &'static str {
+        match self.by {
+            Rank::Bits => "bits",
+            Rank::ExpectedCandidates => "expected",
+        }
+    }
 }
 
 /// A Feedback matrix read into memory: rows are Guesses, columns are the Answer List.

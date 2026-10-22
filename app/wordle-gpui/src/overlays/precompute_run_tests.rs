@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use wordle_gpui::engine::game::Game;
+use wordle_gpui::solver::benchmark::{Benchmark, Event as Played};
 use wordle_gpui::solver::guess_count_matrix::Event as Row;
 use wordle_gpui::solver::matrix::Event as MatrixEvent;
 use wordle_gpui::solver::strategy::STRATEGIES;
@@ -33,7 +34,8 @@ fn resumed_run() -> RunState {
 #[test]
 fn each_strategy_has_a_row_per_word_of_its_guess_pool() {
     let state = RunState::guess_counts(1, &[&STRATEGIES[0], &STRATEGIES[3]]);
-    assert_eq!(state.items.iter().map(|item| (item.id.as_str(), item.total)).collect::<Vec<_>>(), [("bits-answers-candidates", 2315), ("bits-guesses-all", ROWS)]);
+    assert_eq!(state.items.iter().map(|item| (item.id.as_str(), item.total)).collect::<Vec<_>>(), [("bits-answers-candidates", 2315), ("bits-guesses-all", ROWS), ("benchmark", 8)]);
+    // The Benchmark that follows counts Strategies, not rows: only its own line shows it.
     assert_eq!(state.progress_line(secs(0)), "0 of 17,170 rows");
 }
 
@@ -89,13 +91,23 @@ fn a_finished_pass_and_a_finished_run() {
     state.apply_guess_counts(Row::PassEnded { strategy: all, filled: 14_755, stopped: false }, secs(1000));
     assert!(state.is_running());
     let built = Ok(Built { paths: vec![PathBuf::from("summary.json")], stopped: false, filled: 14_755 });
-    state.finish_guess_counts(&built, secs(1001));
+    assert!(state.finish_guess_counts(&built, secs(1001)), "a finished run goes on to the Benchmark");
+    assert!(state.is_running());
+    assert!(!state.can_stop(), "the Benchmark takes seconds: no Stop");
+    assert_eq!(texts(&state)[texts(&state).len() - 2], "Saved guess counts to precompute-cache/guess-counts/ in 16 min 41s (14,755 rows, 8 threads)");
+    assert_eq!(state.items[2].phase, Phase::Running);
+    let benchmark = Benchmark { strategy: candidates, opener: "tarse", games: 2315, distribution: [0, 147, 1021, 941, 166, 34], lost_answers: vec!["foyer"; 6], average_guess_count: 3.5416846652267817 };
+    state.apply_benchmark(Played::Played { benchmark, done: 1 }, secs(1003));
+    assert_eq!(last(&state).text, "bits-guesses-candidates tarse: 3.542 Guesses on average, 6 Losses");
+    assert_eq!(state.items[2].done, 1);
+    state.finish_benchmark(&Ok((PathBuf::new(), PathBuf::new())), secs(1010));
     assert!(!state.is_running());
-    assert_eq!(state.end, Some((End::Finished, secs(1001))));
-    assert_eq!(last(&state).text, "Saved guess counts to precompute-cache/guess-counts/ in 16 min 41s (14,755 rows, 8 threads)");
+    assert_eq!(state.end, Some((End::Finished, secs(1010))));
+    assert_eq!(state.items[2].phase, Phase::Finished);
+    assert_eq!(last(&state).text, "Saved benchmark.json and openers.json to precompute-cache/benchmark/ in 16 min 50s");
     assert_eq!(last(&state).tone, Tone::Success);
     // The time stops with the run.
-    assert_eq!(state.progress_line(secs(5000)), "29,710 of 29,710 rows · 16 min 41s");
+    assert_eq!(state.progress_line(secs(5000)), "29,710 of 29,710 rows · 16 min 50s");
 }
 
 #[test]
@@ -110,9 +122,9 @@ fn a_stopped_run_keeps_its_rows_and_says_so() {
     state.apply_guess_counts(Row::PassEnded { strategy: candidates, filled: 12, stopped: true }, secs(4));
     assert_eq!(last(&state).text, "bits-guesses-candidates stopped: 12 rows filled and kept");
     let built = Ok(Built { paths: vec![], stopped: true, filled: 12 });
-    state.finish_guess_counts(&built, secs(4));
+    assert!(!state.finish_guess_counts(&built, secs(4)), "no Benchmark after a stop");
     assert_eq!(state.end, Some((End::Stopped, secs(4))));
-    assert_eq!([state.items[0].phase, state.items[1].phase], [Phase::Stopped, Phase::NotStarted]);
+    assert_eq!([state.items[0].phase, state.items[1].phase, state.items[2].phase], [Phase::Stopped, Phase::NotStarted, Phase::NotStarted]);
     assert_eq!(last(&state).text, "Stopped guess counts after 4.0s: 12 rows kept in precompute-cache/guess-counts/. Run it again to resume");
     assert_eq!(last(&state).tone, Tone::Warning);
 }
@@ -158,6 +170,22 @@ fn a_failed_matrices_run_says_why() {
 }
 
 #[test]
+fn a_benchmark_run_on_its_own_counts_strategies() {
+    let mut state = RunState::benchmark(8);
+    assert_eq!(state.title(), "Precompute benchmark");
+    assert!(!state.can_stop());
+    assert_eq!(texts(&state), ["Precompute benchmark on 8 threads into precompute-cache/benchmark/"]);
+    state.start_benchmark(secs(0));
+    state.apply_benchmark(Played::Ranked { openers: 500 }, secs(2));
+    assert_eq!(last(&state).text, "Ranked the 500 best Openers by Expected Information");
+    assert_eq!(state.progress_line(secs(2)), "0 of 8 Strategies");
+    state.finish_benchmark(&Err(io::Error::other("disk full")), secs(3));
+    assert_eq!(state.end, Some((End::Failed, secs(3))));
+    assert_eq!(state.items[0].phase, Phase::Failed);
+    assert_eq!(last(&state).text, "Couldn't save the benchmark: disk full");
+}
+
+#[test]
 fn the_log_keeps_the_last_lines_and_counts_the_rest() {
     let mut state = resumed_run();
     let candidates = &STRATEGIES[2];
@@ -174,6 +202,8 @@ fn keys_go_back_to_the_game_only_once_the_run_has_ended() {
     assert_eq!(state.press("escape"), Outcome::None);
     assert_eq!(state.press("a"), Outcome::None);
     state.finish_guess_counts(&Ok(Built { paths: vec![], stopped: false, filled: 0 }), secs(1));
+    assert_eq!(state.press("escape"), Outcome::None, "the Benchmark is playing");
+    state.finish_benchmark(&Ok((PathBuf::new(), PathBuf::new())), secs(2));
     assert_eq!(state.press("escape"), Outcome::BackToGame);
     assert_eq!(state.press("enter"), Outcome::BackToGame);
     assert_eq!(state.press("a"), Outcome::None);
@@ -189,6 +219,8 @@ fn a_run_hides_the_game_and_leaves_its_state_alone() {
     assert_eq!(main_area(run.is_some(), true), Area::Precompute);
     let state = run.as_mut().unwrap();
     state.finish_guess_counts(&Ok(Built { paths: vec![], stopped: false, filled: 0 }), secs(1));
+    assert_eq!(state.press("escape"), Outcome::None, "the Benchmark is playing");
+    state.finish_benchmark(&Ok((PathBuf::new(), PathBuf::new())), secs(2));
     if state.press("escape") == Outcome::BackToGame {
         run = None;
     }

@@ -31,7 +31,7 @@ use serde_json::{Map, Value, json};
 
 use super::guess_counts::{Player, SAFETY_LIMIT};
 use super::matrix::npy_header;
-use super::strategy::{CODES, Matrix, MatrixSet, Rank, STRATEGIES, SearchMode, Strategy, numpy_sum};
+use super::strategy::{CODES, Matrix, MatrixSet, STRATEGIES, Strategy, numpy_sum};
 use crate::engine::game::MAX_GUESSES as GUESS_LIMIT;
 
 pub const SUBDIR: &str = "guess-counts";
@@ -72,19 +72,7 @@ pub fn pool_words(feedback: &Matrix, set: MatrixSet) -> &[&'static str] {
 
 /// A Strategy as `manifest.json` records it, in the Python package's words.
 fn definition(strategy: &Strategy) -> Value {
-    let pool = match strategy.set {
-        MatrixSet::Answers => "answers",
-        MatrixSet::ValidGuesses => "guesses",
-    };
-    let scope = match strategy.mode {
-        SearchMode::Candidates => "candidates",
-        SearchMode::Everything => "global",
-    };
-    let ranked_by = match strategy.by {
-        Rank::Bits => "bits",
-        Rank::ExpectedCandidates => "expected",
-    };
-    json!({"name": strategy.name, "pool": pool, "scope": scope, "ranked_by": ranked_by, "path": strategy.path})
+    json!({"name": strategy.name, "pool": strategy.pool(), "scope": strategy.scope(), "ranked_by": strategy.ranking(), "path": strategy.path})
 }
 
 /// The rows of each Guess Pool's matrices, as the manifest records them.
