@@ -2,6 +2,7 @@
 
 How this project is built. Domain terms are defined in [GLOSSARY.md](../../GLOSSARY.md).
 
+- [Developer setup](README.html): for a new developer: the prerequisites (uv, Rust, just, bun), first setup, how `precompute-cache/` is laid out (`feedback/`, `guess-counts/`, `benchmark/`: what each file holds, who reads it, what happens when it is missing, the xz backup in `data/precompute/`), running the precompute in Python or in the gpui app (restore instead, the costs side by side, the gpui app recommended), starting the web app with `just web`, the tests and common errors.
 - [Architecture](architecture.md): the uv workspace, the `wordle` package's modules and layers, how to run, build and test it.
 - [Feedback scoring](feedback-scoring.md): the two-pass rule that gives each letter its Mark, with repeated-letter examples.
 - [Game and State](game-and-state.md): the `Game`, `Guess` and `State` classes, guess validation, Seeds, the Guess Limit, Win and Loss, and trying words after a Game ends.
