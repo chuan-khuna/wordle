@@ -303,7 +303,8 @@ function GameBoard({
                   ))}
                 </span>
               )}
-              {step && <span className="ml-auto text-[10px] text-meta tabular-nums">{step.candidates_after}</span>}
+              {/* Right after the tiles, not at the board's right edge, where it would read as the next board's. */}
+              {step && <span className="pl-0.5 text-[10px] text-meta tabular-nums">{step.candidates_after}</span>}
             </li>
           );
         })}
