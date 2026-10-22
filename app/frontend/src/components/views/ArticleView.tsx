@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EnTag } from "@/components/site/EnTag";
+import { TableOfContents } from "@/components/site/TableOfContents";
 import { content } from "@/lib/content/content";
+import { articleHeadings } from "@/lib/content/headings";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import { formatNumber } from "@/lib/content/parts";
@@ -11,7 +13,7 @@ import { componentsFor } from "@/mdx-components";
 const linkClass = "link";
 
 
-/** An Article page in a language: header, body, backlinks, and previous / next. */
+/** An Article page in a language: header, body, backlinks, and previous / next, with its Table of contents to the left on wide windows. */
 export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: string; lang?: Language }) {
   const { articles, series, backlinks } = content(lang);
   const text = pageText(lang);
@@ -28,10 +30,13 @@ export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: str
   const next = articles[at + 1];
   const prerequisites = article.prerequisites.map((p) => articles.find((a) => a.slug === p)!);
   const builtOnBy = backlinks(slug);
+  const headings = articleHeadings(article.fileName, lang);
   /** The "EN" tag after a link to an Article that has no Translation, so the reader knows it opens in English. */
   const tag = (a: { translated: boolean }) => !a.translated && <EnTag label={text.englishOnly}>{text.enTag}</EnTag>;
 
   return (
+    <div className={headings.length > 0 ? "article-with-toc" : undefined}>
+    {headings.length > 0 && <TableOfContents headings={headings} label={text.onThisPage} />}
     <article className="article relative min-w-0 space-y-12">
         <header className="max-w-measure space-y-4">
           <p className="eyebrow">
@@ -98,5 +103,6 @@ export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: str
           )}
         </nav>
     </article>
+    </div>
   );
 }

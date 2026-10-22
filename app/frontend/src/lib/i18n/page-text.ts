@@ -10,6 +10,8 @@ export type PageText = {
   buildsOnThis: string;
   /** Accessible name of the previous / next Article nav. */
   prevNext: string;
+  /** The heading of an Article's Table of contents. */
+  onThisPage: string;
   /** The sidebar's heading above the Explore links. */
   explore: string;
   openerDistribution: string;
@@ -162,6 +164,7 @@ export const EN: PageText = {
   prerequisites: "Prerequisites",
   buildsOnThis: "Builds on this Article",
   prevNext: "Previous and next Article",
+  onThisPage: "On this page",
   explore: "Explore",
   openerDistribution: "Opener Distribution",
   openerSplit: "Opener Split",
@@ -283,6 +286,7 @@ export const TH: PageText = {
   prerequisites: "ควรอ่านก่อน (Prerequisites)",
   buildsOnThis: "Article ที่ต่อยอดจากบทนี้",
   prevNext: "Article ก่อนหน้าและถัดไป",
+  onThisPage: "ในหน้านี้",
   explore: "สำรวจ",
   openerDistribution: "Opener Distribution",
   openerSplit: "Opener Split",

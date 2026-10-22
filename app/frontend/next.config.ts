@@ -45,6 +45,8 @@ const withMDX = createMDX({
       ["rehype-pretty-code", { theme: codeTheme, keepBackground: false, defaultLang: "text" }],
       // A <MarginNote> on its own line after a block is wrapped with that block, so it sits beside it (an absolute path: the loader resolves it with require).
       path.join(process.cwd(), "src/lib/content/rehype-margin-notes.mjs"),
+      // An id on each ## and ### heading, for the Table of contents (lib/content/headings.ts lists the same ones).
+      path.join(process.cwd(), "src/lib/content/rehype-heading-ids.mjs"),
     ],
   },
 });

@@ -255,6 +255,38 @@ body {
   clear: right;
 }
 
+/* An Article heading reached from the Table of contents stops a little below the top of the window. */
+.article-body :is(h2, h3)[id] {
+  scroll-margin-top: 2rem;
+}
+
+/* Table of contents. Hidden until the window has room for it, the gap and the Article with its margin, so it
+   never takes the margin from the Margin notes: the sidebar (14rem) + the page gutters (4rem) + the column
+   (13rem) + the gap (2.5rem) + the Article body (989px) is about 1525px, so from 96rem (1536px). Every window
+   that wide has the sidebar as a column, so a media query is exact here. The page is widened by the column and
+   the gap on an Article page only, and the column sticks below the top while the Article scrolls. */
+.article-toc {
+  display: none;
+}
+@media (min-width: 96rem) {
+  main:has(> .article-with-toc) {
+    max-width: calc(var(--container-page) + var(--container-toc) + var(--spacing-margin-gap));
+  }
+  .article-with-toc {
+    display: grid;
+    grid-template-columns: var(--container-toc) minmax(0, 1fr);
+    column-gap: var(--spacing-margin-gap);
+  }
+  .article-toc {
+    display: block;
+    position: sticky;
+    top: 4rem;
+    align-self: start;
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+  }
+}
+
 /* Margin notes. Narrow (the default): a small note in the text flow with a left rule, at the measure. */
 .margin-note {
   display: block;

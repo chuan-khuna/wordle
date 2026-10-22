@@ -46,6 +46,7 @@ app/frontend/
     lib/widgets/opener-presets.ts    the highlight tab lists (Best, Myths, Bad, All) and the preset that matches a word list (with opener-presets.test.ts)
     lib/wordle/strategies.ts        the eight Strategies (ids, display names, Guess Pool, Search Scope, Ranking, in the package's order), their groups by Ranking and the names of each choice (with strategies.test.ts)
     components/prose/MarginNote.tsx, lib/content/rehype-margin-notes.mjs (a Margin note and the rehype plugin that seats it)
+    components/site/TableOfContents.tsx, lib/content/headings.ts, lib/content/rehype-heading-ids.mjs (an Article's Table of contents, the headings it lists and the plugin that gives them ids; headings.test.ts)
     components/prose/Term.tsx (server: glossary lookup), Mark.tsx (server: Mark label), mark-style.ts (the Mark label classes), TermTip.tsx (client: the nested glossary card shared by both), VideoEmbed.tsx
     components/widgets/     the Widgets: FeedbackScorer, CandidateFilter, SplitExplorer (with SplitChart), StepThroughGame, SideBySideGame, OpenerTable, BenchmarkChart, OpenerDistribution, SplitGroups, SplitBlock, OpenerSplit (the Opener Split page's content), Follow (the Follow an Answer page's content), and their parts: FollowPath, WordRow, StateBoard, useGuessCheck, Tile, ui, useWidgetParam, useLoad
     lib/wordle/feedback.ts         TypeScript port of the Feedback scorer, with its step trace (feedback.test.ts)
@@ -135,6 +136,19 @@ An Article is two columns, in the style of Tufte's books: the text column at the
   - **Wide** (the container is at least 989px): a note inside a paragraph is `float: right; clear: right` with a negative right margin of the margin width plus the gap (Tufte CSS), so it sits in the margin level with the line it is written on, takes no room from the text, and a later note is pushed below an earlier one. A note on its own line right after a paragraph, list, quote or display formula is wrapped with that block by `lib/content/rehype-margin-notes.mjs` (a rehype plugin, last in `next.config.ts`; `.margin-row`, a two-column grid) so the two share a row: the note is level with the block (centred on a display formula), and a note taller than its block pushes what follows down. The plugin is given by absolute path (`@next/mdx` resolves plugin paths with `require`). Turbopack's build cache does not track the plugin file, so after editing it delete `.next/cache/turbopack` before `bun run build`.
   - **Narrow**: the note is a block in the text flow, at the measure, indented with a left rule (`rule-strong`), right after the text it was written in (a note in the middle of a paragraph splits that paragraph, so put it at the end). Code blocks and Widgets use the column width; there is no sideways scroll at 390px.
 - Header, Prerequisites, "Builds on this Article" and the Prev/Next links are `max-w-measure`, aligned with the text column.
+
+### Table of contents
+
+On a wide window an Article has a Table of contents in a sticky column to its left: its `##` and `###` headings as links (a `###` indented), under an "On this page" eyebrow (page text `onThisPage`), drawn like the sidebar's links (a left rule, the current one in `text` with a `text` rule).
+
+```
+| sidebar | On this page (13rem) | gap | Article: text column and margin |
+```
+
+- **Ids.** `lib/content/rehype-heading-ids.mjs` (a rehype plugin, after the Margin note one in `next.config.ts`) gives each `h2` and `h3` an id from its text: `headingSlug` lower-cases it, keeps letters of any script with their marks (so Thai keeps its vowels and tone marks), digits and hyphens, and joins words with hyphens ("salet or slate?" is `salet-or-slate`); a repeated heading gets `-1`, `-2`. The same Turbopack cache note as the Margin note plugin applies.
+- **The list.** `ArticleView` reads it on the server with `articleHeadings(fileName, lang)` (`lib/content/headings.ts`): the pure `headingsOf(body)` takes the `##` and `###` lines of the MDX source (not inside fenced code; inline code, emphasis and link syntax shown as plain text) and slugs them with the same slugger, so each link matches its heading's id (tested in `headings.test.ts` by compiling MDX with the plugin). An Article with no heading gets no column.
+- **`TableOfContents`** (`components/site/TableOfContents.tsx`, a Client Component) is rendered on the server, so the links work without JavaScript. Once hydrated it marks the section being read with `aria-current="location"`: the last heading whose top has passed a quarter of the window's height, or the last heading at the bottom of the page; none above the first. Headings in the body have `scroll-margin-top: 2rem`.
+- **When it shows: a media query, from 96rem (1536px).** It is hidden until the window has room for the sidebar (14rem), the gutters (4rem), the column (`--container-toc`, 13rem), the gap (`--spacing-margin-gap`) and the full Article body with its margin (989px), about 1525px, so it never takes the margin from the Margin notes. Every window that wide has the sidebar as a column, so a media query is exact here, unlike the Margin note breakpoint. There, `main:has(> .article-with-toc)` is widened by the column and the gap (other pages keep `max-w-page`) and `.article-with-toc` is a two-column grid; the column is `position: sticky` at `top: 4rem`, scrolling inside itself if it is taller than the window. Below 1536px the Article page is exactly as before.
 
 ## Design tokens
 

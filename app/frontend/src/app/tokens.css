@@ -89,6 +89,8 @@
   --container-article: calc(var(--container-measure) + var(--spacing-margin-gap) + var(--container-margin));
   --container-page: 68rem;
   --container-nav: 14rem;
+  /* An Article's Table of contents: a column left of the Article on wide windows (globals.css, .article-toc). */
+  --container-toc: 13rem;
 
   /* Shape: small radius, no shadow. Tiles keep a 3px corner; everything else is square or 2px. */
   --radius-xs: 1px;
