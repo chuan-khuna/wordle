@@ -29,12 +29,15 @@ export function FollowPath({
   step,
   onPick,
   lang,
+  layoutWidth,
 }: {
   data: SolveResponse;
   groups: readonly (SplitGroup | undefined)[];
   step: number;
   onPick: (n: number) => void;
   lang: Language;
+  /** Lay the nodes out as if the container were this wide (in pixels), instead of measuring it (Full screen). */
+  layoutWidth?: number;
 }) {
   const text = pageText(lang);
   const card = useHeadCard({
@@ -43,9 +46,9 @@ export function FollowPath({
     focusTarget: (el) => (el.tagName === "BUTTON" ? el.querySelector<HTMLElement>(HEAD) : null),
   });
   const { onPointerOver, onPointerOut, onFocus, onBlur } = card.handlers;
-  const [ref, available] = useColumns(NODE_EXTRA);
+  const [ref, available] = useColumns(NODE_EXTRA, layoutWidth);
   return (
-    <div ref={ref} className="min-w-0">
+    <div ref={ref} className="min-w-0" style={layoutWidth === undefined ? undefined : { width: layoutWidth }}>
       <ol
         aria-label={text.pathLabel(data.answer)}
         onPointerOver={onPointerOver}

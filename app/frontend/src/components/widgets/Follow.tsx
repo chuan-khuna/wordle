@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Maximize2 } from "lucide-react";
 import { Suspense, useEffect, useId, useState } from "react";
 import { ControlPanel } from "@/components/controls/ControlPanel";
 import { Field } from "@/components/controls/Field";
@@ -12,6 +12,7 @@ import { pageText } from "@/lib/i18n/page-text";
 import { answerGroup, statesPerRow } from "@/lib/widgets/split-groups";
 import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
 import { POOLS, RANKS, SCOPES } from "@/lib/wordle/strategies";
+import { FitOverlay, useLg } from "./FitOverlay";
 import { FollowPath } from "./FollowPath";
 import { SplitGroups } from "./SplitGroups";
 import { StrategyPicker } from "./StrategyPicker";
@@ -56,6 +57,8 @@ function Game({ lang }: { lang: Language }) {
   const [stepText, setStepText] = useWidgetParam(undefined, "step", "1");
   const [viewText, setView] = useWidgetParam(undefined, "view", "split");
   const view = oneOf(viewText === "graph" ? "path" : viewText, ["split", "path"], "split");
+  const [fit, setFit] = useWidgetParam(undefined, "fit", "");
+  const lg = useLg();
   const pool = oneOf(poolText, POOLS, "guesses");
   const scope = oneOf(scopeText, SCOPES, "global");
   const by = oneOf(byText, RANKS, "bits");
@@ -159,9 +162,12 @@ function Game({ lang }: { lang: Language }) {
               step={step}
               lang={lang}
               rowSplits={rowSplits}
+              fitted={fit === "1" && lg}
+              setFitted={(on) => setFit(on ? "1" : "")}
               onPick={(n) => {
                 go(n);
                 setView("split");
+                setFit("");
               }}
             />
           ) : (
@@ -273,8 +279,28 @@ function useRowSplits(data: SolveResponse | null, steps: number[]): RowSplits {
   return { splits, failures, keyOf };
 }
 
-/** The path: the Answer's group of every row. */
-function Path({ data, step, lang, rowSplits, onPick }: { data: SolveResponse; step: number; lang: Language; rowSplits: RowSplits; onPick: (n: number) => void }) {
+/**
+ * The path: the Answer's group of every row, with a Full screen button (from `lg`; URL param `fit=1`) that shows it in
+ * a `FitOverlay` instead, laid out at the overlay's width and scaled to the window.
+ */
+function Path({
+  data,
+  step,
+  lang,
+  rowSplits,
+  fitted,
+  setFitted,
+  onPick,
+}: {
+  data: SolveResponse;
+  step: number;
+  lang: Language;
+  rowSplits: RowSplits;
+  fitted: boolean;
+  setFitted: (on: boolean) => void;
+  onPick: (n: number) => void;
+}) {
+  const text = pageText(lang);
   const groups = data.steps.map((s) => {
     const split = rowSplits.splits[rowSplits.keyOf(s.number)];
     return split && answerGroup(split, data.answer);
@@ -282,7 +308,27 @@ function Path({ data, step, lang, rowSplits, onPick }: { data: SolveResponse; st
   const failure = data.steps.map((s) => rowSplits.failures[rowSplits.keyOf(s.number)]).find(Boolean);
   return (
     <div className="space-y-4">
-      <FollowPath data={data} groups={groups} step={step} onPick={onPick} lang={lang} />
+      <div className="hidden justify-end lg:flex">
+        <Button type="button" aria-pressed={fitted} onClick={() => setFitted(!fitted)} className="aria-pressed:bg-highlight-med">
+          <Maximize2 aria-hidden="true" />
+          {text.fullScreen}
+        </Button>
+      </div>
+      {fitted ? (
+        <FitOverlay
+          title={data.answer}
+          label={text.fullScreen}
+          closeLabel={text.closeFullScreen}
+          // Re-fit as each row's split arrives: a node's words change its size.
+          contentKey={`${data.steps.map((s) => s.guess).join(" ")}|${groups.filter(Boolean).length}`}
+          content={groups}
+          onExit={() => setFitted(false)}
+        >
+          {(layoutW) => <FollowPath data={data} groups={groups} step={step} onPick={onPick} lang={lang} layoutWidth={layoutW} />}
+        </FitOverlay>
+      ) : (
+        <FollowPath data={data} groups={groups} step={step} onPick={onPick} lang={lang} />
+      )}
       {failure && (
         <p role="alert" className="text-sm text-error">
           {failure}
