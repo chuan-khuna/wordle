@@ -37,6 +37,45 @@ export function union(boxes: (Box | null)[], maxHeight = Infinity): Box | null {
   return { x, y, width: right - x, height: Math.min(bottom - y, maxHeight) };
 }
 
+/**
+ * `box` grown to take in, whole, the small things within `reach` px of it (a heading above, a legend below), so
+ * the shot shows them for context instead of their cut-off edges. Only text, SVG and images count, at most `reach`
+ * tall, and nothing fixed or sticky (a page bar is not context).
+ */
+export async function withContext(page: Page, box: Box, reach = 64): Promise<Box> {
+  return page.evaluate(
+    ({ box, reach }) => {
+      const band = { left: box.x - reach, top: box.y - reach, right: box.x + box.width + reach, bottom: box.y + box.height + reach };
+      const pinned = (e: Element | null): boolean => {
+        for (; e; e = e.parentElement) if (/fixed|sticky/.test(getComputedStyle(e).position)) return true;
+        return false;
+      };
+      const leaf = (e: Element) =>
+        /^(svg|img|canvas|input)$/i.test(e.tagName) ||
+        [...e.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim() !== "");
+      let { left, top } = { left: box.x, top: box.y };
+      let { right, bottom } = { right: box.x + box.width, bottom: box.y + box.height };
+      for (const e of document.body.querySelectorAll("*")) {
+        const svg = e.closest("svg");
+        if (!leaf(e) || (svg && svg !== e)) continue; // an SVG counts whole, not its parts
+        const r = e.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0 || r.height > reach || getComputedStyle(e).visibility === "hidden") continue;
+        const x = r.left + scrollX, y = r.top + scrollY;
+        const inBand = x < band.right && x + r.width > band.left && y < band.bottom && y + r.height > band.top;
+        if (!inBand || pinned(e)) continue;
+        left = Math.min(left, x);
+        top = Math.min(top, y);
+        right = Math.max(right, x + r.width);
+        bottom = Math.max(bottom, y + r.height);
+      }
+      left = Math.max(0, left);
+      right = Math.min(document.documentElement.clientWidth, right);
+      return { x: left, y: top, width: right - left, height: bottom - top };
+    },
+    { box, reach },
+  );
+}
+
 /** The boxes of `selectors` together, at most `maxHeight` tall. */
 export const around =
   (selectors: string[], maxHeight = Infinity) =>

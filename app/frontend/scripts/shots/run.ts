@@ -21,7 +21,7 @@ import { parseArgs } from "node:util";
 import { chromium, type Page } from "playwright";
 import { DEFAULT_THEME, STORAGE_KEY } from "../../src/lib/theme/theme-script";
 import { THEMES } from "../../src/lib/theme/themes";
-import { type Shot, wholePage } from "./lib";
+import { type Shot, wholePage, withContext } from "./lib";
 import follow from "./follow";
 import openerSplit from "./opener-split";
 import openers from "./openers";
@@ -82,14 +82,22 @@ async function open(page: Page, p: string) {
 async function shoot(page: Page, shot: Shot, file: string) {
   await open(page, shot.path);
   await shot.act?.(page);
-  const box = await shot.crop(page);
+  let box = await shot.crop(page);
   // Back at the top, a sticky bar (the Follow page's Guess strip) sits in its place instead of over the crop.
   // Not after a hover or click: scrolling would move the pointer off what it opened.
   if (!shot.act) await page.evaluate(() => window.scrollTo(0, 0));
   if (!box) return page.screenshot({ path: file, animations: "disabled" });
+  box = await withContext(page, box);
   const x = Math.max(0, box.x - MARGIN);
   const y = Math.max(0, box.y - MARGIN);
   const clip = { x, y, width: Math.min(viewport.width - x, box.width + 2 * MARGIN), height: box.height + 2 * MARGIN };
+  // The margin is blank page background, not the cut-off edges of the neighbours (a heading above, a legend below).
+  // A huge shadow around the box paints everything outside it; no pointer events, so an open hover card stays open.
+  await page.evaluate((b) => {
+    const veil = document.createElement("div");
+    veil.style.cssText = `position:absolute;left:${b.x}px;top:${b.y}px;width:${b.width}px;height:${b.height}px;pointer-events:none;z-index:2147483647;box-shadow:0 0 0 100000px ${getComputedStyle(document.body).backgroundColor}`;
+    document.body.append(veil);
+  }, box);
   return page.screenshot({ path: file, clip, fullPage: true, animations: "disabled" });
 }
 
