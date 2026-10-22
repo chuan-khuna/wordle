@@ -88,3 +88,13 @@ web:
         # Ctrl-C reaches both through the shared console; this catches the backend if the frontend exits alone
         taskkill /T /F /PID $backend.Id 2>&1 | Out-Null
     }
+
+# Check an animation in src/animations/ (e.g. what_is_wordle): timeline, storyboard and layout problems. Takes manimgx inspect options, e.g. -t 1.5,end
+animation-inspect name *args:
+    mkdir -p build/animations/{{name}}
+    uv run manimgx inspect src/animations/{{name}}.py -o build/animations/{{name}}/{{name}}.storyboard.png {{args}}
+
+# Present an animation in src/animations/ (e.g. what_is_wordle) as slides in the browser: writes build/animations/<name>/. Takes manimgx present options, e.g. --pdf, -r 1280x720
+animation-present name *args:
+    mkdir -p build/animations/{{name}}
+    uv run manimgx present src/animations/{{name}}.py -o build/animations/{{name}}/{{name}}.mp4 {{args}}

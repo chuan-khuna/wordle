@@ -17,3 +17,6 @@ precompute-cache/
 
 # Local settings (copy .env.example)
 .env
+
+# Animations rendered from src/animations/ (`just animation-present <name>`)
+build/
