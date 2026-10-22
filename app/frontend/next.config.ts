@@ -1,12 +1,26 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import createMDX from "@next/mdx";
 import type { NextConfig } from "next";
 
+// The project's one .env (see .env.example at the root), for `bun run dev` outside `just`. Variables already set win.
+const rootEnv = path.join(process.cwd(), "../../.env");
+if (fs.existsSync(rootEnv)) process.loadEnvFile(rootEnv);
+
 // Where the FastAPI backend runs. Next proxies /api/* there, so the browser only talks to one origin.
 const BACKEND_URL = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
+// This machine's LAN addresses, so the dev server opened from another device (http://192.168.x.x:3000) gets hot reload;
+// Next blocks its dev resources from any origin but localhost otherwise. Read at startup, so a new DHCP lease needs a restart.
+const lanAddresses = Object.values(os.networkInterfaces())
+  .flat()
+  .filter((net) => net && net.family === "IPv4" && !net.internal)
+  .map((net) => net!.address);
+
 const nextConfig: NextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
+  allowedDevOrigins: lanAddresses,
   // The dev indicator defaults to bottom-left, on top of the sidebar.
   devIndicators: { position: "bottom-right" },
   async rewrites() {

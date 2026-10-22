@@ -86,7 +86,7 @@ Run `just precompute` and `just precompute-benchmark` once first: the backend wi
 
 ## The API proxy
 
-`next.config.ts` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`, so the browser only talks to Next and no CORS is needed. `BACKEND_URL` is read when the server starts and defaults to `http://127.0.0.1:8000`; set it to point at another backend (`BACKEND_URL=http://backend:8000 just frontend`). Try it: `curl 'http://localhost:3000/api/feedback?guess=crane&answer=speed'`.
+`next.config.ts` rewrites `/api/:path*` to `${BACKEND_URL}/api/:path*`, so the browser only talks to Next and no CORS is needed. `BACKEND_URL` is read when the server starts and defaults to `http://127.0.0.1:8000`; set it to point at another backend (`BACKEND_URL=http://backend:8000 just frontend`, or in the project's one `.env` at the root: copy `.env.example`; `just` loads it into every recipe and `next.config.ts` reads it too, so `bun run dev` alone sees it; a variable set in the shell wins). Try it: `curl 'http://localhost:3000/api/feedback?guess=crane&answer=speed'`.
 
 ## Themes
 

@@ -1,4 +1,6 @@
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
+# Every recipe gets the variables in .env (see .env.example)
+set dotenv-load
 
 # List the recipes
 default:

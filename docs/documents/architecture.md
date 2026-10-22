@@ -12,7 +12,8 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just precompute`, `just precompute-guess-counts`, `just migrate-guess-counts`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just precompute-benchmark`, `just backup-cache`, `just restore-cache`, `just frontend`, `just web`
+.env.example                every setting, with its default; copy it to `.env` (gitignored), the one settings file of the project (see "Settings")
+justfile                    loads `.env` into every recipe (`set dotenv-load`); `just wordle`, `just precompute`, `just precompute-guess-counts`, `just migrate-guess-counts`, `just wordle-gpui`, `just test`, `just test-gpui`, `just test-backend`, `just backend`, `just precompute-benchmark`, `just backup-cache`, `just restore-cache`, `just frontend`, `just web`
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
 src/precompute_guess_counts.py  entry point: `uv run src/precompute_guess_counts.py` (precompute the Guess Count Matrices)
@@ -73,6 +74,25 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `uv build --package wordle` | Build a wheel; it includes the word lists |
 
 All three game commands take `--answer WORD` or `--seed N` to skip the menu, and `--unlimited` for no Guess Limit.
+
+## Settings
+
+The website's settings live in one `.env` at the root (`cp .env.example .env`; without it the defaults apply). Each app reads it, so it works however you start them:
+
+| Reader | How |
+| --- | --- |
+| every `just` recipe | `set dotenv-load` in the `justfile` |
+| the backend (`uvicorn` run alone) | `main.py` calls python-dotenv's `load_dotenv` on the root `.env` |
+| the frontend (`bun run dev` alone) | `next.config.ts` calls `process.loadEnvFile` on the root `.env` |
+
+A variable set in the shell always wins over the file (`BACKEND_URL=... just frontend`).
+
+| Variable | Read by | Default | What it does |
+| --- | --- | --- | --- |
+| `BACKEND_URL` | frontend | `http://127.0.0.1:8000` | Where Next proxies `/api/*`. See [web-frontend.md](web-frontend.md) |
+| `CORS_ORIGINS` | backend | empty (no CORS) | Origins that may call the API from a browser directly. The website doesn't need it. See [web-backend.md](web-backend.md) |
+
+The terminal game and the gpui app read no settings. The Rust tests' `WORDLE_PYTHON_GUESS_COUNTS` and `WORDLE_PYTHON_BENCHMARK` are usually set per run, but `just test-gpui` would pick them up from `.env` too (see [gpui-app.md](gpui-app.md)).
 
 ## Dependencies
 

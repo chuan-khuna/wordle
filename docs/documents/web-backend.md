@@ -6,7 +6,7 @@ The FastAPI app behind the website, in `app/backend/`. It is its **own uv projec
 
 ```
 app/backend/
-  pyproject.toml          fastapi, uvicorn, numpy and wordle (path source); pytest and httpx as dev tools
+  pyproject.toml          fastapi, uvicorn, numpy, python-dotenv and wordle (path source); pytest and httpx as dev tools
   wordle_backend/
     main.py               the FastAPI app (`wordle_backend.main:app`): lifespan, error handlers, routers
     routers/              one APIRouter per area, all under /api
@@ -78,6 +78,8 @@ The Opener leaderboard ranks every Guess List word as a first Guess by Expected 
 ## API
 
 `main.py` loads the matrices once at startup with mmap (in FastAPI's lifespan) into a `WebSolver` kept on `app.state`. They are never built there: if missing, startup fails with a message pointing to `just precompute`. The Benchmark JSON files and the Guess Count Matrix `summary.json` are loaded too but are optional: if one is missing, only its endpoint fails. Run it with `just backend` (uvicorn, `http://127.0.0.1:8000`; extra arguments go to uvicorn, e.g. `--port 8001 --reload`).
+
+Settings come from the environment or the project's `.env` at the root (`.env.example` lists them; `main.py` loads it with python-dotenv, and a variable set in the shell wins). The one setting is `CORS_ORIGINS`: comma-separated origins (or `*`) that may call the API from a browser, through `CORSMiddleware` for GET and POST. It is empty by default, so no CORS headers are sent: the website doesn't need them, since Next proxies `/api` and the browser only talks to Next. Set it only for a page on another origin that calls the backend directly.
 
 Words are lowercase five-letter strings. A Feedback is written as **five digits, one per letter: 0 Absent, 1 Present, 2 Correct** (`"20102"`), the base-3 digits of its Feedback Code; the emoji squares are for display only. Every response with a Feedback gives both `marks` (that string) and `code` (the Feedback Code). A State is `[{guess, feedback}]` with `feedback` as the digit string. `pool`, `scope` and `by` are as in [solver-strategy.md](solver-strategy.md) (defaults `guesses`, `global`, `bits`). A "WordStats" below is `{word, bits, expected_candidates, groups, largest_group, is_candidate, win_chance}`.
 

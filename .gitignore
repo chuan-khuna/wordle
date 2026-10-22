@@ -14,3 +14,6 @@ dist/
 # Precomputed Feedback matrices, Benchmark and Openers (regenerate with `just precompute`, `just precompute-guess-counts`, `just precompute-benchmark`)
 precompute-cache/
 # (their xz backup in data/precompute/ is committed: `just backup-cache`, `just restore-cache`)
+
+# Local settings (copy .env.example)
+.env

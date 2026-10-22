@@ -2,12 +2,19 @@
 
 The endpoints live in `routers/`, one module per area. Bad input gets HTTP 400
 and `{"detail": "<message>"}`, never FastAPI's default 422.
+
+Settings come from the environment, or from the project's `.env` (see `.env.example` at the root).
 """
 
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
@@ -17,6 +24,14 @@ from wordle_backend.common import BadRequest, NotPrecomputed
 from wordle_backend.routers import benchmark as benchmark_router
 from wordle_backend.routers import candidates, feedback, guess_counts, solve, suggestions
 from wordle_backend.solver import WebSolver
+
+# Variables already set in the environment win over the file.
+load_dotenv(Path(__file__).parents[3] / ".env")
+
+
+def cors_origins(value: str) -> list[str]:
+    """The origins in CORS_ORIGINS: comma-separated, blanks dropped, `*` for any."""
+    return [origin.strip().rstrip("/") for origin in value.split(",") if origin.strip()]
 
 
 @asynccontextmanager
@@ -38,6 +53,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Wordle backend", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000)  # /api/guess-counts is about 15k entries
+# The website needs no CORS (Next proxies /api), only a page on another origin calling the backend directly does.
+if origins := cors_origins(os.environ.get("CORS_ORIGINS", "")):
+    app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 
 for router_module in (feedback, candidates, suggestions, solve, benchmark_router, guess_counts):
     app.include_router(router_module.router)

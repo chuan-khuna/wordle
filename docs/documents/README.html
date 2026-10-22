@@ -193,6 +193,7 @@ just precompute-benchmark --threads 8 --yes</code></pre>
 <p>First make sure <code>precompute-cache/feedback/</code> exists (step 5); the backend won't start without it. Then:</p>
 <pre><code>just web                           <span class="c"># backend on :8000 and frontend on :3000; Ctrl-C stops both</span></code></pre>
 <p>Open <a href="http://localhost:3000">http://localhost:3000</a>. The frontend rewrites <code>/api/*</code> to the backend, so the browser only ever talks to port 3000.</p>
+<p>Settings live in one <code>.env</code> at the project root: <code>cp .env.example .env</code>. It lists each variable (<code>BACKEND_URL</code> for the frontend, <code>CORS_ORIGINS</code> for the backend); <code>just</code> loads it into every recipe, and a variable set in the shell wins. Without it the defaults apply.</p>
 <p>To run the two separately, for example to restart one or change a port:</p>
 <pre><code>just backend                       <span class="c"># FastAPI on http://127.0.0.1:8000; extra args go to uvicorn, e.g. --reload</span>
 just frontend                      <span class="c"># Next.js dev server on http://localhost:3000; e.g. --port 3001</span>
@@ -211,7 +212,7 @@ just test-backend                  <span class="c"># web backend (pytest)</span>
   <li><strong>The backend says the matrices are missing:</strong> run <code>just precompute</code>.</li>
   <li><strong>"manifest.json was written by format version 1":</strong> an old Guess Count folder. Run <code>just migrate-guess-counts</code>.</li>
   <li><strong>"Can't resume &lt;id&gt;":</strong> the matrix doesn't match the current word lists or Strategy definitions. Restore it from the backup, or start it over (<code>--fresh</code>, or delete <code>precompute-cache/guess-counts/</code>).</li>
-  <li><strong>Port 3000 or 8000 is already in use:</strong> pass <code>--port</code> to <code>just frontend</code> or <code>just backend</code>, and set <code>BACKEND_URL</code> to match.</li>
+  <li><strong>Port 3000 or 8000 is already in use:</strong> pass <code>--port</code> to <code>just frontend</code> or <code>just backend</code>, and set <code>BACKEND_URL</code> to match (in <code>.env</code>, or before the command).</li>
 </ul>
 <p>For how each part is built, start at <a href="INDEX.md">INDEX.md</a>. The terms (Candidate, Guess Pool, Search Scope, Strategy, Opener…) are defined in <a href="../../GLOSSARY.md">GLOSSARY.md</a>.</p>
 
