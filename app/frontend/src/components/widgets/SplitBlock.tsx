@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import type { pageText } from "@/lib/i18n/page-text";
 import { type HeadSize, headSize } from "@/lib/widgets/split-groups";
 import { parseMarks } from "@/lib/wordle/feedback";
@@ -7,6 +8,31 @@ import { Tile } from "./Tile";
 /** A word is five mono capitals at 11px (about 6.6px each), in a grid column of `WORD_W` pixels; columns are `WORD_GAP` apart. */
 export const WORD_W = 38;
 export const WORD_GAP = 8;
+
+/** Columns assumed until the container has been measured. */
+const FALLBACK_COLUMNS = 12;
+
+/** How many word columns fit in `width` pixels, once `extra` pixels (a block's padding, border, outline) are taken off; at least 1. */
+const columnsIn = (width: number, extra: number) => Math.max(1, Math.floor((width - extra + WORD_GAP) / (WORD_W + WORD_GAP)));
+
+/**
+ * How many word columns a block can have in the container's width, or in `layoutWidth` when given, `extra` being what
+ * the block adds around its grid; kept up to date as the container resizes. Pass the result to `columnCount`.
+ */
+export function useColumns(extra: number, layoutWidth?: number): [React.RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(FALLBACK_COLUMNS);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || layoutWidth !== undefined) return;
+    const measure = () => setColumns(columnsIn(el.clientWidth, extra));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [layoutWidth, extra]);
+  return [ref, layoutWidth === undefined ? columns : columnsIn(layoutWidth, extra)];
+}
 
 const HEAD_TILE: Record<HeadSize, { small?: boolean; board?: boolean; tiny?: boolean }> = {
   lg: {},

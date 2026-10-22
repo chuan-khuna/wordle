@@ -1,37 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { SplitResponse } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import { columnCount, orderSplitGroups } from "@/lib/widgets/split-groups";
 import { HEAD, useHeadCard } from "./HeadCard";
-import { WORD_GAP, WORD_W, SplitBlock } from "./SplitBlock";
+import { SplitBlock, useColumns } from "./SplitBlock";
 import { chain, useHoverCard } from "./useHoverCard";
 
 /** What a block adds around its grid: 6px of padding each side, plus 3px each side for the highlight outline. */
 const BLOCK_EXTRA = 2 * 6 + 2 * 3;
-/** Columns assumed until the container has been measured. */
-const FALLBACK_COLUMNS = 12;
-
-const columnsIn = (width: number) => Math.max(1, Math.floor((width - BLOCK_EXTRA + WORD_GAP) / (WORD_W + WORD_GAP)));
-
-/** How many word columns fit in the container's width, or in `layoutWidth` when given (at least 1), kept up to date as it resizes. */
-function useColumns(layoutWidth?: number): [React.RefObject<HTMLDivElement | null>, number] {
-  const ref = useRef<HTMLDivElement>(null);
-  const [columns, setColumns] = useState(FALLBACK_COLUMNS);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || layoutWidth !== undefined) return;
-    const measure = () => setColumns(columnsIn(el.clientWidth));
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [layoutWidth]);
-  return [ref, layoutWidth === undefined ? columns : columnsIn(layoutWidth)];
-}
 
 type OrderedGroup = ReturnType<typeof orderSplitGroups>[number];
 
@@ -73,7 +53,7 @@ export const SplitGroups = memo(function SplitGroups({
 }) {
   const text = pageText(lang);
   const groups = useMemo(() => orderSplitGroups(split.split), [split.split]);
-  const [ref, available] = useColumns(layoutWidth);
+  const [ref, available] = useColumns(BLOCK_EXTRA, layoutWidth);
   const guess = split.word;
   const linked = wordLink !== undefined;
 
