@@ -10,6 +10,8 @@ mod cache 'just/cache.just'
 mod test 'just/test.just'
 # Run the website
 mod web 'just/web.just'
+# Present the YouTube video's slides (Slidev) in app/slidev/
+mod slides 'just/slides.just'
 # Check and present the animations in src/animations/
 mod animate 'just/animate.just'
 
