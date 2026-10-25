@@ -1,0 +1,87 @@
+---
+title: "การสร้าง Game"
+summary: "Game ใน Python: State, แต่ละ Guess และ game loop"
+source: 470a3a726cbab8d2525adb4338e41d9c7615ce53
+---
+
+ตอนนี้คุณมีกติกาและฟังก์ชัน Feedback แล้ว แค่นี้ก็พอจะสร้าง <Term>Game</Term> ทั้งหมดได้ ต้องใช้ชิ้นเล็ก ๆ สามชิ้น คือ <Term>Guess</Term>, <Term>State</Term> และตัว Game เอง
+
+## Guess และ State
+
+Guess ในโค้ดคือคำหนึ่งคำพร้อม Feedback และลำดับที่ของมัน ส่วน <Term>State</Term> คือ Guess ทั้งหมดที่ทายมาแล้ว พร้อม Feedback ของแต่ละอัน นั่นคือทุกอย่างที่ผู้เล่น หรือ Solver มองเห็น
+
+```python title="A Guess and the State" {8-9,16-17}
+@dataclass(frozen=True)
+class Guess:
+    number: int
+    word: str
+    feedback: Feedback
+
+    @property
+    def is_win(self) -> bool:
+        return all(mark is Mark.CORRECT for mark in self.feedback)
+
+
+@dataclass(frozen=True)
+class State:
+    guesses: tuple[Guess, ...] = ()
+
+    def add(self, word: str, feedback: Feedback) -> "State":
+        return State(self.guesses + (Guess(len(self.guesses) + 1, word, feedback),))
+```
+
+Guess เป็น <Term>Win</Term> เมื่อทุก Mark เป็น <Mark kind="correct" />
+
+สังเกตว่าทั้งสองคลาสเป็น frozen และ `add` ไม่เปลี่ยน State มันสร้าง State ใหม่ขึ้นมา State ที่คุณถืออยู่จึงคงเดิมทุกอย่าง ไม่ว่า Game จะเดินต่อไปอย่างไร Solver จะพึ่งสิ่งนี้ในภายหลัง
+
+## Game
+
+Game เก็บ Answer, <Term>Guess Limit</Term> และ State ปัจจุบัน และเป็นตัวตัดสินว่าเมื่อไรจบ
+
+```python title="The Game" {4,9,13,16-19}
+@dataclass
+class Game:
+    answer: str
+    max_guesses: int | None = MAX_GUESSES
+    ...
+
+    @property
+    def is_won(self) -> bool:
+        return self._state.last is not None and self._state.last.is_win
+
+    @property
+    def is_lost(self) -> bool:
+        return not self.is_won and self.guesses_left == 0
+
+    def guess(self, word: str) -> Guess:
+        if self.is_over:
+            raise GameOver("the Game is already over")
+        word = self.check_guess(word)
+        self._state = self._state.add(word, feedback(word, self.answer))
+        return self._state.last
+```
+
+การทาย Guess มีสามขั้นตอน ขั้นแรก ปฏิเสธถ้า Game จบไปแล้ว ขั้นที่สอง ตรวจว่าคำนั้นมีห้าตัวอักษรและอยู่ใน <Term>Guess List</Term> คำที่ถูกปฏิเสธจะทำให้เกิด error และไม่นับเป็นหนึ่งใน Guess ที่ใช้ไป ขั้นที่สาม คำนวณ Feedback ด้วยฟังก์ชันจาก Article ที่แล้ว และเพิ่ม Guess ลงใน State ใหม่
+
+<Term>Loss</Term> คือ Game ที่ถึง Guess Limit โดยไม่ได้ Win ตั้ง `max_guesses=None` แล้ว Game จะไม่มีขีดจำกัด จึงจบได้ด้วย Win เท่านั้น
+
+## Loop
+
+ตอนนี้ Game คือ loop ขอคำ ทาย แสดง State และหยุดเมื่อ Game จบ:
+
+```python
+game = Game("crane")
+while not game.is_over:
+    word = input("Guess: ")
+    try:
+        game.guess(word)
+    except InvalidGuess as error:
+        print(error)
+        continue
+    print(game.state)
+print("Win" if game.is_won else f"Loss: the Answer was {game.answer}")
+```
+
+พิมพ์ `zzzzz` แล้วคุณจะได้ `'zzzzz' is not on the Guess List` และคุณยังมี Guess ครบทุกครั้งเหมือนเดิม พิมพ์ `crane` แล้ว loop จะพิมพ์กระเบื้อง <Mark kind="correct" /> ห้าอันและ Win
+
+นั่นคือเกมทั้งหมด จากนี้ไปทุกอย่างเป็นเรื่องของผู้เล่น

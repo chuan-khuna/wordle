@@ -1,0 +1,64 @@
+---
+title: "Greedy Strategy"
+summary: "เล่น Guess ที่ได้คะแนนดีที่สุดในทุกขั้น รวมถึง Guess ที่เป็น Answer ไม่ได้"
+source: 3b1e5db80ef9d05f6c767f72b7bf02aa66a4fde4
+---
+
+ตอนนี้เราสร้าง <Term>Solver</Term> ได้แล้ว <Term>Strategy</Term> ของมันง่ายที่สุดเท่าที่มี: ในทุกขั้น ดู <Term>Candidate Set</Term> ปัจจุบัน ให้คะแนนทุก Guess ด้วย <Term>Expected Information</Term> แล้วเล่นคำที่ดีที่สุด วิธีนี้เรียกว่า greedy เพราะมันเลือก Guess ที่ดีที่สุดในตอนนี้ และไม่เคยวางแผนไกลกว่านั้น
+
+แต่ละขั้นคือสามแนวคิดของ Part นี้ต่อกัน หา Candidate แบ่งพวกมันด้วยทุก Guess แล้วเล่นคำอันดับแรก Guess นั้นคือ <Term>Suggestion</Term>
+
+```python title="The greedy choice" {11-14}
+def suggest(
+    self,
+    candidates: np.ndarray,
+    *,
+    pool: Pool = "guesses",
+    scope: Scope = "global",
+    by: Rank = "bits",
+) -> WordStats | None:
+    """The Suggestion: the top-ranked Guess, or None if no Candidate is left."""
+    # With one or two Candidates, guessing one of them is never worse.
+    if 0 < len(candidates) <= 2:
+        scope = "candidates"
+    best = self.rank(candidates, pool=pool, scope=scope, by=by, top=1)
+    return best[0] if best else None
+```
+
+Loop ที่ครอบมันสั้น ๆ ทาย Suggestion ตัด Candidate ให้แคบลงด้วย Feedback แล้วทำซ้ำ:
+
+```python
+game = Game("watch")
+candidates = solver.all_candidates()
+while not game.is_over:
+    guess = game.guess(solver.suggest(candidates).word)
+    candidates = solver.narrow(candidates, guess.word, pack(guess.feedback))
+```
+
+## Guess ที่ชนะไม่ได้
+
+มีการตั้งค่าหนึ่งใน `suggest` ที่ส่งผลมาก: `scope` คือ <Term>Search Scope</Term> Solver จะค้นหาเฉพาะ Candidate ก็ได้ หรือจะค้นหา **All words** ใน Guess List ซึ่งรวมคำที่เป็น Answer ไม่ได้ก็ได้
+
+การเล่นคำที่ชนะไม่ได้ฟังดูสิ้นเปลือง แต่มันอาจเป็นคำถามที่ดีที่สุด นี่คือเหตุผล ใน Game ที่ Answer คือ <Word>watch</Word>
+
+ก่อนอื่น Solver ใช้การตั้งค่าแบบแคบ คือ Candidate เท่านั้น และเลือก Guess จาก Answer List ซึ่งเป็น <Term>Guess Pool</Term> ของมัน ลองเดินดูทีละขั้น:
+
+<StepThroughGame id="trap" answer="watch" pool="answers" scope="candidates" step={4} />
+
+<Word>raise</Word>, <Word>tangy</Word> และ <Word>caput</Word> ลด Candidate Set เหลือ 5 คำ: <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word>, <Word>match</Word> และ <Word>watch</Word> ทุกคำเข้ากับ <Word>_atch</Word> ตอนนี้ Solver ต้องเลือกหนึ่งในนั้น และแต่ละคำเป็นคำถามที่แย่ ทาย <Word>batch</Word> แล้ว ถ้าไม่ถูก คุณจะรู้แค่ว่าตัวอักษรตัวแรกผิด Candidate ทำได้ดีที่สุดแค่ 0.72 บิต โดยมีกลุ่มใหญ่สุด 4 คำ Solver ไล่ทาย <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word> และ <Word>match</Word> ทีละคำ <Word>watch</Word> ใช้ Guess ถึง **แปด** ครั้ง และเมื่อ Guess Limit คือหกครั้ง นั่นคือ <Term>Loss</Term> ส่วน <Word>match</Word> ใช้เจ็ดครั้ง ก็เป็น Loss เหมือนกัน
+
+นี่คือกับดัก <Word>_atch</Word> กลุ่มคำที่ต่างกันตัวอักษรเดียวเป็นกับดักของทุก Strategy ที่ทายเฉพาะ Candidate เพราะ Candidate แต่ละคำตัดออกได้แค่ตัวมันเอง
+
+ทีนี้มาดู Answer เดิม โดยให้ Solver ค้นหา All words ใน Guess List ได้:
+
+<StepThroughGame id="free" answer="watch" step={3} />
+
+คราวนี้ Solver เปิดด้วย <Word>tarse</Word> และจาก Candidate 5 คำ มันเล่น <Word>abamp</Word> มันเป็นคำแปลก ๆ และเป็น Answer ไม่ได้ แต่มันมี <Letter>b</Letter>, <Letter>m</Letter> และ <Letter>a</Letter> อยู่ด้วยกัน และถามสี่คำถามพร้อมกัน Feedback ของมันแยกกลุ่มคำนั้นออกจากกัน Solver จึง Win ใน 5 Guess <MarginNote>ลองตาม <Word>watch</Word> ด้วย Strategy นี้ได้ที่หน้า [Follow an Answer](/th/follow?answer=watch&pool=guesses&scope=global&by=bits) และดู Candidate ที่เหลือหลังทุก Guess</MarginNote>
+
+คุณเห็นเรื่องเดียวกันได้จาก Candidate 5 คำเดิม Candidate อย่าง <Word>batch</Word> มีค่า 0.72 บิต และเหลือเฉลี่ย 3.4 คำ คำที่ดีที่สุดในรายการทั้งหมดคือ <Word>ablow</Word> มีค่า 1.92 บิต และเหลือเฉลี่ย 1.4 คำ โดยไม่มีกลุ่มไหนใหญ่กว่า 2 มันชนะตอนนี้ไม่ได้ แต่แทบรับประกันว่าจะชนะในครั้งต่อไป
+
+ดู Strategy สามแบบเล่น Answer ชุดเดียวกันเคียงกัน ทีละ Guess Guess List แบบ Candidate เท่านั้นเลือก Opener จาก Guess List แต่ทุก Guess หลังจากนั้นเป็น Candidate ซึ่งก็คือคำใน Answer List มีเพียงกระดาน All words ที่เล่นคำที่ชนะไม่ได้ได้อย่างอิสระ:
+
+<SideBySideGame id="race" />
+
+กฎง่าย ๆ คือ **Guess ที่ชนะไม่ได้ก็ยังเป็น Guess ที่ดีที่สุดได้** การค้นหาทุกคำคือสิ่งที่เปลี่ยนแปด Guess ให้เป็นห้า บรรทัดสุดท้ายของ `suggest` มีรายละเอียดอีกอย่างหนึ่ง เมื่อเหลือ Candidate สองคำ มันกลับไปใช้ Candidate เท่านั้น เพราะตอนนั้นการทายหนึ่งในนั้นไม่เคยแย่กว่า

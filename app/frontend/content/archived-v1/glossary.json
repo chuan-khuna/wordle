@@ -1,0 +1,166 @@
+[
+  {
+    "term": "Game",
+    "definition": "One attempt to find a single Answer, within its Guess Limit."
+  },
+  {
+    "term": "Guess Limit",
+    "definition": "The most Guesses a Game allows: six, as in Wordle, or none, so the Game only ends with a Win."
+  },
+  {
+    "term": "Answer",
+    "definition": "The hidden word the player is trying to find."
+  },
+  {
+    "term": "Guess",
+    "definition": "A five-letter word submitted during a Game. It must be on the Guess List."
+  },
+  {
+    "term": "Feedback",
+    "definition": "The five Marks the game shows for a Guess, one per letter. A letter repeated in a Guess is marked Correct or Present only as many times as it appears in the Answer, with Correct Marks given out first."
+  },
+  {
+    "term": "Mark",
+    "definition": "The verdict on one letter of a Guess: **Correct** (in the Answer at this position), **Present** (in the Answer at a different position) or **Absent** (not in the Answer, or already accounted for)."
+  },
+  {
+    "term": "State",
+    "definition": "The Guesses made so far in a Game, each with its Feedback."
+  },
+  {
+    "term": "Win",
+    "definition": "The end of a Game in which a Guess matched the Answer."
+  },
+  {
+    "term": "Loss",
+    "definition": "The end of a Game that reaches its Guess Limit without a Win. A Game with no Guess Limit can't be lost."
+  },
+  {
+    "term": "Hard Mode",
+    "definition": "A rule that every Guess must reuse all the Correct and Present letters revealed so far, keeping Correct letters in place."
+  },
+  {
+    "term": "Seed",
+    "definition": "A number that picks the Answer of a random Game. The same Seed always picks the same Answer, so a Game can be replayed."
+  },
+  {
+    "term": "Answer List",
+    "definition": "The words that can be an Answer."
+  },
+  {
+    "term": "Guess List",
+    "definition": "Every word accepted as a Guess. It contains the whole Answer List."
+  },
+  {
+    "term": "Solver",
+    "definition": "The player that picks Guesses automatically from the State."
+  },
+  {
+    "term": "Candidate",
+    "definition": "An Answer List word that would have produced every Feedback in the State so far, so it could still be the Answer."
+  },
+  {
+    "term": "Candidate Set",
+    "definition": "All Candidates for a State. At the start of a Game it is the whole Answer List."
+  },
+  {
+    "term": "Suggestion",
+    "definition": "The Guess the Solver recommends for the current State."
+  },
+  {
+    "term": "Opener",
+    "definition": "The first Guess of a Game."
+  },
+  {
+    "term": "Feedback Split",
+    "definition": "How a possible Guess would divide the Candidate Set into groups, one group for each Feedback it could produce."
+  },
+  {
+    "term": "Feedback Matrix",
+    "definition": "A table of the Feedback of every Guess against every Answer, scored once before any Game so the Solver can look a Feedback up instead of working it out. There are two: one with the Answer List as its rows and one with the Guess List as its rows. Each cell is a Feedback Code."
+  },
+  {
+    "term": "Feedback Code",
+    "definition": "One Feedback packed into a single number from 0 to 242, by reading its five Marks as base-3 digits (Absent 0, Present 1, Correct 2), first letter first. 242 is a Win."
+  },
+  {
+    "term": "Expected Information",
+    "definition": "How much a Guess is expected to shrink the Candidate Set, averaged over its Feedback Split and counted in bits."
+  },
+  {
+    "term": "Expected Candidates",
+    "definition": "How many Candidates a Guess is expected to leave, averaged over its Feedback Split: the fewer, the better."
+  },
+  {
+    "term": "Guess Pool",
+    "definition": "The list the Solver may take its Guesses from, the Opener included: the Answer List or the Guess List."
+  },
+  {
+    "term": "Search Scope",
+    "definition": "Which Guess Pool words the Solver considers for each Guess after the Opener: **Candidates only**, or **All words** in the Guess Pool, so a word that can't be the Answer may still be guessed to split the Candidates. The Opener may be any Guess Pool word under either Search Scope, so with Candidates only the Guess Pool decides only the Opener, since every Candidate is on the Answer List."
+  },
+  {
+    "term": "Ranking",
+    "definition": "The measure the Solver uses to pick the best Guess among those it considers: highest Expected Information or lowest Expected Candidates."
+  },
+  {
+    "term": "Strategy",
+    "definition": "The rule the Solver uses to pick each Guess: one Guess Pool, one Search Scope and one Ranking, such as the Guess List, All words and highest Expected Information."
+  },
+  {
+    "term": "Play",
+    "definition": "Using the app to play a Game: the app holds the Answer and you make the Guesses."
+  },
+  {
+    "term": "Assist",
+    "definition": "Using the Solver while you play Wordle somewhere else: you enter each Guess and its Feedback, and the app shows Suggestions and the Candidate Set."
+  },
+  {
+    "term": "Benchmark",
+    "definition": "A run in which the Solver plays a Game for every word on the Answer List with one Strategy."
+  },
+  {
+    "term": "Guess Count",
+    "definition": "The number of Guesses the Solver needed to Win a Game."
+  },
+  {
+    "term": "Guess Distribution",
+    "definition": "How many Games in a Benchmark ended at each Guess Count, plus the number of Losses."
+  },
+  {
+    "term": "Average Guess Count",
+    "definition": "The mean Guess Count of a set of Games, such as a Benchmark or one Opener's row of the Guess Count Matrix. Every Game counts: each is played to a Win with no Guess Limit, so a Game that would be a Loss counts at the Guess Count it needed."
+  },
+  {
+    "term": "Guess Count Matrix",
+    "definition": "A table of the Guess Count of every Game, one row per Opener in the Strategy's Guess Pool and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count; Openers are compared by it."
+  },
+  {
+    "term": "Opener Distribution",
+    "definition": "How many Openers have each Average Guess Count, rounded to two decimals, under one Strategy. It is read from the Guess Count Matrix."
+  },
+  {
+    "term": "Article",
+    "definition": "A short piece on the website that explains one idea, such as Feedback Split or Expected Information. It may build on other Articles, its Prerequisites."
+  },
+  {
+    "term": "Prerequisite",
+    "definition": "An Article that another Article builds on and links back to."
+  },
+  {
+    "term": "Series",
+    "definition": "An ordered path through several Articles that tells one story, such as \"Solving Wordle\". A video follows a Series."
+  },
+  {
+    "term": "Part",
+    "definition": "A group of consecutive Articles in a Series that share one core idea, such as learning and building Wordle, or solving it. Each Article belongs to exactly one Part."
+  },
+  {
+    "term": "Widget",
+    "definition": "An interactive figure inside an Article that lets the reader try the idea, such as scoring a Guess or exploring a Feedback Split."
+  },
+  {
+    "term": "Margin note",
+    "definition": "A short aside printed in the margin of an Article, beside the text it comments on."
+  }
+]
