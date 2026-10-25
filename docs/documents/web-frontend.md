@@ -275,7 +275,7 @@ A term that is not in the glossary throws while the page is prerendered, so `bun
 
 `<Word>speed</Word>` works in any MDX file with no import. It has three variants, picked with `variant`:
 
-- **`simple`** (the default without Feedback): the word in caps of the surrounding font (the serif in prose, the sans in a Margin note) at `0.82em` with a little tracking, unframed, so it reads as a word and not as a widget. Frames and tiles are kept for words that carry Feedback.
+- **`simple`** (the default without Feedback): the word in mono caps (`font-mono`, `tracking-caps`) in an unfilled box the size of a `<Mark>` label (`text-xs`, `rounded-md`, `leading-none` so it does not grow the line, and `py-[0.5px]` inside the 1px border so it is as tall as the label, 19px in the body text) with the hairline `border-rule` frame of a plain `<Letter>` tile. Painted tiles are kept for words that carry Feedback.
 - **`text`**: JetBrains Mono caps at `0.8em` with `tracking-caps`, no frame, for a word shown as data.
 - **`cell`** (the default with Feedback): five small letter tiles (bold `font-tile` caps, tile radius, sized in `em` so they do not grow the line), plain tiles with the `rule` frame when there is no Feedback. The tile styles live in `components/prose/letter-tile.ts`, shared with `<Letter>`.
 
@@ -287,11 +287,11 @@ In prose, write a letter of a word as `<Letter>` (below), not a bare capital, so
 
 ## `<Letter>`
 
-`<Letter>e</Letter>` works in any MDX file with no import: one letter drawn as the same small tile as a letter of `<Word>` (plain, with the `rule` frame). `<Letter mark="present">e</Letter>` paints it with that Mark; `mark` takes the names `<Mark kind>` takes (`correct`, `present`, `absent`). Screen readers get "E" or "E, Present". Anything but one letter a to z, or an unknown `mark`, throws and fails the build.
+`<Letter>e</Letter>` works in any MDX file with no import: one letter drawn as the same small tile as a letter of `<Word>`, but in regular weight where the tiles of a `<Word>` are bold (plain, with the `rule` frame). `<Letter mark="present">e</Letter>` paints it with that Mark; `mark` takes the names `<Mark kind>` takes (`correct`, `present`, `absent`). Screen readers get "E" or "E, Present". Anything but one letter a to z, or an unknown `mark`, throws and fails the build.
 
 ## `<WordList>`
 
-`<WordList list="answers" />` works in any MDX file with no import (`components/prose/WordList.tsx`): the whole Answer List (`answerList()` in `lib/wordle/words.ts`, read from the Python package's `answers.txt` at build time), closed until the reader opens it. It is a native `<details>`, so it needs no client JS. The summary ("Show all 2,315 words on the Answer List", from `pageText(lang).showWordList`, so `componentsFor(lang)` passes the language) has a chevron that turns when open. Inside, the words are grouped by first letter under a plain letter tile and the group's count, in mono caps in as many columns as fit, in a box that scrolls past 28rem and takes keyboard focus. `answers` is the only list; another value throws and fails the build. It is a prose component for the Translation check, so a Translation may leave it out. Article 1 shows it after "Six questions for 2,315 words".
+`<WordList list="answers" />` works in any MDX file with no import (`components/prose/WordList.tsx`): the whole Answer List (`answerList()` in `lib/wordle/words.ts`, read from the Python package's `answers.txt` at build time), closed until the reader opens it. It is a native `<details>`, so it needs no client JS. The summary ("Show all 2,315 words on the Answer List", from `pageText(lang).showWordList`, so `componentsFor(lang)` passes the language) has a chevron that turns when open. Inside, the words are grouped by first letter under the letter in plain mono caps, in mono caps in as many columns as fit, in a box that scrolls past 28rem and takes keyboard focus. `answers` is the only list; another value throws and fails the build. It is a prose component for the Translation check, so a Translation may leave it out. Article 1 shows it after "Six questions for 2,315 words".
 
 ## `<Boards>` and `<Board>`
 

@@ -1,19 +1,21 @@
 import { MARK_NAMES, parseMarks, scoreFeedback, WORD_LENGTH, type Mark } from "@/lib/wordle/feedback";
 import { fitsPattern, guessList } from "@/lib/wordle/words";
-import { INLINE, PAINT, PLAIN, TILE } from "./letter-tile";
+import { INLINE, PAINT, PLAIN, TILE, TILE_BOLD } from "./letter-tile";
 
 const VARIANTS = ["cell", "simple", "text"] as const;
 type Variant = (typeof VARIANTS)[number];
 
-// Caps in the surrounding font, a little smaller and spaced, so a run of capitals is no louder than the words around
-// it. Tiles and frames are kept for words that carry Feedback.
-const SIMPLE = "text-[0.82em] uppercase tracking-[0.06em]";
+// Mono caps in an unfilled box the size of a <Mark> label: the same text-xs, radius and leading-none (so it does not
+// grow the prose line), and half a pixel of padding inside the 1px border, so the box is as tall as the label (19px in the body text). The
+// frame is the hairline `rule` frame of a plain <Letter> tile. Painted tiles are kept for words that carry Feedback.
+const SIMPLE =
+  "rounded-md border border-rule px-1.5 py-[0.5px] font-mono text-xs leading-none uppercase tracking-caps text-text";
 
 // Mono caps, for a word shown as data.
 const TEXT = "font-mono text-[0.8em] uppercase tracking-caps";
 
 /**
- * A word in prose. `<Word>speed</Word>` shows the word in small caps of the surrounding font, unframed (variant "simple");
+ * A word in prose. `<Word>speed</Word>` shows the word in mono caps in an unfilled hairline box, shaped like a <Mark> label (variant "simple");
  * `<Word feedback="00101">speed</Word>` draws five letter tiles painted with each letter's Mark (digits 0 Absent,
  * 1 Present, 2 Correct), and `<Word answer="abide">speed</Word>` works the Feedback out against that Answer.
  * `variant` overrides the look: "cell" (five tiles, plain without Feedback), "simple", or "text" (mono caps, no frame).
@@ -89,7 +91,7 @@ export function Word({
   return (
     <span role="img" aria-label={label} className={`inline-flex gap-[0.12em] ${INLINE}`}>
       {[...word].map((letter, i) => (
-        <span key={i} aria-hidden className={`${TILE} ${marks ? PAINT[marks[i]] : PLAIN}`}>
+        <span key={i} aria-hidden className={`${TILE} ${TILE_BOLD} ${marks ? PAINT[marks[i]] : PLAIN}`}>
           {letter === "_" ? "" : letter}
         </span>
       ))}
