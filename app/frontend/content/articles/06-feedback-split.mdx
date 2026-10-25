@@ -1,41 +1,41 @@
 ---
 title: "Feedback Split and Expected Information"
-summary: "A Guess sorts the Candidate Set into groups, one per possible Feedback; Expected Information scores that split in bits."
+summary: "A Guess divides the Candidate Set into groups, one for each possible Feedback; Expected Information measures that split in bits."
 prerequisites: [candidate-set]
 part: solving-wordle
 ---
 
-Here is what a Guess really does. Every possible Answer would give some <Term>Feedback</Term>. So a Guess sorts the <Term>Candidate Set</Term> into groups, one group per Feedback. That sorting is the <Term>Feedback Split</Term>.
+The last Article used one Feedback at a time. This Article looks at all the possible Feedbacks of one Guess together. Each possible Answer gives one <Term>Feedback</Term>, so a Guess divides the <Term>Candidate Set</Term> into groups, one group for each Feedback. These groups are the <Term>Feedback Split</Term>.
 
-Here is <Word>crane</Word> as the first Guess, so the Candidate Set is all 2,315 words. Each bar is one Feedback, drawn as five Mark tiles. The bar is as long as its group:
+The Widget shows <Word>crane</Word> as the first Guess, so the Candidate Set is all 2,315 words. Each bar is one Feedback, shown as five Mark tiles. The length of the bar is the size of its group:
 
 <SplitExplorer id="fs" guess="crane" />
 
-Select a bar to see the words in that group. The biggest is the Feedback with five <Mark kind="absent" /> tiles: 263 words with none of <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter>, <Letter>n</Letter> or <Letter>e</Letter>, like <Word>biddy</Word> and <Word>blood</Word>. At the other end, 29 Feedbacks leave a single word. Only one word gets five <Mark kind="correct" /> tiles, and that is <Word>crane</Word> itself.
+Select a bar to see the words in its group. The largest group has the Feedback with five <Mark kind="absent" /> tiles. It holds 263 words with none of <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter>, <Letter>n</Letter> or <Letter>e</Letter>, such as <Word>biddy</Word> and <Word>blood</Word>. At the other end, 29 Feedbacks each leave only one word. Only one word gets five <Mark kind="correct" /> tiles, and that word is <Word>crane</Word>.
 
-In total, <Word>crane</Word> makes 142 groups. A bad Guess makes few. Type <Word>fuzzy</Word> into the Guess row and it only makes 34, with 1,352 words in a single group. You learn almost nothing from that reply.
+In total, <Word>crane</Word> makes 142 groups. A bad Guess makes few groups. Type <Word>fuzzy</Word> in the Guess row. It makes only 34 groups, and one of them holds 1,352 words. The reply to <Word>fuzzy</Word> tells you almost nothing.
 
-The chart's title already has two numbers. They rate the split in the two ways from the introduction.
+The title of the chart shows two numbers. They are the two measures of a split from the Article "What makes a good first Guess?".
 
 ## Expected Candidates
 
-The first is the <Term>Expected Candidates</Term>. If the Answer is equally likely to be any word, a group is reached in proportion to its size, and when it is reached, that is how many words are left. Averaging gives 78.7 words left for <Word>crane</Word>. For <Word>fuzzy</Word> it is 855.7.
+The first number is the <Term>Expected Candidates</Term>. If each word has the same chance to be the Answer, the chance of a group is proportional to its size. When the game shows the Feedback of a group, the words of that group are the words that are left. The average is 78.7 words for <Word>crane</Word>. For <Word>fuzzy</Word> it is 855.7.
 
 ## Expected Information
 
-The second is the <Term>Expected Information</Term>, in bits. A bit is one halving. A group with half the words in it is worth one bit, because it cuts the Candidate Set in half. A group with a quarter of the words is worth two. In general, a group reached with probability $p$ is worth $\log_2(1/p)$ bits, and the average over the whole split is
+The second number is the <Term>Expected Information</Term>, in bits. A bit is one halving. A group with half of the words is worth one bit, because it cuts the Candidate Set in half. A group with a quarter of the words is worth two bits. In general, a group with the chance $p$ is worth $\log_2(1/p)$ bits, and the average over the full split is
 
 $$
 -\sum_i p_i \log_2 p_i
 $$
 
-<MarginNote>This formula is known in information theory as entropy. That is the only time we will use the word. We will call it Expected Information.</MarginNote>
+<MarginNote>In information theory, the name of this formula is entropy. This Series uses that word only here. Everywhere else, it is Expected Information.</MarginNote>
 
-For <Word>crane</Word> it is 5.74 bits. To put that in perspective, picking one word out of 2,315 takes $\log_2 2315 = 11.18$ bits in all. So one Guess gets you about half way. If all the groups were the same size, 5.74 bits would leave $2315 / 2^{5.74} \approx 43$ words. The real expected number is 79, because the big groups count more than their share. That gap is the reason the two numbers can disagree.
+For <Word>crane</Word> it is 5.74 bits. To find one word out of 2,315, you need $\log_2 2315 = 11.18$ bits in total. So one Guess gives you about half of the bits that you need. If all the groups had the same size, 5.74 bits would leave $2315 / 2^{5.74} \approx 43$ words. The real expected number is 79, because the large groups count more than their share. This difference is the reason why the two numbers can disagree.
 
 ## Both in Python
 
-Counting the groups is a dictionary. Sort every Candidate by the Feedback the Guess would give:
+To count the groups, use a dictionary. Put each Candidate into the group of the Feedback that the Guess would get:
 
 ```python
 def split(guess, candidates):
@@ -48,7 +48,7 @@ sizes = [len(words) for words in split("crane", answers).values()]
 len(sizes), max(sizes)   # (142, 263)
 ```
 
-The package counts the same groups from a row of the Feedback Matrix, for thousands of Guesses at once. This is how it scores them. Both measures come from the same counts:
+The package counts the same groups from a row of the Feedback Matrix, for thousands of Guesses at the same time. The function below gives each Guess its two numbers. Both numbers come from the same group sizes:
 
 ```python title="Scoring a Feedback Split" {6-7}
 def _score(counts: np.ndarray, total: int) -> tuple[np.ndarray, np.ndarray]:
@@ -61,4 +61,4 @@ def _score(counts: np.ndarray, total: int) -> tuple[np.ndarray, np.ndarray]:
     return bits, expected
 ```
 
-The last two lines are the two formulas. `bits` uses an equivalent form of the sum, $\log_2 N - \frac{1}{N}\sum c \log_2 c$, which only needs the group sizes. `expected` is $\sum c^2 / N$.
+The two highlighted lines are the two formulas. `bits` uses a different form of the same sum, $\log_2 N - \frac{1}{N}\sum c \log_2 c$, which needs only the group sizes. `expected` is $\sum c^2 / N$.

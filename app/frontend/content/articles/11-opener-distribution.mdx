@@ -1,52 +1,52 @@
 ---
 title: "Opener Distribution"
-summary: "Play every Opener on the Guess List out to the end and see how far apart the best and the worst really are."
+summary: "Play every Opener on the Guess List to the end and see how far apart the best and the worst really are."
 prerequisites: [benchmark]
 part: solving-wordle
 ---
 
-The <Term>Benchmark</Term> played one <Term>Opener</Term> for each <Term>Strategy</Term>. But the Solver can start with any of the 14,855 words on the <Term>Guess List</Term>. So let us play them all.
+The <Term>Benchmark</Term> played one <Term>Opener</Term> for each <Term>Strategy</Term>. But the Solver can start with any of the 14,855 words on the <Term>Guess List</Term>. This Article plays all of them.
 
-For each Strategy, every word in its <Term>Guess Pool</Term> is the Opener of 2,315 Games, one for each Answer, and the Solver finishes each Game on its own. For the Guess List that is 14,855 × 2,315 Games, and we keep one number for each: the <Term>Guess Count</Term>. The table of all of them is the <Term>Guess Count Matrix</Term>. Average each row and you have the <Term>Average Guess Count</Term> of every Opener: how many Guesses it needs, on average, to win.
+For each Strategy, each word in its <Term>Guess Pool</Term> is the Opener of 2,315 Games, one Game for each Answer. The Solver plays each Game to the end. For the Guess List, that is 14,855 × 2,315 Games. For each Game, we keep one number, the <Term>Guess Count</Term>. The table of all these numbers is the <Term>Guess Count Matrix</Term>. The mean of one row is the <Term>Average Guess Count</Term> of one Opener: the number of Guesses that it needs to win, on average.
 
-Now count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. Each block is one Opener, and they are stacked in bars 0.01 wide, the best at the bottom. The Strategy here is Expected Information, Guess List, All words. All 14,855 words are drawn: one colour for the words on the <Term>Answer List</Term>, another for the rest. The tabs below mark lists of words (the best, some myths, some bad Openers), and each marked word has its numbers above it. Click a bar to list the Openers in it:
+Then count how many Openers have each Average Guess Count. This is the <Term>Opener Distribution</Term>. In the chart, each block is one Opener. The blocks are in bars 0.01 wide, with the best Opener at the bottom. The Strategy is Expected Information, Guess List, All words. The chart shows all 14,855 words, with one colour for the words on the <Term>Answer List</Term> and a different colour for the other words. The tabs below the chart mark lists of words (the best Openers, some myths and some bad Openers), and each marked word shows its numbers above it. Click a bar to see the Openers in it:
 
 <OpenerDistribution id="od" strategy="bits-guesses-all" controls={false} tabs />
 
 ## What it shows
 
-The best Opener is <Word>tarse</Word>, with an Average Guess Count of **3.429**. The worst is <Word>qajaq</Word>, with **4.117**. That is less than one Guess between the best start and the worst. Choosing the Opener matters, but not nearly as much as playing the rest of the Game well.
+The best Opener is <Word>tarse</Word>, with an Average Guess Count of **3.429**. The worst is <Word>qajaq</Word>, with **4.117**. The best start and the worst start are less than one Guess apart. The Opener is important, but it is much less important than how the Solver plays the rest of the Game.
 
-<Word>tarse</Word> is not an Answer, and neither is <Word>salet</Word>. They are on the <Term>Guess List</Term>, so both are in the chart, and <Word>tarse</Word> is the best block of all. On the full page you can tick Only Openers on the Answer List to see just the words that can be the answer.
+<Word>tarse</Word> is not an Answer, and <Word>salet</Word> is not an Answer either. Both are on the <Term>Guess List</Term>, so the chart shows both, and <Word>tarse</Word> is the best block of all. On the full page, select Only Openers on the Answer List to see only the words that can be the Answer.
 
-<Word>crane</Word> comes seventh, with 3.437, less than a hundredth of a Guess behind <Word>tarse</Word>. <Word>raise</Word> is 95th, with 3.471. Both are good Openers, and the gap between them is about three hundredths of a Guess.
+<Word>crane</Word> is seventh, with 3.437, less than a hundredth of a Guess behind <Word>tarse</Word>. <Word>raise</Word> is 95th, with 3.471. Both are good Openers, and the difference between them is about three hundredths of a Guess.
 
-The Strategy matters. With Expected Information, Guess List, Candidates only, the best Opener is <Word>salet</Word> with **3.528**, and <Word>raise</Word> falls to 420th. The Opener that is best depends on how the Solver plays the rest of the Game.
+The Strategy is important. With Expected Information, Guess List, Candidates only, the best Opener is <Word>salet</Word> with **3.528**, and <Word>raise</Word> goes down to 420th. The best Opener depends on how the Solver plays the rest of the Game.
 
 ## Two rankings that disagree
 
-Article 7 ranked the Openers by Expected Information, before any Game was played. Playing them out gives a second ranking, and the two do not agree.
+Article 7 ranked the Openers by Expected Information, before the Solver played any Game. When the Solver plays each Opener to the end, we get a second ranking. The two rankings do not agree.
 
-<Word>raise</Word> is fifth by Expected Information, with 5.878 bits, but 95th when played. <Word>crane</Word> is only 35th by Expected Information, with 5.743 bits, and seventh when played. Only <Word>tarse</Word> is first in both.
+<Word>raise</Word> is fifth by Expected Information, with 5.878 bits, but 95th when the Solver plays it. <Word>crane</Word> is only 35th by Expected Information, with 5.743 bits, but seventh when the Solver plays it. Only <Word>tarse</Word> is first in both rankings.
 
-Expected Information measures one step: how much the first Guess tells you. A Game is several steps. A high score on the first step does not promise a good finish.
+Expected Information measures one step: how much the first Guess tells you. A Game has several steps. A good first step does not make sure of a good result.
 
 ## Popular Openers, played out
 
-Some Openers are famous. Here is how they fare under Expected Information, Guess List, All words.
+Some Openers are famous. This is how they do under Expected Information, Guess List, All words.
 
-The vowel-heavy starts are the weakest. <Word>adieu</Word> is 7,062nd, with 3.624, so about half the Guess List opens better. <Word>audio</Word> is 8,241st, with 3.644, and <Word>ouija</Word> is near the bottom, 14,197th, with 3.822. Four vowels tell you a lot about vowels and little about anything else.
+The Openers with many vowels are the weakest. <Word>adieu</Word> is 7,062nd, with 3.624, so about half of the Guess List is a better start. <Word>audio</Word> is 8,241st, with 3.644, and <Word>ouija</Word> is near the bottom, 14,197th, with 3.822. Four vowels tell you a lot about the vowels and little about the other letters.
 
-The Expected Information favourites are good but not the best. <Word>soare</Word> is third by Expected Information and 71st when played, and <Word>roate</Word> is fourth and 58th.
+The favourites of Expected Information are good, but not the best. <Word>soare</Word> is third by Expected Information and 71st when played. <Word>roate</Word> is fourth and 58th.
 
-The common-letter words live up to their name. <Word>crate</Word> is 4th, <Word>trace</Word> 5th, <Word>slate</Word> 6th and <Word>crane</Word> 7th.
+Words with common letters do well. <Word>crate</Word> is 4th, <Word>trace</Word> 5th, <Word>slate</Word> 6th and <Word>crane</Word> 7th.
 
-At the bottom are rare letters and repeats: <Word>qajaq</Word>, <Word>xviii</Word>, <Word>zhuzh</Word>. Among the Answers, <Word>jazzy</Word> is the worst, with 4.029. Even these never lose a Game.
+At the bottom are words with rare letters and repeated letters: <Word>qajaq</Word>, <Word>xviii</Word> and <Word>zhuzh</Word>. Of the Answers, <Word>jazzy</Word> is the worst, with 4.029. But even these words never lose a Game.
 
 ### salet or slate?
 
-Under this Strategy <Word>salet</Word> is 3rd, with 3.432, and <Word>slate</Word> 6th, with 3.437. Over 2,315 Games that is 7,944 Guesses against 7,957, a difference of 13. With the Guess List and Candidates only, they are first and second, one Guess apart. Under the two Guess List Strategies that score by Expected Candidates, <Word>slate</Word> comes out ahead.
+Under this Strategy, <Word>salet</Word> is 3rd, with 3.432, and <Word>slate</Word> is 6th, with 3.437. Over 2,315 Games, that is 7,944 Guesses against 7,957, a difference of 13. With the Guess List and Candidates only, they are first and second, one Guess apart. With the two Guess List Strategies that rank by Expected Candidates, <Word>slate</Word> is better.
 
-So it is a tie. <Word>slate</Word> has one advantage: it is an Answer, so once in 2,315 Games it wins in one Guess. <Word>salet</Word> never can.
+So the two words are equal in practice. <Word>slate</Word> has one advantage. It is an Answer, so in one Game out of 2,315 it wins with the first Guess. <Word>salet</Word> can never do that.
 
 [See the full Opener Distribution →](/openers)

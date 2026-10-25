@@ -1,13 +1,13 @@
 ---
 title: "Greedy Strategy"
-summary: "Play the best-scoring Guess at every step, including Guesses that cannot be the Answer."
+summary: "Play the Guess with the best number at every step, including Guesses that cannot be the Answer."
 prerequisites: [openers, candidate-set]
 part: solving-wordle
 ---
 
-We can now build the <Term>Solver</Term>. Its <Term>Strategy</Term> is the simplest one there is: at every step, look at the current <Term>Candidate Set</Term>, rate every Guess by its <Term>Expected Information</Term>, and play the best. This is called greedy, because it takes the best Guess for now and never plans further ahead.
+Now we can build the <Term>Solver</Term>. Its <Term>Strategy</Term> is the simplest possible one. At each step, it takes the current <Term>Candidate Set</Term>, calculates the <Term>Expected Information</Term> of each Guess, and plays the best Guess. The name of this Strategy is greedy, because it takes the best Guess for this step and does not plan further.
 
-Each step is the three ideas of this Part in a row. Find the Candidates. Split them with every Guess. Play the top one. That Guess is the <Term>Suggestion</Term>.
+Each step uses the three ideas of this Part, in order. Find the Candidates. Make the Feedback Split of each Guess. Play the best Guess. That Guess is the <Term>Suggestion</Term>.
 
 ```python title="The greedy choice" {11-14}
 def suggest(
@@ -26,7 +26,7 @@ def suggest(
     return best[0] if best else None
 ```
 
-The loop around it is short. Guess the Suggestion, narrow the Candidates with the Feedback, and repeat:
+The loop around `suggest` is short. Play the Suggestion, use its Feedback to find the new Candidates, and do it again:
 
 ```python
 game = Game("watch")
@@ -38,28 +38,28 @@ while not game.is_over:
 
 ## A Guess that can't win
 
-One setting in `suggest` decides a lot: `scope`, the <Term>Search Scope</Term>. The Solver may search only the Candidates, or it may search **All words** on the Guess List, including words that cannot be the Answer.
+One setting of `suggest` has a large effect: `scope`, the <Term>Search Scope</Term>. The Solver can search only the Candidates. Or it can search **All words** on the Guess List, which includes words that cannot be the Answer.
 
-Playing a word that cannot win sounds wasteful. But it can be the best question. Here is why, in a Game where the Answer is <Word>watch</Word>.
+To play a word that cannot win looks like a waste. But it can be the best question. A Game with the Answer <Word>watch</Word> shows why.
 
-First, the Solver uses the narrow setting, Candidates only, and takes its Guesses from the Answer List, its <Term>Guess Pool</Term>. Step through it:
+First, the Solver searches Candidates only, and its <Term>Guess Pool</Term> is the Answer List. Step through the Game:
 
 <StepThroughGame id="trap" answer="watch" pool="answers" scope="candidates" step={4} />
 
-<Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word> bring the Candidate Set down to 5 words: <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word>, <Word>match</Word> and <Word>watch</Word>. Every word fits <Word>_atch</Word>. Now the Solver has to pick one of them, and each is a poor question. Guess <Word>batch</Word> and, unless it is right, you only learn the first letter was wrong. The best a Candidate can do is 0.72 bits, with a largest group of 4. The Solver works through <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word> and <Word>match</Word> one at a time. <Word>watch</Word> takes **eight** Guesses, and under the Guess Limit of six that is a <Term>Loss</Term>. <Word>match</Word>, with seven, is a Loss too.
+<Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word> make the Candidate Set 5 words: <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word>, <Word>match</Word> and <Word>watch</Word>. All five words fit <Word>_atch</Word>. Now the Solver must guess one of them, and each one is a bad question. If you guess <Word>batch</Word> and it is not the Answer, you learn only that the first letter is not <Letter>b</Letter>. The best Candidate gives only 0.72 bits, and its largest group has 4 words. So the Solver guesses <Word>batch</Word>, <Word>hatch</Word>, <Word>latch</Word> and <Word>match</Word>, one at a time. <Word>watch</Word> needs **eight** Guesses. The Guess Limit is six, so that Game is a <Term>Loss</Term>. <Word>match</Word> needs seven, and it is also a Loss.
 
-This is the <Word>_atch</Word> trap. A family of words that differ in a single letter is a trap for any Strategy that only guesses Candidates, because every Candidate rules out only itself.
+This is the <Word>_atch</Word> trap. A family of words that are different in only one letter is a trap for each Strategy that guesses only Candidates, because each Candidate removes only itself.
 
-Now the same Answer, with the Solver allowed to search All words on the Guess List:
+Now take the same Answer, and let the Solver search All words on the Guess List:
 
 <StepThroughGame id="free" answer="watch" step={3} />
 
-This time the Solver opens with <Word>tarse</Word> and, from 5 Candidates, plays <Word>abamp</Word>. It is a strange word, and it cannot be the Answer. But it holds <Letter>b</Letter>, <Letter>m</Letter> and <Letter>a</Letter> together, and it asks four questions at once. Its Feedback separates the family, so the Solver wins in 5 Guesses. <MarginNote>Follow <Word>watch</Word> with this Strategy on the [Follow an Answer page](/follow?answer=watch&pool=guesses&scope=global&by=bits), and see the Candidates left after every Guess.</MarginNote>
+This time, the Solver starts with <Word>tarse</Word>. With 5 Candidates left, it plays <Word>abamp</Word>. <Word>abamp</Word> is an unusual word, and it cannot be the Answer. But it contains <Letter>b</Letter>, <Letter>m</Letter> and <Letter>a</Letter>, so it asks four questions with one Guess. Its Feedback separates the family, and the Solver wins with 5 Guesses. <MarginNote>Follow <Word>watch</Word> with this Strategy on the [Follow an Answer page](/follow?answer=watch&pool=guesses&scope=global&by=bits), and see the Candidates left after each Guess.</MarginNote>
 
-You can see the same thing with the same 5 Candidates. A Candidate such as <Word>batch</Word> is worth 0.72 bits, with 3.4 words left on average. The best word on the whole list, <Word>ablow</Word>, is worth 1.92 bits and leaves 1.4 words on average, with no group larger than 2. It cannot win now, and it nearly guarantees a win next.
+The numbers show the same thing for these 5 Candidates. A Candidate such as <Word>batch</Word> is worth 0.72 bits, and it leaves 3.4 words on average. The best word on the full list, <Word>ablow</Word>, is worth 1.92 bits and leaves 1.4 words on average, with no group larger than 2. <Word>ablow</Word> cannot win now, but it almost makes sure of a win with the next Guess.
 
-Watch three Strategies play the same Answers side by side, one Guess at a time. Guess List with Candidates only takes its Opener from the Guess List, but every later Guess is a Candidate, so an Answer List word. Only the All words board is free to play a word that cannot win:
+The Widget below plays the same Answers with three Strategies at the same time, one Guess at a time. Guess List with Candidates only takes its Opener from the Guess List, but each later Guess is a Candidate, so it is an Answer List word. Only the All words board can play a word that cannot win:
 
 <SideBySideGame id="race" />
 
-The rule of thumb: **a Guess that cannot win can still be the best Guess.** Searching every word is what turns eight Guesses into five. The last line of `suggest` has one more detail. With two Candidates left it goes back to Candidates only, because then guessing one is never worse.
+So remember this: **a Guess that cannot win can still be the best Guess.** When the Solver searches all words, eight Guesses become five. The `if` near the end of `suggest` adds one more detail. With one or two Candidates left, the Solver goes back to Candidates only, because then to guess one of them is never worse.

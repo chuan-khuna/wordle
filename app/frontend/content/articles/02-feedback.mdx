@@ -1,39 +1,39 @@
 ---
 title: "Feedback"
-summary: "Every Guess is judged letter by letter, and repeated letters follow a two-pass rule."
+summary: "The game marks every Guess letter by letter, and repeated letters follow a two-pass rule."
 prerequisites: [rules]
 part: wordle
 ---
 
-After every Guess, the game gives you <Term>Feedback</Term>: five <Term of="Mark">Marks</Term>, one for each letter.
+After each Guess, the game shows <Term>Feedback</Term>. Feedback is five <Term of="Mark">Marks</Term>, one for each letter of the Guess. This Article shows how the game gives each Mark, and then gives a Python function that does the same.
 
-A letter can be <Mark kind="correct" />, which means it is in the Answer at this position. It can be <Mark kind="present" />, which means it is in the Answer, but somewhere else. Or it can be <Mark kind="absent" />, which means the Answer has no use for it.
+A letter is <Mark kind="correct" /> when it is in the Answer at the same position. A letter is <Mark kind="present" /> when it is in the Answer at a different position. A letter is <Mark kind="absent" /> when the Answer does not contain it. (Repeated letters add one more case to Absent. The second half of this Article explains it.)
 
-Three verdicts for five letters gives $3^5 = 243$ possible Feedbacks. Remember that number. It is the most different replies one Guess can ever get.
+Three Marks for each of five letters give $3^5 = 243$ possible Feedbacks. Keep this number in mind. One Guess can never get more than 243 different replies.
 
-<MarginNote>Strictly, only 238 of them can happen. Four <Mark kind="correct" /> and one <Mark kind="present" /> is impossible: the only free spot for the Present letter is its own, and there it would be Correct. For example, <Word feedback="22221">crank</Word> can never be shown: with C, R, A and N Correct the Answer is <Word>cran_</Word>, so a K in the Answer would have to sit in the last spot, where it would be Correct. That rules out 5 Feedbacks. We still count to 243, because a Feedback that never happens just holds no words and changes nothing.</MarginNote>
+<MarginNote>Only 238 of them can occur. Four <Mark kind="correct" /> and one <Mark kind="present" /> is not possible, because the Present letter has only one free position, its own, and there it is Correct. For example, the game can never show <Word feedback="22221">crank</Word>. If <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter> and <Letter>n</Letter> are Correct, the Answer is <Word>cran_</Word>. A <Letter>k</Letter> in that Answer must then be in the last position, where it is Correct. This removes 5 Feedbacks. We still count 243, because a Feedback that never occurs holds no words and changes no result.</MarginNote>
 
 ## The repeated-letter rule
 
-Most letters are easy. The trouble starts when a Guess repeats a letter. Try this one. The Guess is <Word answer="abide">speed</Word> and the Answer is <Word>abide</Word>:
+Most letters are easy to mark. The problem is a Guess with the same letter two times. Look at this example. The Guess is <Word answer="abide">speed</Word> and the Answer is <Word>abide</Word>:
 
 <FeedbackScorer id="fb" guess="speed" answer="abide" />
 
-<Word>speed</Word> has <Letter>e</Letter> twice, and <Word>abide</Word> has only one. The first <Letter>e</Letter>
-is <Mark kind="present" />. The second <Letter>e</Letter> is <Mark kind="absent" />, even though
-<Letter>e</Letter> really is in the word. The Answer's one <Letter>e</Letter> has already been used up.
+<Word>speed</Word> has two <Letter>e</Letter>s, but <Word>abide</Word> has only one. The first <Letter>e</Letter> is
+<Mark kind="present" />. The second <Letter>e</Letter> is <Mark kind="absent" />, although the Answer does contain an
+<Letter>e</Letter>. The first <Letter>e</Letter> already used the only <Letter>e</Letter> of the Answer.
 
-The rule is that a letter is marked only as many times as it appears in the Answer. To make that fair, the Feedback is worked out in two passes.
+So the rule is this. The game marks a letter Correct or Present only as many times as the letter occurs in the Answer. To give those Marks in a fair order, the game works out the Feedback in two passes.
 
-**Pass one** goes through the Guess and marks every exact match <Mark kind="correct" />. Correct letters claim their copy of the letter first.
+**Pass one** goes through the Guess and finds each letter that is at the same position in the Answer. Each of these letters gets <Mark kind="correct" />. So Correct letters take their copy of the letter first.
 
-**Pass two** goes left to right through the rest. A letter is <Mark kind="present" /> if the Answer still has an unused copy of it. Otherwise it is <Mark kind="absent" />.
+**Pass two** goes from left to right through the letters that remain. A letter gets <Mark kind="present" /> if the Answer still has an unused copy of that letter. If not, the letter gets <Mark kind="absent" />.
 
-The order matters. Change the Guess to <Word answer="crane">eerie</Word> and the Answer to <Word>crane</Word>. The only <Letter>e</Letter> in <Word>crane</Word> is the last letter, and <Word>eerie</Word> ends with an <Letter>e</Letter> in that same place. Pass one gives that <Letter>e</Letter> to the last letter, so it is <Mark kind="correct" />, and nothing is left for the two <Letter>e</Letter>s at the front. They are both <Mark kind="absent" />. If the first <Letter>e</Letter> had been served first, it would have been <Mark kind="present" />, and the Feedback would have been wrong.
+The order of the passes is important. Change the Guess to <Word answer="crane">eerie</Word> and the Answer to <Word>crane</Word>. <Word>crane</Word> has one <Letter>e</Letter>, in the last position, and <Word>eerie</Word> also has an <Letter>e</Letter> in the last position. Pass one gives the Answer's <Letter>e</Letter> to that last letter, so it is <Mark kind="correct" />. No <Letter>e</Letter> is left for the two <Letter>e</Letter>s at the start, so both are <Mark kind="absent" />. With only one pass from left to right, the first <Letter>e</Letter> would take the Answer's <Letter>e</Letter> and get <Mark kind="present" />. That Feedback would be wrong.
 
-## The function
+## The function in Python
 
-Here is the whole thing in Python. The two passes are highlighted:
+This is the full function. The highlighted lines are the two passes:
 
 ```python title="Two-pass Feedback" {48-53,64-69}
 """Work out the Feedback for a Guess: which letters are Correct, Present or Absent."""
@@ -109,6 +109,6 @@ def feedback(guess: str, answer: str) -> Feedback:
     return tuple(marks)
 ```
 
-Pass one is the list of Correct marks. The counter after it holds only the letters that pass one did not use. Pass two spends that counter one letter at a time, and that is why a second <Letter>e</Letter> finds it empty.
+Pass one makes the list of Correct Marks. After pass one, the counter `unused_answer_letters` holds only the Answer letters that pass one did not use. Pass two takes letters from that counter, one at a time. That is why the second <Letter>e</Letter> of <Word>speed</Word> finds no <Letter>e</Letter> left.
 
-Every other idea in this Series is built on this one function.
+All the other ideas in this Series use this one function.

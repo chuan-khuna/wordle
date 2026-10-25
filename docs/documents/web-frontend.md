@@ -211,6 +211,8 @@ Content lives in `content/`, outside `src/`. The site has exactly one Series, "S
 
 **Frontmatter.** `remark-frontmatter` only strips the `---` block from the rendered output. The data is read by `lib/content/content.ts` with gray-matter, straight from the files with `fs`. That gives the index, the backlinks and the validation one plain function over all files, with no need to compile and import every MDX file to read a few fields.
 
+**The archived first version.** `content/archived-v1/` is a copy of `content/` (Articles, Thai Translations, glossaries and Series files) before the English Articles were rewritten in plainer English. Nothing reads it: `content.ts` reads only `content/articles/` and `content/<lang>/`, and the dynamic imports in `ArticleView.tsx` name those folders. Diff against it to see what the rewrite changed.
+
 **Add or reorder an Article.** The file name is `NN-slug.mdx`: the two-digit prefix is the Article's number (and its place in the Series), the rest is its URL slug (`05-candidate-set.mdx` is `/articles/candidate-set`). Prerequisites use the slug without the prefix, so renumbering never breaks a link or a Prerequisite. To insert or move an Article, rename files so the numbers run 01..N again (`git mv`). There is no `order` field. Create `content/articles/NN-<slug>.mdx`:
 
 ```mdx

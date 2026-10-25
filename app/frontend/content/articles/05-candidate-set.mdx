@@ -1,29 +1,29 @@
 ---
 title: "Candidate Set"
-summary: "Each Feedback rules words out; what is left is the Candidate Set."
+summary: "Each Feedback removes words; the words that remain are the Candidate Set."
 prerequisites: [solving-introduction, feedback]
 part: solving-wordle
 ---
 
-Each <Term>Feedback</Term> rules some words out. The words that survive are the <Term of="Candidate">Candidates</Term>, and all of them together are the <Term>Candidate Set</Term>.
+Each <Term>Feedback</Term> removes some words. The words that remain are the <Term of="Candidate">Candidates</Term>, and all of them together are the <Term>Candidate Set</Term>. This Article gives the exact test for a Candidate, and shows how fast the Candidate Set gets smaller.
 
-A word is a Candidate if it could still be the Answer. The test is simple. Pretend the word *is* the Answer, and work out the Feedback every Guess in the <Term>State</Term> would have got. If every one of them matches what the game really said, the word is still a Candidate. If a single one is different, it is out.
+A word is a Candidate if it can still be the Answer. To test a word, use it as the Answer and work out the Feedback that each Guess in the <Term>State</Term> would get. If all of these Feedbacks are the same as the Feedbacks that the game showed, the word is a Candidate. If one of them is different, the word is not a Candidate.
 
-Only words from the <Term>Answer List</Term> can be Candidates, even if a Guess was an odd word that could never be an Answer. At the start of a Game, before any Guess, the Candidate Set is the whole Answer List: 2,315 words.
+Only words from the <Term>Answer List</Term> can be Candidates. This is also true when a Guess is an unusual word that can never be the Answer. At the start of a Game, before the first Guess, the Candidate Set is the full Answer List: 2,315 words.
 
 ## Watch it shrink
 
-Take the Answer <Word>abide</Word>. The first Guess is <Word answer="abide">crane</Word>, and the Feedback is <Mark kind="absent" /> for <Letter>c</Letter>, <Letter>r</Letter> and <Letter>n</Letter>, <Mark kind="present" /> for <Letter>a</Letter> and <Mark kind="correct" /> for <Letter>e</Letter>. That leaves 49 Candidates. The second Guess is <Word answer="abide">pilot</Word>. Only the <Letter>i</Letter> is in <Word>abide</Word>, and not in the second place, so <Letter>i</Letter> is <Mark kind="present" /> and the other four letters are <Mark kind="absent" />. Now only 4 Candidates are left: <Word>abide</Word>, <Word>aside</Word>, <Word>maize</Word> and <Word>waive</Word>.
+Let the Answer be <Word>abide</Word>. The first Guess is <Word answer="abide">crane</Word>. The Feedback is <Mark kind="absent" /> for <Letter>c</Letter>, <Letter>r</Letter> and <Letter>n</Letter>, <Mark kind="present" /> for <Letter>a</Letter> and <Mark kind="correct" /> for <Letter>e</Letter>. That leaves 49 Candidates. The second Guess is <Word answer="abide">pilot</Word>. Of its letters, only <Letter>i</Letter> is in <Word>abide</Word>, and not in the second position. So <Letter>i</Letter> is <Mark kind="present" /> and the other four letters are <Mark kind="absent" />. Now only 4 Candidates remain: <Word>abide</Word>, <Word>aside</Word>, <Word>maize</Word> and <Word>waive</Word>.
 
-Here is that State in the Widget. Click the tiles to change the Marks, or type new Guesses, and watch the numbers on the right of each row:
+The Widget shows this State. Click a tile to change its Mark, or type a new Guess, and look at the numbers on the right of each row:
 
 <CandidateFilter id="cs" state="crane:00102,pilot:01000" />
 
-Each row shows the size of the Candidate Set before and after that Guess. The drop from 2,315 to 49 to 4 is the whole idea of solving Wordle. A Guess is good when the drop is big.
+Each row shows the size of the Candidate Set before and after that Guess. The Candidate Set goes from 2,315 to 49 to 4. That decrease is what solving Wordle is about. A Guess is good when it makes the Candidate Set much smaller.
 
 ## The same test in Python
 
-The definition is already the code. Keep the Answer List words that would have produced every Feedback in the State, using the function from the Feedback Article:
+The definition is also the code. Keep each Answer List word that would give every Feedback in the State. The `feedback` function comes from the Feedback Article:
 
 ```python
 def candidates(state, answers):
@@ -34,7 +34,7 @@ def candidates(state, answers):
     ]
 ```
 
-The package does the same job, but much faster. Working out a Feedback again for every word on every step would be slow. Instead it looks each one up in a <Term>Feedback Matrix</Term>, a table of every Guess against every Answer that is scored once before any Game:
+The package does the same work, but much faster. To work out each Feedback again, for each word at each step, is slow. So the package finds each Feedback in a <Term>Feedback Matrix</Term>. This is a table of the Feedback of every Guess against every Answer, and the package fills it once, before any Game:
 
 ```python title="Narrowing the Candidates" {4-5}
 def narrow(self, candidates: np.ndarray, guess: str, code: int) -> np.ndarray:
@@ -43,8 +43,8 @@ def narrow(self, candidates: np.ndarray, guess: str, code: int) -> np.ndarray:
     return candidates[row[candidates] == code]
 ```
 
-The line that matters is the last one: keep the Candidates whose cell in the Guess's row equals the Feedback that came back.
+The important line is the last one. It keeps each Candidate whose cell in the Guess's row is equal to the Feedback that the game showed.
 
 ## An even split
 
-If a Guess split $N$ Candidates into $k$ groups of the same size, the next Candidate Set would have $N/k$ words. Real splits are never that even, and that is the problem the next Article looks at: how a Guess sorts the Candidate Set into groups.
+If a Guess divided $N$ Candidates into $k$ groups of the same size, the next Candidate Set would have $N/k$ words. Real splits are never that even. The next Article shows how a Guess really divides the Candidate Set into groups.

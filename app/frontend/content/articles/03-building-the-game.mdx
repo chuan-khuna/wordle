@@ -5,11 +5,11 @@ prerequisites: [feedback]
 part: wordle
 ---
 
-You now have the rules and the Feedback function. That is enough to build the whole <Term>Game</Term>. It needs three small pieces: a <Term>Guess</Term>, a <Term>State</Term> and the Game itself.
+The last two Articles gave the rules and the Feedback function. With them, you can build the full <Term>Game</Term>. The Game needs three small parts: a <Term>Guess</Term>, a <Term>State</Term> and the Game itself.
 
 ## A Guess and the State
 
-A Guess in the code is a word with its Feedback and its number. The <Term>State</Term> is all the Guesses so far, each with its Feedback. That is everything a player, or a Solver, can see.
+In the code, a Guess is a word, its Feedback and its number in the Game. The <Term>State</Term> is all the Guesses so far, each with its Feedback. The State is all that a player, or a Solver, can see.
 
 ```python title="A Guess and the State" {8-9,16-17}
 @dataclass(frozen=True)
@@ -31,13 +31,13 @@ class State:
         return State(self.guesses + (Guess(len(self.guesses) + 1, word, feedback),))
 ```
 
-A Guess is a <Term>Win</Term> when every Mark is <Mark kind="correct" />.
+A Guess is a <Term>Win</Term> when all five Marks are <Mark kind="correct" />.
 
-Notice that both classes are frozen, and `add` does not change the State. It builds a new one. So a State that you keep hold of stays exactly as it was, however the Game goes on. A Solver will rely on that later.
+Both classes are frozen, and `add` does not change the State. It makes a new State. So if you keep a State, it stays the same while the Game continues. The Solver needs this later.
 
 ## The Game
 
-The Game holds the Answer, the <Term>Guess Limit</Term> and the current State. It decides when it is over.
+The Game holds the Answer, the <Term>Guess Limit</Term> and the current State. The Game also decides when it is over.
 
 ```python title="The Game" {4,9,13,16-19}
 @dataclass
@@ -62,9 +62,13 @@ class Game:
         return self._state.last
 ```
 
-Making a Guess takes three steps. First, refuse if the Game is already over. Second, check that the word is five letters and on the <Term>Guess List</Term>. A refused word raises an error and does not use up a Guess. Third, work out the Feedback with the function from the last Article, and add the Guess to a new State.
+`guess` does three steps:
 
-A <Term>Loss</Term> is a Game that has reached its Guess Limit without a Win. Set `max_guesses=None` and a Game has no limit, so it can only end with a Win.
+1. If the Game is already over, it raises `GameOver`.
+2. `check_guess` makes sure that the word has five letters and is on the <Term>Guess List</Term>. If not, it raises an error, and the word does not count as a Guess.
+3. The `feedback` function from the last Article gives the Feedback, and `add` puts the Guess into a new State.
+
+A <Term>Loss</Term> is a Game that reached its Guess Limit without a Win. If you set `max_guesses=None`, the Game has no Guess Limit, so it can only stop with a Win.
 
 ## The loop
 
@@ -83,6 +87,6 @@ while not game.is_over:
 print("Win" if game.is_won else f"Loss: the Answer was {game.answer}")
 ```
 
-Type `zzzzz` and you get `'zzzzz' is not on the Guess List`, and you still have all your Guesses. Type `crane` and the loop prints five <Mark kind="correct" /> tiles and a Win.
+If you type `zzzzz`, the loop prints `'zzzzz' is not on the Guess List`, and you keep all your Guesses. If you type `crane`, the loop prints five <Mark kind="correct" /> tiles and a Win.
 
-That is the whole game. Everything from here is about the player.
+That is the full game. The rest of the Series is about the player, and how it picks each Guess.

@@ -1,47 +1,45 @@
 ---
 title: "What makes a good first Guess?"
-summary: "A Guess splits the possible Answers into groups. Two ways to measure the split, and why they can disagree."
+summary: "A Guess divides the possible Answers into groups. Two ways to measure the groups, and why they can disagree."
 prerequisites: [building-the-game]
 part: solving-wordle
 ---
 
-Before the first Guess, the Answer could be any of 2,315 words. After it, you get one of up to 243 Feedbacks. What makes one first Guess better than another?
+The first Part built the game. This Part builds a player, and it starts with one question: why is one first Guess better than another?
 
-Think of what you want to be holding after the first reply: as few possible Answers as you can get. The words that could still be the Answer are the <Term of="Candidate">Candidates</Term>, and together they are the <Term>Candidate Set</Term>. The next Article makes that exact.
+Before the first Guess, the Answer can be any of 2,315 words. After it, you get one of up to 243 Feedbacks. After that reply, you want as few possible Answers as you can get. The words that can still be the Answer are the <Term of="Candidate">Candidates</Term>, and all of them together are the <Term>Candidate Set</Term>. The next Article defines them exactly.
 
-A Guess does not choose which Feedback you get. The Answer does. What the Guess chooses is how the 2,315 words are sorted by that reply. Every possible Answer gives some Feedback, so the Guess sorts all of them into groups, one group for each Feedback. That sorting is the <Term>Feedback Split</Term>.
+Your Guess does not choose the Feedback that you get. The Answer chooses it. But the Guess does choose how the reply divides the 2,315 words. Each possible Answer gives one Feedback, so the Guess puts every word into a group, one group for each Feedback. These groups are the <Term>Feedback Split</Term>.
 
-Compare two Guesses. <Word>crane</Word> sorts the 2,315 words into 142 groups. The biggest group, with no <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter>, <Letter>n</Letter> or <Letter>e</Letter> at all, holds 263 words. <Word>fuzzy</Word> sorts them into only 34 groups, and its biggest group, with none of its letters, holds 1,352 words. The reply to <Word>crane</Word> on average leaves you with far fewer words than the reply to <Word>fuzzy</Word>.
+Compare two Guesses. <Word>crane</Word> puts the 2,315 words into 142 groups. Its largest group holds the 263 words that contain no <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter>, <Letter>n</Letter> or <Letter>e</Letter>. <Word>fuzzy</Word> makes only 34 groups, and its largest group, the words with none of its letters, holds 1,352 words. On average, the reply to <Word>crane</Word> leaves far fewer words than the reply to <Word>fuzzy</Word>.
 
-So a good Guess makes many groups and keeps them small and even. Now let's count that.
+So a good Guess makes many groups, and the groups are small and of similar size. The next step is to put a number on that.
 
 ## Two ways to count
 
-Call the number of Candidates $N$. A Guess splits them into groups of sizes $n_1, n_2, \ldots$, one group for each Feedback it could get. The group for Feedback $i$ is reached with probability
+Let $N$ be the number of Candidates. A Guess divides them into groups of sizes $n_1, n_2, \ldots$, one group for each Feedback that the Guess can get. If each Candidate has the same chance to be the Answer, the chance of the group for Feedback $i$ is its share of the words:
 
 $$
 p_i = \frac{n_i}{N}
 $$
 
-because if every Candidate is equally likely to be the Answer, then the chance of landing in a group is its share of the words.
+The main idea is this. **We judge a Guess by what is left after one Feedback, and we take the average over the split.** Each group gets a value, and the average gives each value the weight $p_i$. Two values for a group are natural.
 
-Here is the key idea. **We judge a Guess by what is left after one Feedback, and we average over the split.** Each group has a score, and the average is weighted by $p_i$. There are two natural scores for a group.
-
-The first score is its size, $n_i$: how many Candidates are left. Averaging it gives the <Term>Expected Candidates</Term>, the number of possible Answers we expect to be left. Lower is better.
+The first value is the size of the group, $n_i$, which is the number of Candidates left. The average of this value is the <Term>Expected Candidates</Term>, the number of possible Answers that we expect to be left. Lower is better.
 
 $$
 \mathbb{E}[\text{left}] = \sum_i p_i \, n_i = \frac{1}{N}\sum_i n_i^2
 $$
 
-The second score is how many times it cuts the Candidate Set down. A group of size $n_i$ out of $N$ cuts the set by a factor of $N / n_i$, and we count that in halvings, which are called bits. A group that is half the words is worth one bit. A group that is a quarter is worth two. Averaging that gives the <Term>Expected Information</Term>. Higher is better.
+The second value is how much the group cuts the Candidate Set. A group of $n_i$ words out of $N$ cuts the set by a factor of $N / n_i$. We count that factor in halvings, and the name of one halving is a bit. A group with half of the words is worth one bit. A group with a quarter of the words is worth two bits. The average of this value is the <Term>Expected Information</Term>. Higher is better.
 
 $$
 \mathbb{E}[\text{bits}] = \sum_i p_i \log_2 \frac{N}{n_i} = -\sum_i p_i \log_2 p_i
 $$
 
-The two formulas share a shape. Both are an expectation over the same Feedback Split. They differ only in the score of each group: its size, or how many halvings it saves.
+The two formulas have the same shape. Each one is an average over the same Feedback Split. The only difference is the value of each group: its size, or the number of halvings.
 
-A small example makes it concrete. Say 10 Candidates split into groups of 5, 3, 1 and 1. The chances are 0.5, 0.3, 0.1 and 0.1.
+Try a small example. 10 Candidates divide into groups of 5, 3, 1 and 1, so the chances are 0.5, 0.3, 0.1 and 0.1.
 
 ```python
 from math import log2
@@ -58,12 +56,12 @@ expected_left([5, 3, 1, 1])   # 3.6
 expected_bits([5, 3, 1, 1])   # 1.685
 ```
 
-On average we expect 3.6 Candidates left, and the Guess is worth 1.685 bits. <MarginNote>The Solver uses the same two formulas, just for every word at once.</MarginNote>
+On average, we expect 3.6 Candidates to be left, and the Guess is worth 1.685 bits. <MarginNote>The Solver uses the same two formulas, for all words at the same time.</MarginNote>
 
 ## They can disagree
 
-If both measure the same split, why have two? Because they treat a big group differently. A big group counts with its square in the first formula, so it hurts a lot. In the second it counts only through a logarithm, so it hurts less.
+Both formulas measure the same split, so why use two? Because they give a large group a different weight. In the first formula, a large group counts with its square, so it has a large effect. In the second formula, a large group counts only through a logarithm, so its effect is smaller.
 
-The two really do pick different words. Over the whole Answer List, the Guess with the most Expected Information is <Word>tarse</Word>: 5.947 bits, leaving 66.0 Candidates on average. The Guess with the fewest Expected Candidates is <Word>roate</Word>: 60.4 left, but only 5.883 bits. <Word>tarse</Word> makes more groups, 147 against 126, but one of them is bigger, 227 words against 195.
+The two formulas do select different words. Over the full Answer List, the Guess with the highest Expected Information is <Word>tarse</Word>: 5.947 bits, with 66.0 Candidates left on average. The Guess with the lowest Expected Candidates is <Word>roate</Word>: 60.4 Candidates left, but only 5.883 bits. <Word>tarse</Word> makes more groups, 147 against 126, but its largest group is also larger, 227 words against 195.
 
-Neither is wrong. They are two answers to the question "what does a good split look like?". The rest of this Series builds the tools to try both. The next Article shows how to find the Candidates, and the one after that builds the Feedback Split for any Guess and shows both numbers.
+Neither measure is wrong. Each one is an answer to the question "what is a good split?". The rest of this Series lets you try both. The next Article shows how to find the Candidates. The Article after it makes the Feedback Split of any Guess and shows both numbers.
