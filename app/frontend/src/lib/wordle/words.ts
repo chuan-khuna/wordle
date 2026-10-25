@@ -1,14 +1,22 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-// The Python package's Guess List, two levels above app/frontend (the cwd of `next build` and `next dev`).
-const GUESSES_PATH = path.resolve(process.cwd(), "../../packages/wordle/src/wordle/data/guesses.txt");
+// The Python package's word lists, two levels above app/frontend (the cwd of `next build` and `next dev`).
+const DATA_DIR = path.resolve(process.cwd(), "../../packages/wordle/src/wordle/data");
+
+const readWords = (name: string) => readFileSync(path.join(DATA_DIR, name), "utf8").split(/\r?\n/).filter(Boolean);
 
 let cache: Set<string> | undefined;
+let answers: readonly string[] | undefined;
 
 /** The Guess List (it contains the whole Answer List), read once at build time. */
 export function guessList(): Set<string> {
-  return (cache ??= new Set(readFileSync(GUESSES_PATH, "utf8").split(/\r?\n/).filter(Boolean)));
+  return (cache ??= new Set([...readWords("guesses.txt"), ...answerList()]));
+}
+
+/** The Answer List, sorted, read once at build time. */
+export function answerList(): readonly string[] {
+  return (answers ??= readWords("answers.txt").sort());
 }
 
 /** Whether some word fits `pattern`, where `_` is a blank that stands for any letter: `_atch` fits batch. */

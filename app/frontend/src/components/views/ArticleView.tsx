@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EnTag } from "@/components/site/EnTag";
@@ -12,8 +13,14 @@ import { componentsFor } from "@/mdx-components";
 
 const linkClass = "link";
 
+// A previous / next card in the footer: a hairline box that firms up on hover and focus, an arrow on its outer side.
+const pagerCard =
+  "group flex items-center gap-3 rounded-md border border-rule px-4 py-3 shadow-xs transition-colors hover:border-rule-strong hover:bg-highlight-low focus-visible:border-rule-strong";
 
-/** An Article page in a language: header, body, backlinks, and previous / next, with its Table of contents to the left on wide windows. */
+/**
+ * An Article page in a language: header, body, and a footer below a hairline (the related Articles, then previous / next
+ * cards), with its Table of contents to the left on wide windows.
+ */
 export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: string; lang?: Language }) {
   const { articles, series, backlinks } = content(lang);
   const text = pageText(lang);
@@ -29,7 +36,13 @@ export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: str
   const prev = articles[at - 1];
   const next = articles[at + 1];
   const prerequisites = article.prerequisites.map((p) => articles.find((a) => a.slug === p)!);
-  const builtOnBy = backlinks(slug);
+  // Related Articles: the Prerequisites, then the Articles that build on this one, each once.
+  const related = [
+    ...prerequisites.map((a) => ({ article: a, relation: text.relationPrerequisite })),
+    ...backlinks(slug)
+      .filter((a) => !article.prerequisites.includes(a.slug))
+      .map((a) => ({ article: a, relation: text.relationBuildsOn })),
+  ];
   const toc = articleToc(article.fileName, lang);
   /** The "EN" tag after a link to an Article that has no Translation, so the reader knows it opens in English. */
   const tag = (a: { translated: boolean }) => !a.translated && <EnTag label={text.englishOnly}>{text.enTag}</EnTag>;
@@ -65,43 +78,56 @@ export async function ArticleView({ slug, lang = DEFAULT_LANGUAGE }: { slug: str
           <Body components={componentsFor(lang)} />
         </div>
 
-        {builtOnBy.length > 0 && (
-          <section className="max-w-measure space-y-3">
-            <h2 className="eyebrow">{text.buildsOnThis}</h2>
-            <ul className="space-y-1">
-              {builtOnBy.map((a) => (
-                <li key={a.slug}>
-                  <Link href={articleLink(a, lang)} className={linkClass}>
-                    {a.title}
-                  </Link>
-                  {tag(a)}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <footer className="max-w-measure space-y-8 border-t border-rule pt-8 font-sans">
+          {related.length > 0 && (
+            <section aria-labelledby="related-articles" className="space-y-3">
+              <h2 id="related-articles" className="eyebrow">
+                {text.relatedArticles}
+              </h2>
+              <ul className="space-y-2">
+                {related.map(({ article: a, relation }) => (
+                  <li key={a.slug} className="flex items-baseline gap-3">
+                    <span className="shrink-0 font-mono text-sm text-meta tabular-nums">{formatNumber(a.number)}</span>
+                    <span className="min-w-0">
+                      <Link href={articleLink(a, lang)} className={linkClass}>
+                        {a.title}
+                      </Link>
+                      {tag(a)}
+                      <span className="ml-2 text-xs text-meta">{relation}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
-        <nav
-          aria-label={text.prevNext}
-          className="flex max-w-measure justify-between gap-6 font-sans text-sm"
-        >
-          {prev ? (
-            <Link href={articleLink(prev, lang)} rel="prev" className={linkClass}>
-              &larr; <span className="font-mono tabular-nums">{formatNumber(prev.number)}</span> {prev.title}
-              {tag(prev)}
-            </Link>
-          ) : (
-            <span />
-          )}
-          {next ? (
-            <Link href={articleLink(next, lang)} rel="next" className={`${linkClass} text-right`}>
-              <span className="font-mono tabular-nums">{formatNumber(next.number)}</span> {next.title}
-              {tag(next)} &rarr;
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
+          <nav aria-label={text.prevNext} className="grid gap-4 sm:grid-cols-2">
+            {prev && (
+              <Link href={articleLink(prev, lang)} rel="prev" className={pagerCard}>
+                <ArrowLeft aria-hidden className="size-5 shrink-0 text-meta transition-transform group-hover:-translate-x-0.5" />
+                <span className="min-w-0">
+                  <span className="block text-sm text-meta">{text.previousArticle}</span>
+                  <span className="block text-lg leading-snug text-balance text-text">
+                    {prev.title}
+                    {tag(prev)}
+                  </span>
+                </span>
+              </Link>
+            )}
+            {next && (
+              <Link href={articleLink(next, lang)} rel="next" className={`${pagerCard} justify-end text-right sm:col-start-2`}>
+                <span className="min-w-0">
+                  <span className="block text-sm text-meta">{text.nextArticle}</span>
+                  <span className="block text-lg leading-snug text-balance text-text">
+                    {next.title}
+                    {tag(next)}
+                  </span>
+                </span>
+                <ArrowRight aria-hidden className="size-5 shrink-0 text-meta transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            )}
+          </nav>
+        </footer>
     </article>
     </div>
   );

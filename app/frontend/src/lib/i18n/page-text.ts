@@ -7,9 +7,15 @@ export type PageText = {
   /** "Part 2": a Part's number. */
   part: (number: number) => string;
   prerequisites: string;
-  buildsOnThis: string;
-  /** Accessible name of the previous / next Article nav. */
+  /** The Article footer: the heading over the related Articles, the tag on each saying how it is related, and the previous / next cards (their nav's accessible name and the small label over each title). */
+  relatedArticles: string;
+  relationPrerequisite: string;
+  relationBuildsOn: string;
   prevNext: string;
+  previousArticle: string;
+  nextArticle: string;
+  /** The summary of a closed <WordList>: "Show all 2,315 words on the Answer List". */
+  showWordList: (count: string) => string;
   /** The heading of an Article's Table of contents. */
   onThisPage: string;
   /** The sidebar's heading above the Explore links. */
@@ -162,8 +168,13 @@ export const EN: PageText = {
   series: "Series",
   part: (n) => `Part ${n}`,
   prerequisites: "Prerequisites",
-  buildsOnThis: "Builds on this Article",
+  relatedArticles: "Related Articles",
+  relationPrerequisite: "Prerequisite",
+  relationBuildsOn: "Builds on this",
   prevNext: "Previous and next Article",
+  previousArticle: "Previous",
+  nextArticle: "Next",
+  showWordList: (count) => `Show all ${count} words on the Answer List`,
   onThisPage: "On this page",
   explore: "Explore",
   openerDistribution: "Opener Distribution",
@@ -284,8 +295,13 @@ export const TH: PageText = {
   series: "Series",
   part: (n) => `Part ${n}`,
   prerequisites: "ควรอ่านก่อน (Prerequisites)",
-  buildsOnThis: "Article ที่ต่อยอดจากบทนี้",
+  relatedArticles: "Article ที่เกี่ยวข้อง",
+  relationPrerequisite: "ควรอ่านก่อน",
+  relationBuildsOn: "ต่อยอดจากบทนี้",
   prevNext: "Article ก่อนหน้าและถัดไป",
+  previousArticle: "ก่อนหน้า",
+  nextArticle: "ถัดไป",
+  showWordList: (count) => `แสดงคำทั้ง ${count} คำใน Answer List`,
   onThisPage: "ในหน้านี้",
   explore: "สำรวจ",
   openerDistribution: "Opener Distribution",

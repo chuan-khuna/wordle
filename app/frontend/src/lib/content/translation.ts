@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 /** Capitalised MDX tags that are prose, not Widgets: a Translation may add, drop or move them. Every other capitalised tag is a Widget. */
-export const PROSE_COMPONENTS: ReadonlySet<string> = new Set(["Term", "Word", "Mark", "Letter", "MarginNote"]);
+export const PROSE_COMPONENTS: ReadonlySet<string> = new Set(["Term", "Word", "Mark", "Letter", "WordList", "MarginNote"]);
 
 /** One Widget element: its tag and attributes (`name` to the source text of the value, `true` for a bare attribute). */
 export type WidgetUse = { tag: string; props: Record<string, string> };

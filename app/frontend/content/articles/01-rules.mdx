@@ -1,6 +1,6 @@
 ---
 title: "The rules"
-summary: "The Answer, the Guess and the two word lists: what a Game is and when you Win."
+summary: "What a Game is, how you win or lose one, and why the game keeps two lists of words."
 prerequisites: []
 part: wordle
 ---
@@ -17,7 +17,7 @@ You can make six Guesses. This is the <Term>Guess Limit</Term>. If a Guess is th
 
 The game uses two lists of words. The difference between them becomes important when we start to solve the game.
 
-The <Term>Answer List</Term> contains the words that can be an Answer. It has 2,315 words, and they are all common words, such as <Word>crane</Word>, <Word>abide</Word> and <Word>watch</Word>.
+The <Term>Answer List</Term> contains the words that can be an Answer. It has 2,315 words, and they are all common words, such as <Word>crane</Word>, <Word>abide</Word> and <Word variant="simple">watch</Word>.
 
 The <Term>Guess List</Term> contains every word that the game accepts as a Guess. It has 14,855 words, and it contains the full Answer List. So you can guess an unusual word such as <Word>tarse</Word>. It is never the Answer, but the game accepts it. If you type a word that is not on the Guess List, the game refuses it, and the refused word does not count as one of your six Guesses.
 
@@ -62,3 +62,5 @@ len(lists.answers), len(lists.guesses)         # (2315, 14855)
 ## Six questions for 2,315 words
 
 Put the two numbers side by side. The Answer is one of 2,315 words, and you can ask six questions. Each Guess is a question, and its Feedback is the reply. The rest of this Series shows how to ask better questions.
+
+<WordList list="answers" />
