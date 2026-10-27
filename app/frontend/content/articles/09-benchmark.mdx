@@ -1,0 +1,80 @@
+---
+title: "Benchmark"
+summary: "Play all 2,315 Answers with each of the eight Strategies, and compare how many Guesses each one needs."
+prerequisites: [greedy-strategy]
+part: solving-wordle
+---
+
+One Game tells one story. To compare Strategies, you must play all the Games. A <Term>Benchmark</Term> plays a <Term>Game</Term> for each word on the <Term>Answer List</Term> with one <Term>Strategy</Term>. That is 2,315 Games.
+
+For each Game, we record the <Term>Guess Count</Term>, the number of Guesses that the Solver needed to Win. From all the Guess Counts we get the <Term>Guess Distribution</Term>: the number of Games that ended at each Guess Count, and the number of Losses. The mean of all the Guess Counts is the <Term>Average Guess Count</Term>. A lost Game also counts. The Solver continues to guess until it wins, and that Guess Count goes into the mean.
+
+```python
+from collections import Counter
+
+def benchmark(solver, opener, **strategy):
+    counts = Counter()
+    for answer in solver.answers:
+        game = Game(answer)            # the Guess Limit is six
+        candidates = solver.all_candidates()
+        word = opener
+        while not game.is_over:
+            guess = game.guess(word)
+            candidates = solver.narrow(candidates, guess.word, pack(guess.feedback))
+            if not game.is_over:
+                word = solver.suggest(candidates, **strategy).word
+        counts[len(game.state) if game.is_won else "lost"] += 1
+    return counts
+```
+
+A Strategy is three choices. Its <Term>Guess Pool</Term> is the Answer List or the Guess List. Its <Term>Search Scope</Term> is Candidates only or All words. Its <Term>Ranking</Term> is Expected Information or Expected Candidates. That gives eight Strategies. Each one starts with its own best Opener, the best first Guess in its full Guess Pool. The chart shows all eight:
+
+<BenchmarkChart id="bm" />
+
+## What it shows
+
+**Expected Information, Guess List, All words** starts with <Word>tarse</Word>. It never loses. Its Average Guess Count is **3.43**. It wins 61 Games with 2 Guesses, 1,256 with 3, 943 with 4, 53 with 5 and 2 with 6. Three Guesses is the most frequent result, and almost all Games end by the fourth Guess.
+
+**Expected Candidates, Guess List, All words** starts with <Word>roate</Word>. It also never loses, and its average is **3.48**. It is a little slower, but more regular. No Game needs six Guesses.
+
+**Expected Information, Answer List, Candidates only** starts with <Word>raise</Word>. This is the narrow setting from the last Article. Its average is **3.60**, and it **loses 11 Games**. The list under the chart shows them, and <Word>match</Word> and <Word>watch</Word> are two of them. Each of these Answers is in a family of words that look almost the same, such as the <Word>_atch</Word> trap. The average counts each of these Games at the 7 or 8 Guesses that it needed.
+
+Each of the 11 Losses is such a trap. After two or three Guesses, the Candidates are a family of words that share most of their letters. The Solver then guesses the words of the family one at a time, until it has no Guesses left.
+
+<Boards title="The 11 Losses">
+  <Board pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
+  <Board pattern="_o_er" guesses="raise deter cower hover joker boxer foyer goner" />
+  <Board pattern="gra_e" guesses="raise grace grade grape grate grave graze" />
+  <Board pattern="_aste" guesses="raise caste baste haste paste taste waste" />
+  <Board pattern="_ater" guesses="raise taper cater eater hater later water" />
+  <Board pattern="s_ore" guesses="raise scree shore snore spore store swore" />
+  <Board pattern="_ight" guesses="raise pilot fight might night tight wight" />
+  <Board pattern="_illy" guesses="raise pilot filly billy dilly hilly willy" />
+  <Board pattern="ta__y" guesses="raise tangy tabby tacky taffy tally tatty" />
+</Boards>
+
+Each board is one Game, and each Game starts with <Word>raise</Word>. The dashed line is the Guess Limit. A Game that goes below it is a Loss. The <Word>_atch</Word> and <Word>_o_er</Word> boards each have two lost Answers: <Word>match</Word> and <Word>foyer</Word> on the seventh row, and <Word>watch</Word> and <Word>goner</Word> on the eighth row.
+
+### How searching All words gets out
+
+When the Solver searches All words on the Guess List, it does not wait for the trap to close. From the same State, it plays a word that is not a Candidate but contains the letters that make the family words different. The boards below put a ring on that word. Here is <Word>watch</Word> again, after the same <Word>raise</Word>, <Word>tangy</Word> and <Word>caput</Word>. And here is <Word>tatty</Word>, after the same <Word>raise</Word> and <Word>tangy</Word>:
+
+<Boards title="Same State, two searches">
+  <Board label="Candidates only" pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
+  <Board label="All words" pattern="_atch" guesses="raise tangy caput ablow watch" highlight="ablow" />
+  <Board label="Candidates only" pattern="ta__y" guesses="raise tangy tabby tacky taffy tally tatty" />
+  <Board label="All words" pattern="ta__y" guesses="raise tangy bafta tatty" highlight="bafta" />
+</Boards>
+
+With five Candidates left, a Guess of one of them, for example <Word>match</Word>, can only say yes or no. It divides the five into groups of 1 and 4. <Word>ablow</Word> cannot be the Answer. But it contains <Letter>b</Letter>, <Letter>l</Letter> and <Letter>w</Letter>, three of the first letters in the family, so each of these letters gets its own Feedback:
+
+- against <Word variant="text">batch</Word>: <Word answer="batch">ablow</Word>
+- against <Word variant="text">latch</Word>: <Word answer="latch">ablow</Word>
+- against <Word variant="text">watch</Word>: <Word answer="watch">ablow</Word>
+- against <Word variant="text">hatch</Word> or <Word variant="text">match</Word>: <Word answer="hatch">ablow</Word>
+
+That makes four groups, and no group has more than two words. So in the worst case, the next Guess is right one time in two. The Solver finds <Word>watch</Word> with the fifth Guess, not the eighth. <Word>bafta</Word> does the same for the <Word>ta__y</Word> family, with <Letter>b</Letter>, <Letter>f</Letter> and a <Letter>t</Letter> in the fourth position. After <Word>bafta</Word>, only <Word variant="text">tacky</Word> and <Word variant="text">tally</Word> stay together in one group, and <Word>tatty</Word> needs 4 Guesses, not 7. When the Solver plays the 11 lost Games again from the same States, the All words search wins all 11, most of them with 4 or 5 Guesses.
+
+The other four Strategies separate the effect of the Guess Pool from the effect of the Search Scope. All words of the Answer List also starts with <Word>raise</Word>, and it also loses no Game. Its average is **3.50** with Expected Information and 3.52 with Expected Candidates. Guess List with Candidates only starts with <Word>tarse</Word> or <Word>roate</Word>, and it still loses Games: 6 with Expected Information and 13 with Expected Candidates.
+
+The large gain comes from one change: the Solver can play a word that cannot win. This change takes the Losses from 11 to 0, and it makes the average 0.17 Guesses lower. (The Opener also changes, but the trap is the cause of the lost Games.) The choice of measure is less important. Expected Information and Expected Candidates are within 0.05 Guesses of each other.

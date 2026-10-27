@@ -1,0 +1,112 @@
+---
+title: "Feedback"
+summary: "ทุก Guess ถูกตัดสินทีละตัวอักษร และตัวอักษรที่ซ้ำจะใช้กฎสองรอบ"
+source: e9589762f60f1ce43f23c976430e7789fbdff125
+---
+
+หลังทุก Guess เกมจะให้ <Term>Feedback</Term> กับคุณ คือ <Term of="Mark">Mark</Term> ห้าอัน หนึ่งอันต่อหนึ่งตัวอักษร
+
+ตัวอักษรอาจเป็น <Mark kind="correct" /> ซึ่งหมายถึงอยู่ใน Answer และอยู่ตำแหน่งนี้ อาจเป็น <Mark kind="present" /> ซึ่งหมายถึงอยู่ใน Answer แต่อยู่ตำแหน่งอื่น หรืออาจเป็น <Mark kind="absent" /> ซึ่งหมายถึง Answer ไม่ต้องการตัวอักษรนี้
+
+ผลตัดสินสามแบบกับตัวอักษรห้าตัว ได้ Feedback ที่เป็นไปได้ $3^5 = 243$ แบบ จำไว้ว่าเลขนี้ มันคือจำนวนคำตอบกลับที่หลากหลายที่สุดที่ Guess หนึ่งครั้งจะได้
+
+<MarginNote>พูดให้ตรงที่สุด เกิดขึ้นได้จริงเพียง 238 แบบ <Mark kind="correct" /> สี่ตัวกับ <Mark kind="present" /> หนึ่งตัวเป็นไปไม่ได้ เพราะที่ว่างเดียวของตัวอักษร Present คือตำแหน่งของมันเอง และตรงนั้นมันจะเป็น Correct ตัวอย่างเช่น <Word feedback="22221">crank</Word> จะไม่มีวันแสดงขึ้นมา เมื่อ C, R, A และ N เป็น Correct แล้ว Answer คือ <Word>cran_</Word> ดังนั้น K ใน Answer ต้องอยู่ช่องสุดท้าย ซึ่งมันจะเป็น Correct นั่นตัด Feedback ออกไป 5 แบบ เรายังนับถึง 243 อยู่ดี เพราะ Feedback ที่ไม่เคยเกิดขึ้นก็แค่ไม่มีคำอยู่ในนั้น และไม่เปลี่ยนอะไรเลย</MarginNote>
+
+## กฎของตัวอักษรที่ซ้ำ
+
+ตัวอักษรส่วนใหญ่ง่าย ปัญหาเริ่มเมื่อ Guess มีตัวอักษรซ้ำ ลองดูตัวนี้ Guess คือ <Word answer="abide">speed</Word> และ Answer คือ <Word>abide</Word>:
+
+<FeedbackScorer id="fb" guess="speed" answer="abide" />
+
+<Word>speed</Word> มี <Letter>e</Letter> สองตัว แต่ <Word>abide</Word> มีแค่ตัวเดียว <Letter>e</Letter> ตัวแรกเป็น <Mark kind="present" /> ส่วน <Letter>e</Letter> ตัวที่สองเป็น <Mark kind="absent" /> ทั้งที่ <Letter>e</Letter> อยู่ในคำนั้นจริง ๆ เพราะ <Letter>e</Letter> ตัวเดียวของ Answer ถูกใช้ไปแล้ว
+
+กฎคือ ตัวอักษรหนึ่งจะถูกให้ Mark ได้ไม่เกินจำนวนครั้งที่มันอยู่ใน Answer เพื่อให้ยุติธรรม Feedback จึงคำนวณเป็นสองรอบ
+
+**รอบที่หนึ่ง** ไล่ดู Guess และให้ <Mark kind="correct" /> กับทุกตัวที่ตรงตำแหน่งพอดี ตัวอักษรที่ Correct จะจองสำเนาของตัวอักษรนั้นก่อน
+
+**รอบที่สอง** ไล่จากซ้ายไปขวาในตัวที่เหลือ ตัวอักษรจะเป็น <Mark kind="present" /> ถ้า Answer ยังมีสำเนาที่ยังไม่ถูกใช้ ไม่เช่นนั้นจะเป็น <Mark kind="absent" />
+
+ลำดับสำคัญ ลองเปลี่ยน Guess เป็น <Word answer="crane">eerie</Word> และ Answer เป็น <Word>crane</Word> <Letter>e</Letter> ตัวเดียวใน <Word>crane</Word> คือตัวอักษรสุดท้าย และ <Word>eerie</Word> ก็ลงท้ายด้วย <Letter>e</Letter> ที่ตำแหน่งเดียวกัน รอบที่หนึ่งยก <Letter>e</Letter> นั้นให้ตัวอักษรสุดท้าย มันจึงเป็น <Mark kind="correct" /> และไม่เหลืออะไรให้ <Letter>e</Letter> สองตัวข้างหน้า ทั้งสองตัวเป็น <Mark kind="absent" /> ถ้า <Letter>e</Letter> ตัวแรกได้รับบริการก่อน มันจะเป็น <Mark kind="present" /> และ Feedback ก็จะผิด
+
+## ฟังก์ชัน
+
+นี่คือทั้งหมดใน Python สองรอบถูกไฮไลต์ไว้:
+
+```python title="Two-pass Feedback" {48-53,64-69}
+"""Work out the Feedback for a Guess: which letters are Correct, Present or Absent."""
+
+from collections import Counter
+from enum import Enum
+
+
+class Mark(Enum):
+    """The verdict on one letter of a Guess."""
+
+    ABSENT = 0  # the letter isn't in the Answer (or every copy of it is already used up)
+    PRESENT = 1  # the letter is in the Answer, but at a different position
+    CORRECT = 2  # the letter is in the Answer at this exact position
+
+
+# One Mark per letter of the Guess, in order.
+# Example: guess "crane" against answer "cable" gives
+# (CORRECT, ABSENT, PRESENT, ABSENT, CORRECT).
+type Feedback = tuple[Mark, ...]
+
+
+def feedback(guess: str, answer: str) -> Feedback:
+    """Mark each letter of `guess` against `answer`, using the official Wordle rules.
+
+    The tricky part is repeated letters. Each letter of the Answer can only
+    "pay for" one Mark. So if the Answer has one E and the Guess has two,
+    only one of the Guess's E's can be Correct or Present; the other is Absent.
+
+    We do two passes over the Guess:
+      1. Mark every letter that is in exactly the right position as Correct.
+      2. For the letters left over, mark them Present if the Answer still has
+         an unused copy of that letter, otherwise Absent.
+
+    Example: guess "speed" against answer "abide"
+      - Pass 1: no letter is in the right position.
+      - Pass 2: the Answer's leftover letters are a, b, i, d, e (one E).
+          s -> Absent, p -> Absent,
+          e -> Present (uses up the only E),
+          e -> Absent  (no E left),
+          d -> Present.
+    """
+    if len(guess) != len(answer):
+        raise ValueError(f"guess {guess!r} and answer {answer!r} have different lengths")
+
+    # Pair up the letters at each position: "speed" vs "abide" gives
+    # ("s", "a"), ("p", "b"), ("e", "i"), ("e", "d"), ("d", "e").
+    letter_pairs = list(zip(guess, answer))
+
+    # Pass 1: a letter in exactly the right position is Correct.
+    # Everything else starts as Absent; pass 2 may upgrade it to Present.
+    marks = [
+        Mark.CORRECT if guess_letter == answer_letter else Mark.ABSENT
+        for guess_letter, answer_letter in letter_pairs
+    ]
+
+    # Count the Answer's letters that pass 1 didn't use up.
+    # For "speed" vs "abide" nothing was Correct, so this is
+    # {"a": 1, "b": 1, "i": 1, "d": 1, "e": 1}.
+    unused_answer_letters = Counter(
+        answer_letter
+        for guess_letter, answer_letter in letter_pairs
+        if guess_letter != answer_letter
+    )
+
+    # Pass 2: going left to right, a non-Correct letter is Present
+    # if the Answer still has an unused copy of it.
+    for position, guess_letter in enumerate(guess):
+        if marks[position] is Mark.ABSENT and unused_answer_letters[guess_letter] > 0:
+            marks[position] = Mark.PRESENT
+            unused_answer_letters[guess_letter] -= 1  # that copy is now used up
+
+    return tuple(marks)
+```
+
+รอบที่หนึ่งคือรายการ Mark ที่เป็น Correct ตัวนับหลังจากนั้นเก็บเฉพาะตัวอักษรที่รอบแรกไม่ได้ใช้ รอบที่สองใช้ตัวนับนั้นทีละตัวอักษร และนั่นคือเหตุผลที่ <Letter>e</Letter> ตัวที่สองพบว่ามันว่างเปล่า
+
+ทุกแนวคิดอื่นใน Series นี้สร้างอยู่บนฟังก์ชันนี้
+

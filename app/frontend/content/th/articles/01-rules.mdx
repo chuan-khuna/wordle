@@ -1,0 +1,65 @@
+---
+title: "กติกา"
+summary: "Answer, Guess และรายการคำสองรายการ: Game คืออะไร และคุณ Win เมื่อไร"
+source: fad7f9922ce97020d0736a090eea2a23db6fcc59
+---
+
+Wordle เป็นเกมทายคำที่มีกติกาน้อยมาก
+
+ทุก <Term>Game</Term> เริ่มจากคำลับห้าตัวอักษรหนึ่งคำ นั่นคือ <Term>Answer</Term> งานของคุณคือหาคำนั้นให้เจอ
+
+คุณหาคำนั้นด้วยการทาย <Term>Guess</Term> คือคำห้าตัวอักษรที่เกมยอมรับ หลังทายแต่ละครั้ง เกมจะตอบกลับด้วย <Term>Feedback</Term> ซึ่งเป็นผลตัดสินหนึ่งอย่างต่อตัวอักษรแต่ละตัว เรื่อง Feedback อยู่ใน Article ถัดไปทั้งบท ตอนนี้แค่รู้ไว้ว่านี่คือวิธีที่เกมคุยกับคุณ
+
+คุณมี Guess ได้หกครั้ง นี่คือ <Term>Guess Limit</Term> ถ้า Guess ใดตรงกับ Answer คุณจะได้ <Term>Win</Term> และ Game จบลง ถ้าใช้ครบหกครั้งแล้วยังหาไม่เจอ Game จะจบด้วย <Term>Loss</Term>
+
+## สองรายการคำ
+
+เกมเก็บคำไว้สองรายการ และความต่างของสองรายการนี้จะสำคัญในภายหลัง
+
+<Term>Answer List</Term> คือรายการคำที่เป็น Answer ได้ มีอยู่ 2,315 คำ และเป็นคำที่ใช้กันทั่วไป เช่น <Word>crane</Word>, <Word>abide</Word>, <Word>watch</Word>
+
+<Term>Guess List</Term> คือรายการคำทุกคำที่เกมยอมรับเป็น Guess มีอยู่ 14,855 คำ และ Answer List ทั้งหมดอยู่ในนั้นด้วย คุณจึงทายคำแปลก ๆ อย่าง <Word>tarse</Word> ได้ มันจะไม่มีวันเป็น Answer แต่เกมก็ยอมรับ ส่วนคำที่ไม่อยู่ใน Guess List เกมจะปฏิเสธ และไม่นับเป็นหนึ่งใน Guess หกครั้งของคุณ
+
+นี่คือสองรายการตามที่แพ็กเกจ Python โหลดเข้ามา:
+
+```python title="The two word lists" {10-13,24}
+from dataclasses import dataclass
+from functools import cache
+from importlib.resources import files
+
+WORD_LENGTH = 5
+
+
+@dataclass(frozen=True)
+class WordLists:
+    answers: tuple[str, ...]
+    """The Answer List, sorted."""
+    guesses: frozenset[str]
+    """The Guess List. Contains every word in `answers`."""
+
+
+def _read(name: str) -> list[str]:
+    text = files("wordle").joinpath("data", name).read_text(encoding="utf-8")
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+@cache
+def load_word_lists() -> WordLists:
+    answers = tuple(sorted(_read("answers.txt")))
+    guesses = frozenset(_read("guesses.txt")) | frozenset(answers)
+    return WordLists(answers=answers, guesses=guesses)
+```
+
+บรรทัดสุดท้ายคือกติกาในรูปโค้ด: Guess List คือไฟล์ของมันเองรวมกับ Answer List ทั้งหมด
+
+```python
+lists = load_word_lists()
+len(lists.answers), len(lists.guesses)         # (2315, 14855)
+"tarse" in lists.guesses, "tarse" in lists.answers   # (True, False)
+```
+
+## ทำไมนี่จึงเป็นปริศนา
+
+ลองวางตัวเลขเทียบกัน Answer คือหนึ่งในคำ 2,315 คำ และคุณถามได้หกคำถาม แต่ละ Guess คือหนึ่งคำถาม และ Feedback คือคำตอบ ที่เหลือของ Series นี้คือการเรียนรู้วิธีถามคำถามให้ดีขึ้น
+
+<WordList list="answers" />

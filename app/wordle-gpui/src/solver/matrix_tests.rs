@@ -59,6 +59,20 @@ fn an_npy_header_is_padded_to_64_bytes_and_ends_in_a_newline() {
 }
 
 #[test]
+fn the_npy_header_is_byte_for_byte_the_one_numpy_writes() {
+    // What `np.save` and `open_memmap` write for a 14,855 × 2,315 `uint8` array (numpy 2.5), also
+    // pinned in packages/wordle/tests/test_matrix.py, so both tools write the same file.
+    let dict = "{'descr': '|u1', 'fortran_order': False, 'shape': (14855, 2315), }";
+    let mut numpy = b"\x93NUMPY\x01\x00\x76\x00".to_vec();
+    numpy.extend_from_slice(dict.as_bytes());
+    numpy.extend_from_slice(&[b' '; 51]);
+    numpy.push(b'\n');
+    assert_eq!(numpy.len(), 128);
+    let bytes = npy_bytes(14855, 2315, &vec![0; 14855 * 2315]);
+    assert_eq!(&bytes[..128], &numpy[..]);
+}
+
+#[test]
 fn build_writes_both_matrices() {
     let directory = std::env::temp_dir().join(format!("wordle-gpui-matrices-{}", std::process::id()));
     let (answers_path, guesses_path) = build(&directory, 4).unwrap();
@@ -71,5 +85,29 @@ fn build_writes_both_matrices() {
     assert_eq!(guesses_file.len(), 128 + lists.guesses.len() * n);
     // An Answer against itself is a Win.
     assert!((0..n).all(|i| answers_file[128 + i * n + i] == WIN));
+    std::fs::remove_dir_all(&directory).ok();
+}
+
+#[test]
+fn build_reports_each_matrix_its_rows_and_its_file() {
+    let directory = std::env::temp_dir().join(format!("wordle-gpui-matrix-events-{}", std::process::id()));
+    let events = std::sync::Mutex::new(Vec::new());
+    let (answers_path, guesses_path) = build_with(&directory, 4, &|event| events.lock().unwrap().push(event)).unwrap();
+    let events = events.into_inner().unwrap();
+    let lists = word_lists();
+    let (rows, n) = (lists.guesses.len(), lists.answers.len());
+    assert_eq!(events[0], Event::Started { file: GUESSES_FILE, rows, columns: n });
+    // Row reports come out of order across threads, but the furthest is every row.
+    let guess_rows: Vec<usize> = events.iter().filter_map(|event| match event {
+        Event::Rows { file: GUESSES_FILE, done, .. } => Some(*done),
+        _ => None,
+    }).collect();
+    assert!(guess_rows.len() > 4, "a report every few hundred rows");
+    assert_eq!(guess_rows.iter().max(), Some(&rows));
+    let tail = &events[events.len() - 4..];
+    assert_eq!(tail[0], Event::Started { file: ANSWERS_FILE, rows: n, columns: n });
+    assert_eq!(tail[1], Event::Rows { file: ANSWERS_FILE, done: n, rows: n });
+    assert_eq!(tail[2], Event::Saved { file: ANSWERS_FILE, path: answers_path, rows: n, columns: n, bytes: 128 + n * n });
+    assert_eq!(tail[3], Event::Saved { file: GUESSES_FILE, path: guesses_path, rows, columns: n, bytes: 128 + rows * n });
     std::fs::remove_dir_all(&directory).ok();
 }

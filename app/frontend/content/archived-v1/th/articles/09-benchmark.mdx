@@ -1,0 +1,79 @@
+---
+title: "Benchmark"
+summary: "เล่นทุก Answer ด้วยแต่ละ Strategy แล้วเปรียบเทียบ Guess Distribution และ Average Guess Count"
+source: 8fa9119b96b2af726cb68d1415c86c284b9dab01
+---
+
+Game เดียวเล่าได้แค่เรื่องเดียว การเปรียบเทียบ Strategy ต้องดูทั้งหมด <Term>Benchmark</Term> เล่น <Term>Game</Term> สำหรับทุกคำใน <Term>Answer List</Term> ด้วยหนึ่ง <Term>Strategy</Term>: 2,315 Game
+
+สำหรับแต่ละ Game เราจดค่า <Term>Guess Count</Term> คือจำนวน Guess ที่ใช้จน Win เมื่อรวมกันจะได้ <Term>Guess Distribution</Term> คือจำนวน Game ที่จบที่แต่ละ Guess Count บวกกับจำนวน Loss ค่าเฉลี่ยของทุก Game คือ <Term>Average Guess Count</Term> Game ที่แพ้ก็นับด้วย: Solver ทายต่อไปจนชนะ และ Guess Count นั้นถูกรวมเข้าค่าเฉลี่ย
+
+```python
+from collections import Counter
+
+def benchmark(solver, opener, **strategy):
+    counts = Counter()
+    for answer in solver.answers:
+        game = Game(answer)            # the Guess Limit is six
+        candidates = solver.all_candidates()
+        word = opener
+        while not game.is_over:
+            guess = game.guess(word)
+            candidates = solver.narrow(candidates, guess.word, pack(guess.feedback))
+            if not game.is_over:
+                word = solver.suggest(candidates, **strategy).word
+        counts[len(game.state) if game.is_won else "lost"] += 1
+    return counts
+```
+
+Strategy คือการเลือกสามอย่าง: <Term>Guess Pool</Term> (Answer List หรือ Guess List) <Term>Search Scope</Term> (Candidate เท่านั้น หรือ All words) และ <Term>Ranking</Term> (Expected Information หรือ Expected Candidates) นั่นทำให้มี Strategy แปดแบบ แต่ละแบบเล่นจาก Opener ที่ดีที่สุดของมันเอง คือ Guess แรกที่ดีที่สุดใน Guess Pool ทั้งหมดของมัน นี่คือทั้งแปดแบบ:
+
+<BenchmarkChart id="bm" />
+
+## มันแสดงอะไร
+
+**Expected Information, Guess List, All words** เริ่มด้วย <Word>tarse</Word> มันไม่เคยแพ้ Average Guess Count ของมันคือ **3.43**: 61 Game ใน 2 Guess, 1,256 ใน 3, 943 ใน 4, 53 ใน 5 และ 2 ใน 6 สามครั้งเป็นผลที่พบบ่อยที่สุด และเกือบทุก Game จบภายในครั้งที่สี่
+
+**Expected Candidates, Guess List, All words** เริ่มด้วย <Word>roate</Word> มันก็ไม่เคยแพ้เช่นกัน และเฉลี่ย **3.48** มันช้ากว่าเล็กน้อย แต่นิ่งกว่า: ไม่มี Game ไหนใช้ถึงหก Guess
+
+**Expected Information, Answer List, Candidates only** เริ่มด้วย <Word>raise</Word> นี่คือการตั้งค่าแบบแคบจาก Article ที่แล้ว ค่าเฉลี่ยของมันคือ **3.60** และมัน **แพ้ 11 Game** ซึ่งแสดงไว้ใต้แผนภูมิ รวมถึง <Word>match</Word> และ <Word>watch</Word> เหล่านี้คือคำที่มีกลุ่มหน้าตาคล้ายกัน คือกับดัก <Word>_atch</Word> และกับดักอื่นแบบเดียวกัน ค่าเฉลี่ยนับแต่ละ Game เหล่านี้ตามที่ใช้จริง คือ 7 หรือ 8 Guess
+
+ทั้ง 11 Loss เป็นกับดักแบบนี้ทั้งหมด หลังจากสองหรือสาม Guess Candidate กลายเป็นกลุ่มที่มีตัวอักษรส่วนใหญ่ร่วมกัน และ Solver ทายสมาชิกของกลุ่มทีละคำ จนหมด Guess
+
+<Boards title="The 11 Losses">
+  <Board pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
+  <Board pattern="_o_er" guesses="raise deter cower hover joker boxer foyer goner" />
+  <Board pattern="gra_e" guesses="raise grace grade grape grate grave graze" />
+  <Board pattern="_aste" guesses="raise caste baste haste paste taste waste" />
+  <Board pattern="_ater" guesses="raise taper cater eater hater later water" />
+  <Board pattern="s_ore" guesses="raise scree shore snore spore store swore" />
+  <Board pattern="_ight" guesses="raise pilot fight might night tight wight" />
+  <Board pattern="_illy" guesses="raise pilot filly billy dilly hilly willy" />
+  <Board pattern="ta__y" guesses="raise tangy tabby tacky taffy tally tatty" />
+</Boards>
+
+แต่ละกระดานคือหนึ่ง Game ที่เปิดด้วย <Word>raise</Word> เส้นประคือ Guess Limit: ทุกอย่างใต้เส้นคือ Loss บนกระดาน <Word>_atch</Word> และ <Word>_o_er</Word> มี Answer ที่แพ้สองคำ: <Word>match</Word> และ <Word>foyer</Word> ที่แถวที่เจ็ด และ <Word>watch</Word> และ <Word>goner</Word> ที่แถวที่แปด
+
+### การค้นหา All words หนีออกมาได้อย่างไร
+
+การค้นหา All words ใน Guess List ไม่รอให้กับดักปิด จาก State เดียวกัน มันเล่นคำที่ไม่ใช่ Candidate แต่มีตัวอักษรที่ทำให้กลุ่มนั้นต่างกัน (วงไว้ด้านล่าง) นี่คือ <Word>watch</Word> อีกครั้ง หลัง <Word>raise</Word>, <Word>tangy</Word> และ <Word>caput</Word> เดิม และ <Word>tatty</Word> หลัง <Word>raise</Word> และ <Word>tangy</Word> เดิม:
+
+<Boards title="Same State, two searches">
+  <Board label="Candidates only" pattern="_atch" guesses="raise tangy caput batch hatch latch match watch" />
+  <Board label="All words" pattern="_atch" guesses="raise tangy caput ablow watch" highlight="ablow" />
+  <Board label="Candidates only" pattern="ta__y" guesses="raise tangy tabby tacky taffy tally tatty" />
+  <Board label="All words" pattern="ta__y" guesses="raise tangy bafta tatty" highlight="bafta" />
+</Boards>
+
+เมื่อเหลือ Candidate ห้าคำ การทายหนึ่งในนั้น เช่น <Word>match</Word> บอกได้แค่ใช่หรือไม่ใช่: มันแบ่งเป็น 1 กับ 4 <Word>ablow</Word> เป็น Answer ไม่ได้ แต่มี <Letter>b</Letter>, <Letter>l</Letter> และ <Letter>w</Letter> ซึ่งเป็นสามในตัวอักษรตัวแรกที่ยังอยู่ในเกม แต่ละตัวจึงปรากฏใน Feedback ของมันเอง:
+
+- เทียบกับ <Word variant="text">batch</Word>: <Word answer="batch">ablow</Word>
+- เทียบกับ <Word variant="text">latch</Word>: <Word answer="latch">ablow</Word>
+- เทียบกับ <Word variant="text">watch</Word>: <Word answer="watch">ablow</Word>
+- เทียบกับ <Word variant="text">hatch</Word> หรือ <Word variant="text">match</Word>: <Word answer="hatch">ablow</Word>
+
+นั่นคือสี่กลุ่ม ไม่มีกลุ่มไหนใหญ่กว่าสอง Guess ถัดไปจึงอย่างแย่ที่สุดก็เหมือนโยนเหรียญ Answer <Word>watch</Word> ถูกพบที่ Guess ที่ห้าแทนที่จะเป็นที่แปด <Word>bafta</Word> ทำแบบเดียวกันกับกลุ่ม <Word>ta__y</Word> ด้วย <Letter>b</Letter>, <Letter>f</Letter> และ <Letter>t</Letter> ในตำแหน่งที่สี่: เหลือเพียง <Word variant="text">tacky</Word> และ <Word variant="text">tally</Word> อยู่ด้วยกัน และ <Word>tatty</Word> ใช้ 4 Guess แทนที่จะเป็น 7 เมื่อเล่นซ้ำจาก State เดียวกัน การค้นหา All words ชนะทั้ง 11 Game ที่แพ้ โดยส่วนใหญ่ใน 4 หรือ 5 Guess
+
+อีกสี่ Strategy แยก Guess Pool และ Search Scope ออกจากกัน การค้นหา All words ของ Answer List ยังเปิดด้วย <Word>raise</Word> และก็ไม่แพ้ Game ไหนเช่นกัน: เฉลี่ย **3.50** ด้วย Expected Information และ 3.52 ด้วย Expected Candidates การเปิดจาก Guess List ทั้งหมดแล้วทายเฉพาะ Candidate เริ่มด้วย <Word>tarse</Word> หรือ <Word>roate</Word> และยังแพ้ 6 และ 13 Game
+
+ผลดีก้อนใหญ่มาจากการเปลี่ยนอย่างเดียว: ให้ Solver เล่นคำที่ชนะไม่ได้ มันลด Loss จาก 11 เหลือ 0 และลดค่าเฉลี่ยลง 0.17 Guess (Opener ก็ต่างกันด้วย แต่กับดักคือสิ่งที่ทำให้เสีย Game) การที่ Solver ใช้การวัดแบบไหนสำคัญน้อยกว่า: Expected Information และ Expected Candidates ห่างกันไม่เกิน 0.05 Guess

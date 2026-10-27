@@ -11,5 +11,12 @@ dist/
 # macOS
 .DS_Store
 
-# Precomputed Feedback matrices (regenerate with `uv run wordle-matrices`)
-matrices/
+# Precomputed Feedback matrices, Benchmark and Openers (regenerate with `just precompute feedback`, `just precompute guess-counts`, `just precompute benchmark`)
+precompute-cache/
+# (their xz backup in data/precompute/ is committed: `just cache backup`, `just cache restore`)
+
+# Local settings (copy .env.example)
+.env
+
+# Animations rendered from src/animations/ (`just animate present <name>`)
+build/

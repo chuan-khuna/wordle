@@ -1,0 +1,63 @@
+---
+title: "Feedback Split และ Expected Information"
+summary: "Guess แบ่ง Candidate Set เป็นกลุ่ม หนึ่งกลุ่มต่อหนึ่ง Feedback ที่เป็นไปได้ และ Expected Information ให้คะแนนการแบ่งนั้นเป็นบิต"
+source: 9aa5d33a77452d74094a92833d23d2e3b1dc066b
+---
+
+นี่คือสิ่งที่ Guess ทำจริง ๆ Answer ที่เป็นไปได้ทุกคำจะให้ <Term>Feedback</Term> แบบใดแบบหนึ่ง Guess จึงแบ่ง <Term>Candidate Set</Term> เป็นกลุ่ม หนึ่งกลุ่มต่อหนึ่ง Feedback การแบ่งนี้คือ <Term>Feedback Split</Term>
+
+นี่คือ <Word>crane</Word> เป็น Guess แรก Candidate Set จึงเป็นทั้ง 2,315 คำ แต่ละแท่งคือหนึ่ง Feedback วาดเป็นกระเบื้อง Mark ห้าอัน แท่งยาวเท่ากับขนาดกลุ่มของมัน:
+
+<SplitExplorer id="fs" guess="crane" />
+
+เลือกแท่งเพื่อดูคำในกลุ่มนั้น กลุ่มใหญ่สุดคือ Feedback ที่เป็นกระเบื้อง <Mark kind="absent" /> ห้าอัน: 263 คำที่ไม่มี <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter>, <Letter>n</Letter> หรือ <Letter>e</Letter> เลย เช่น <Word>biddy</Word> และ <Word>blood</Word> อีกด้านหนึ่ง มี Feedback 29 แบบที่เหลือคำเดียว มีเพียงคำเดียวที่ได้กระเบื้อง <Mark kind="correct" /> ห้าอัน และนั่นคือ <Word>crane</Word> เอง
+
+รวมแล้ว <Word>crane</Word> สร้าง 142 กลุ่ม Guess ที่แย่สร้างได้น้อย ลองพิมพ์ <Word>fuzzy</Word> ลงในแถว Guess มันสร้างได้เพียง 34 กลุ่ม โดยมี 1,352 คำอยู่ในกลุ่มเดียว คำตอบกลับแบบนั้นแทบไม่บอกอะไรคุณเลย
+
+ชื่อของแผนภูมิมีตัวเลขสองตัวอยู่แล้ว มันให้คะแนนการแบ่งด้วยสองวิธีจากบทนำ
+
+## Expected Candidates
+
+วิธีแรกคือ <Term>Expected Candidates</Term> ถ้า Answer มีโอกาสเป็นคำใดก็ได้เท่ากัน กลุ่มหนึ่งจะเกิดขึ้นตามสัดส่วนขนาดของมัน และเมื่อมันเกิดขึ้น นั่นคือจำนวนคำที่เหลือ เมื่อเฉลี่ยแล้ว <Word>crane</Word> เหลือ 78.7 คำ ส่วน <Word>fuzzy</Word> เหลือ 855.7
+
+## Expected Information
+
+วิธีที่สองคือ <Term>Expected Information</Term> เป็นบิต หนึ่งบิตคือการหารครึ่งหนึ่งครั้ง กลุ่มที่มีครึ่งหนึ่งของคำทั้งหมดมีค่าหนึ่งบิต เพราะมันลด Candidate Set ลงครึ่งหนึ่ง กลุ่มที่มีหนึ่งในสี่ของคำมีค่าสองบิต โดยทั่วไป กลุ่มที่เกิดขึ้นด้วยความน่าจะเป็น $p$ มีค่า $\log_2(1/p)$ บิต และค่าเฉลี่ยของทั้งการแบ่งคือ
+
+$$
+-\sum_i p_i \log_2 p_i
+$$
+
+<MarginNote>สูตรนี้ในทฤษฎีสารสนเทศเรียกว่าเอนโทรปี เราจะใช้คำนี้แค่ครั้งนี้ครั้งเดียว หลังจากนี้เราจะเรียกมันว่า Expected Information</MarginNote>
+
+สำหรับ <Word>crane</Word> ค่านี้คือ 5.74 บิต เพื่อให้เห็นภาพ การเลือกหนึ่งคำจาก 2,315 คำต้องใช้ $\log_2 2315 = 11.18$ บิตทั้งหมด Guess หนึ่งครั้งจึงพาคุณไปได้ราวครึ่งทาง ถ้าทุกกลุ่มมีขนาดเท่ากัน 5.74 บิตจะเหลือ $2315 / 2^{5.74} \approx 43$ คำ จำนวนที่คาดไว้จริงคือ 79 เพราะกลุ่มใหญ่นับมากกว่าส่วนแบ่งของมัน ช่องว่างนั้นคือเหตุผลที่สองตัวเลขอาจไม่ตรงกัน
+
+## ทั้งสองใน Python
+
+การนับกลุ่มทำได้ด้วย dictionary จัดกลุ่ม Candidate ทุกคำตาม Feedback ที่ Guess จะให้:
+
+```python
+def split(guess, candidates):
+    groups = {}
+    for answer in candidates:
+        groups.setdefault(feedback(guess, answer), []).append(answer)
+    return groups
+
+sizes = [len(words) for words in split("crane", answers).values()]
+len(sizes), max(sizes)   # (142, 263)
+```
+
+แพ็กเกจนับกลุ่มเดียวกันจากแถวหนึ่งของ Feedback Matrix สำหรับ Guess นับพันพร้อมกัน นี่คือวิธีที่มันให้คะแนน ทั้งสองการวัดมาจากจำนวนที่นับชุดเดียวกัน:
+
+```python title="Scoring a Feedback Split" {6-7}
+def _score(counts: np.ndarray, total: int) -> tuple[np.ndarray, np.ndarray]:
+    """(bits, expected Candidates) for each row of Feedback counts."""
+    c = counts.astype(np.float64)
+    # Σ p log2(1/p) = log2 N − Σ c log2 c / N, with 0 · log2 0 taken as 0.
+    c_log_c = np.where(c > 0, c * np.log2(np.where(c > 0, c, 1)), 0.0)
+    bits = np.log2(total) - c_log_c.sum(axis=1) / total
+    expected = (c * c).sum(axis=1) / total
+    return bits, expected
+```
+
+สองบรรทัดสุดท้ายคือสองสูตร `bits` ใช้รูปที่เทียบเท่ากันของผลบวก คือ $\log_2 N - \frac{1}{N}\sum c \log_2 c$ ซึ่งต้องการแค่ขนาดของกลุ่ม ส่วน `expected` คือ $\sum c^2 / N$

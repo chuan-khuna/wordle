@@ -61,7 +61,7 @@ fn candidates_keep_only_the_answers_that_fit_every_feedback() {
 
 #[test]
 fn the_opener_is_ranked_best_first() {
-    let top = suggest(answers_matrix(), &all_candidates(), SearchMode::Candidates, 10);
+    let top = suggest(answers_matrix(), &all_candidates(), SearchMode::Candidates, Rank::Bits, 10);
     assert_eq!(top.len(), 10);
     assert!(top.windows(2).all(|pair| pair[0].bits >= pair[1].bits - 1e-9));
     // A first Guess on 2,315 Answers can tell us somewhere between 5 and 7 bits.
@@ -72,9 +72,9 @@ fn the_opener_is_ranked_best_first() {
 
 #[test]
 fn searching_everything_never_does_worse_than_searching_candidates() {
-    let candidates_only = suggest(answers_matrix(), &all_candidates(), SearchMode::Candidates, 1)[0].bits;
-    let everything_answers = suggest(answers_matrix(), &all_candidates(), SearchMode::Everything, 1)[0].bits;
-    let everything_valid = suggest(valid_matrix(), &all_candidates(), SearchMode::Everything, 1)[0].bits;
+    let candidates_only = suggest(answers_matrix(), &all_candidates(), SearchMode::Candidates, Rank::Bits, 1)[0].bits;
+    let everything_answers = suggest(answers_matrix(), &all_candidates(), SearchMode::Everything, Rank::Bits, 1)[0].bits;
+    let everything_valid = suggest(valid_matrix(), &all_candidates(), SearchMode::Everything, Rank::Bits, 1)[0].bits;
     assert!(everything_answers >= candidates_only - 1e-9);
     // More words to choose from can only help.
     assert!(everything_valid >= everything_answers - 1e-9);
@@ -83,8 +83,8 @@ fn searching_everything_never_does_worse_than_searching_candidates() {
 #[test]
 fn candidates_mode_on_the_valid_matrix_matches_the_answers_matrix() {
     // Same words tried, so the same ranking, whichever matrix they are read from.
-    let from_answers = suggest(answers_matrix(), &all_candidates(), SearchMode::Candidates, 5);
-    let from_valid = suggest(valid_matrix(), &all_candidates(), SearchMode::Candidates, 5);
+    let from_answers = suggest(answers_matrix(), &all_candidates(), SearchMode::Candidates, Rank::Bits, 5);
+    let from_valid = suggest(valid_matrix(), &all_candidates(), SearchMode::Candidates, Rank::Bits, 5);
     assert_eq!(from_answers, from_valid);
 }
 
@@ -93,12 +93,12 @@ fn a_single_candidate_is_the_suggestion() {
     let answers = &word_lists().answers;
     let only = answers.iter().position(|&word| word == "cable").unwrap();
     for mode in [SearchMode::Candidates, SearchMode::Everything] {
-        let top = suggest(valid_matrix(), &[only], mode, 3);
+        let top = suggest(valid_matrix(), &[only], mode, Rank::Bits, 3);
         assert_eq!(top[0].word, "cable", "{mode:?}");
         assert!(top[0].is_candidate);
         assert_eq!(top[0].bits, 0.0);
     }
-    assert!(suggest(valid_matrix(), &[], SearchMode::Everything, 3).is_empty());
+    assert!(suggest(valid_matrix(), &[], SearchMode::Everything, Rank::Bits, 3).is_empty());
 }
 
 #[test]
@@ -131,6 +131,16 @@ fn a_missing_or_stale_matrix_is_an_error() {
 }
 
 #[test]
+fn a_column_by_column_npy_is_refused() {
+    // What `np.save(path, matrix.T)` or a Fortran-ordered array writes: same bytes, other meaning.
+    let row_by_row = crate::solver::matrix::npy_bytes(2, 3, &[0; 6]);
+    assert!(read_npy_header(&row_by_row).is_ok());
+    let header = std::str::from_utf8(&row_by_row[10..128]).unwrap().replace("'fortran_order': False, ", "'fortran_order': True,  ");
+    let column_by_column = [&row_by_row[..10], header.as_bytes(), &[0; 6]].concat();
+    assert_eq!(read_npy_header(&column_by_column).unwrap_err(), "the cells are not stored row by row");
+}
+
+#[test]
 fn marks_of_undoes_code() {
     for marks in [[Mark::Correct, Mark::Absent, Mark::Present, Mark::Absent, Mark::Correct], [Mark::Absent; 5], [Mark::Correct; 5]] {
         assert_eq!(marks_of(code(&marks)), marks);
@@ -141,7 +151,7 @@ fn marks_of_undoes_code() {
 #[test]
 fn a_distribution_matches_the_matrix_row_and_the_ranking() {
     let all = all_candidates();
-    let top = &suggest(answers_matrix(), &all, SearchMode::Candidates, 1)[0];
+    let top = &suggest(answers_matrix(), &all, SearchMode::Candidates, Rank::Bits, 1)[0];
     let chart = distribution(top.word, &all).unwrap();
     assert_eq!(chart.candidates, all.len());
     assert_eq!(chart.groups.iter().map(|group| group.count).sum::<usize>(), all.len());
@@ -160,4 +170,173 @@ fn a_distribution_needs_a_word_on_the_guess_list() {
     assert!(distribution("zzzzz", &all_candidates()).is_none());
     assert!(distribution("CRANE", &all_candidates()).is_some());
     assert!(distribution("cra", &all_candidates()).is_none());
+}
+
+#[test]
+fn round9_rounds_like_numpy() {
+    // Values printed by `np.round(x, 9)`; the ones ending in 5 sit at a tie after scaling, which rounds to even.
+    assert_eq!(round9(5e-10), 0.0);
+    assert_eq!(round9(1.5e-9), 2e-9);
+    assert_eq!(round9(2.5e-9), 2e-9);
+    assert_eq!(round9(3.5e-9), 4e-9);
+    assert_eq!(round9(0.1234567895), 0.12345679);
+    assert_eq!(round9(0.1234567885), 0.123456788);
+    assert_eq!(round9(61.0008639314), 61.000863931);
+}
+
+#[test]
+fn settings_name_the_strategy_they_amount_to() {
+    let mut ids = Vec::new();
+    for by in [Rank::Bits, Rank::ExpectedCandidates] {
+        for set in MatrixSet::ALL {
+            for mode in [SearchMode::Candidates, SearchMode::Everything] {
+                let strategy = Strategy::named(set, mode, by);
+                assert_eq!((strategy.set, strategy.mode, strategy.by), (set, mode, by));
+                ids.push(strategy.id);
+            }
+        }
+    }
+    // Every combination has its own name, in the order of `STRATEGIES`: Ranking, Guess Pool, Search Scope.
+    let want = [
+        "bits-answers-candidates",
+        "bits-answers-all",
+        "bits-guesses-candidates",
+        "bits-guesses-all",
+        "expected-answers-candidates",
+        "expected-answers-all",
+        "expected-guesses-candidates",
+        "expected-guesses-all",
+    ];
+    assert_eq!(ids, want);
+    assert_eq!(STRATEGIES.map(|strategy| strategy.id), want);
+}
+
+#[test]
+fn each_strategy_has_the_python_packages_name_and_path() {
+    for strategy in &STRATEGIES {
+        let ranking = match strategy.by {
+            Rank::Bits => ("bits", "Expected Information"),
+            Rank::ExpectedCandidates => ("expected", "Expected Candidates"),
+        };
+        let pool = match strategy.set {
+            MatrixSet::Answers => ("answers", "Answer List"),
+            MatrixSet::ValidGuesses => ("guesses", "Guess List"),
+        };
+        let scope = match strategy.mode {
+            SearchMode::Candidates => ("candidates", "Candidates only"),
+            SearchMode::Everything => ("all", "All words"),
+        };
+        assert_eq!(strategy.id, format!("{}-{}-{}", ranking.0, pool.0, scope.0));
+        assert_eq!(strategy.path, format!("{}/{}-{}.npy", ranking.0, pool.0, scope.0));
+        assert_eq!(strategy.name, format!("{}, {}, {}", ranking.1, pool.1, scope.1));
+    }
+    assert_eq!(MatrixSet::Answers.size(), 2315);
+    assert_eq!(MatrixSet::ValidGuesses.size(), 14855);
+}
+
+/// What the Python Solver printed for one State and one Strategy: the top Suggestions as
+/// `(word, bits, expected Candidates)`.
+type Expected = (&'static str, f64, f64);
+
+/// Check the top Suggestions of `strategy` for the State of `guesses` against the Answer `answer`.
+fn matches_python(guesses: &[&str], answer: &str, id: &str, want: &[Expected]) {
+    let strategy = STRATEGIES.iter().find(|strategy| strategy.id == id).unwrap();
+    let matrix = match strategy.set {
+        MatrixSet::Answers => answers_matrix(),
+        MatrixSet::ValidGuesses => valid_matrix(),
+    };
+    let state: Vec<(&str, Vec<Mark>)> = guesses.iter().map(|&guess| (guess, feedback(guess, answer))).collect();
+    let left = candidates(state.iter().map(|(word, marks)| (*word, marks.as_slice())));
+    let top = suggest(matrix, &left, strategy.mode, strategy.by, want.len());
+    let got: Vec<&str> = top.iter().map(|suggestion| suggestion.word).collect();
+    let words: Vec<&str> = want.iter().map(|(word, ..)| *word).collect();
+    assert_eq!(got, words, "{id} after {guesses:?} (Answer {answer})");
+    for (suggestion, (word, bits, expected)) in top.iter().zip(want) {
+        assert!((suggestion.bits - bits).abs() < 1e-8, "{id} {word}: {} bits, Python {bits}", suggestion.bits);
+        assert!((suggestion.expected_left - expected).abs() < 1e-8, "{id} {word}: {} left, Python {expected}", suggestion.expected_left);
+    }
+}
+
+// The expected values below were printed by the Python package's `Solver.rank` (with the two-or-fewer
+// Candidates rule of `Solver.suggest`) on the matrices in `precompute-cache/feedback/`.
+
+#[test]
+fn the_empty_state_matches_the_python_solver() {
+    matches_python(&[], "", "bits-answers-candidates", &[("raise", 5.877909691, 61.000863931), ("slate", 5.855775377, 71.572786177), ("crate", 5.834874004, 72.899784017), ("irate", 5.83139698, 63.779265659)]);
+    matches_python(&[], "", "expected-answers-candidates", &[("raise", 5.877909691, 61.000863931), ("arise", 5.820939701, 63.725701944), ("irate", 5.83139698, 63.779265659), ("arose", 5.767796702, 66.021166307)]);
+    matches_python(&[], "", "bits-guesses-all", &[("tarse", 5.946725225, 66.044492441), ("tiare", 5.931203413, 60.933477322), ("soare", 5.88596011, 62.301079914), ("roate", 5.882779324, 60.42462203)]);
+    matches_python(&[], "", "expected-guesses-all", &[("roate", 5.882779324, 60.42462203), ("tiare", 5.931203413, 60.933477322), ("raise", 5.877909691, 61.000863931), ("raile", 5.86570971, 61.330885529)]);
+}
+
+#[test]
+fn the_opener_is_ranked_over_the_whole_guess_pool_as_the_python_benchmark_does() {
+    // The top three of `Solver.rank(all_candidates(), pool=how.pool, scope="global", by=how.by)`,
+    // as `benchmark.best_opener` ranks, for each Strategy.
+    let answers = [("raise", 5.877909691, 61.000863931), ("slate", 5.855775377, 71.572786177), ("crate", 5.834874004, 72.899784017)];
+    let guesses = [("tarse", 5.946725225, 66.044492441), ("tiare", 5.931203413, 60.933477322), ("soare", 5.88596011, 62.301079914)];
+    let answers_expected = [("raise", 5.877909691, 61.000863931), ("arise", 5.820939701, 63.725701944), ("irate", 5.83139698, 63.779265659)];
+    let guesses_expected = [("roate", 5.882779324, 60.42462203), ("tiare", 5.931203413, 60.933477322), ("raise", 5.877909691, 61.000863931)];
+    for strategy in &STRATEGIES {
+        let want = match (strategy.by, strategy.set) {
+            (Rank::Bits, MatrixSet::Answers) => answers,
+            (Rank::Bits, MatrixSet::ValidGuesses) => guesses,
+            (Rank::ExpectedCandidates, MatrixSet::Answers) => answers_expected,
+            (Rank::ExpectedCandidates, MatrixSet::ValidGuesses) => guesses_expected,
+        };
+        let matrix = if strategy.set == MatrixSet::Answers { answers_matrix() } else { valid_matrix() };
+        let top = suggest(matrix, &all_candidates(), strategy.mode.for_guess(0), strategy.by, 3);
+        let got: Vec<&str> = top.iter().map(|suggestion| suggestion.word).collect();
+        assert_eq!(got, want.map(|(word, ..)| word), "{}", strategy.id);
+        for (suggestion, (word, bits, expected)) in top.iter().zip(want) {
+            assert!((suggestion.bits - bits).abs() < 1e-8 && (suggestion.expected_left - expected).abs() < 1e-8, "{} {word}", strategy.id);
+        }
+    }
+    // From the second Guess on, the setting applies.
+    assert_eq!(SearchMode::Candidates.for_guess(1), SearchMode::Candidates);
+    assert_eq!(SearchMode::Everything.for_guess(2), SearchMode::Everything);
+}
+
+#[test]
+fn a_big_candidate_set_matches_the_python_solver() {
+    // 263 Candidates left after CRANE against THUMB.
+    let (guesses, answer) = (&["crane"][..], "thumb");
+    matches_python(guesses, answer, "bits-answers-candidates", &[("spilt", 5.640498031, 7.88973384), ("sloth", 5.63956581, 8.27756654), ("split", 5.605539224, 7.836501901), ("hoist", 5.603077646, 9.380228137)]);
+    matches_python(guesses, answer, "expected-answers-candidates", &[("lousy", 5.494354249, 7.403041825), ("moult", 5.550901739, 7.562737643), ("split", 5.605539224, 7.836501901), ("spilt", 5.640498031, 7.88973384)]);
+    matches_python(guesses, answer, "bits-guesses-all", &[("slipt", 5.67770119, 8.155893536), ("smolt", 5.6708567, 6.733840304), ("toils", 5.646543723, 6.787072243), ("sluit", 5.644373972, 7.235741445)]);
+    matches_python(guesses, answer, "expected-guesses-all", &[("smolt", 5.6708567, 6.733840304), ("toils", 5.646543723, 6.787072243), ("louts", 5.575160238, 7.091254753), ("sluit", 5.644373972, 7.235741445)]);
+}
+
+#[test]
+fn a_tie_on_the_primary_measure_is_broken_by_the_other_measure() {
+    // SLATE against ROOST leaves 24 Candidates. Ranked by Expected Candidates, TORSO and FIRST both
+    // leave 2.333333333 and are both Candidates; TORSO has more bits, so it comes first.
+    let (guesses, answer) = (&["slate"][..], "roost");
+    matches_python(guesses, answer, "bits-answers-candidates", &[("torus", 3.772055209, 2.416666667), ("frost", 3.751629167, 2.166666667), ("worst", 3.65726823, 2.583333333), ("torso", 3.653107168, 2.333333333)]);
+    matches_python(guesses, answer, "expected-answers-candidates", &[("frost", 3.751629167, 2.166666667), ("joist", 3.605388542, 2.25), ("torso", 3.653107168, 2.333333333), ("first", 3.636842188, 2.333333333)]);
+    matches_python(guesses, answer, "bits-guesses-all", &[("trois", 4.001629167, 1.75), ("trout", 3.934560814, 2.0), ("droit", 3.886842188, 1.916666667), ("torsi", 3.886842188, 1.916666667)]);
+    matches_python(guesses, answer, "expected-guesses-all", &[("trois", 4.001629167, 1.75), ("droit", 3.886842188, 1.916666667), ("torsi", 3.886842188, 1.916666667), ("horis", 3.823934896, 1.916666667)]);
+}
+
+#[test]
+fn a_tie_on_both_measures_goes_to_a_candidate_then_alphabetical() {
+    // ADIEU then PIOUS against FLUME leaves 16 Candidates. TULLE (a Candidate) and BUTLE tie on
+    // both measures, so the Candidate comes first; BUGLE and TRUCE tie and go alphabetically.
+    let (guesses, answer) = (&["adieu", "pious"][..], "flume");
+    matches_python(guesses, answer, "bits-answers-candidates", &[("tulle", 3.75, 1.25), ("bugle", 3.577819531, 1.5), ("truce", 3.577819531, 1.5), ("brute", 3.5, 1.5)]);
+    matches_python(guesses, answer, "expected-answers-candidates", &[("tulle", 3.75, 1.25), ("bugle", 3.577819531, 1.5), ("truce", 3.577819531, 1.5), ("brute", 3.5, 1.5)]);
+    matches_python(guesses, answer, "bits-guesses-all", &[("tulle", 3.75, 1.25), ("butle", 3.75, 1.25), ("cully", 3.702819531, 1.375), ("mulct", 3.702819531, 1.375)]);
+    matches_python(guesses, answer, "expected-guesses-all", &[("tulle", 3.75, 1.25), ("butle", 3.75, 1.25), ("cully", 3.702819531, 1.375), ("mulct", 3.702819531, 1.375)]);
+}
+
+#[test]
+fn two_candidates_left_go_to_candidates_only() {
+    // CRANE against ACORN leaves ACORN and RANCH. Searching all words would list others (AAHED ties
+    // them at 1 bit), but with two Candidates only they are tried.
+    let (guesses, answer) = (&["crane"][..], "acorn");
+    for id in ["bits-answers-candidates", "expected-answers-candidates", "bits-guesses-all", "expected-guesses-all"] {
+        matches_python(guesses, answer, id, &[("acorn", 1.0, 1.0), ("ranch", 1.0, 1.0)]);
+    }
+    let state = [("crane", feedback("crane", answer))];
+    let left = candidates(state.iter().map(|(word, marks)| (*word, marks.as_slice())));
+    assert_eq!(suggest(valid_matrix(), &left, SearchMode::Everything, Rank::Bits, 4).len(), 2);
 }

@@ -1,0 +1,133 @@
+import { useLayoutEffect, useRef, useState } from "react";
+import type { pageText } from "@/lib/i18n/page-text";
+import { type HeadSize, headSize } from "@/lib/widgets/split-groups";
+import { parseMarks } from "@/lib/wordle/feedback";
+import { headLabel } from "./HeadCard";
+import { Tile } from "./Tile";
+
+/** A word is five mono capitals at 11px (about 6.6px each), in a grid column of `WORD_W` pixels; columns are `WORD_GAP` apart. */
+export const WORD_W = 38;
+export const WORD_GAP = 8;
+
+/** Columns assumed until the container has been measured. */
+const FALLBACK_COLUMNS = 12;
+
+/** How many word columns fit in `width` pixels, once `extra` pixels (a block's padding, border, outline) are taken off; at least 1. */
+const columnsIn = (width: number, extra: number) => Math.max(1, Math.floor((width - extra + WORD_GAP) / (WORD_W + WORD_GAP)));
+
+/**
+ * How many word columns a block can have in the container's width, or in `layoutWidth` when given, `extra` being what
+ * the block adds around its grid; kept up to date as the container resizes. Pass the result to `columnCount`.
+ */
+export function useColumns(extra: number, layoutWidth?: number): [React.RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(FALLBACK_COLUMNS);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || layoutWidth !== undefined) return;
+    const measure = () => setColumns(columnsIn(el.clientWidth, extra));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [layoutWidth, extra]);
+  return [ref, layoutWidth === undefined ? columns : columnsIn(layoutWidth, extra)];
+}
+
+const HEAD_TILE: Record<HeadSize, { small?: boolean; board?: boolean; tiny?: boolean }> = {
+  lg: {},
+  md: { small: true },
+  sm: { board: true },
+  xs: { tiny: true },
+};
+
+/**
+ * The inside of one Feedback's block, shared by `SplitGroups` and the Follow an Answer path: the head (the Guess in that
+ * Feedback's Marks, smaller Tiles for a smaller group, and the word count, or `label` in its place) and the group's words as
+ * plain text in `columns` columns. `more` words left out are counted after them. `strong` marks the highlighted word.
+ * Given `total` (the size of the Candidate Set the split was over), the head is a target of the shared stats card (`HEAD`,
+ * with its figures in `data-*`; see `useHeadCard`), and `headTab` (0 or -1) makes it focusable, as a roving tab stop.
+ */
+export function SplitBlock({
+  marks: code,
+  count,
+  words,
+  guess,
+  columns,
+  text,
+  label,
+  more = 0,
+  highlightWord,
+  linked = false,
+  picked = null,
+  tabWord = null,
+  total,
+  headTab,
+}: {
+  marks: string;
+  count: number;
+  words: readonly string[];
+  guess: string;
+  columns: number;
+  text: ReturnType<typeof pageText>;
+  label?: string;
+  more?: number;
+  highlightWord?: string;
+  linked?: boolean;
+  /** The picked word, when it is in this block. */
+  picked?: string | null;
+  /** The word that is the tab stop, when it is in this block. */
+  tabWord?: string | null;
+  total?: number;
+  headTab?: 0 | -1;
+}) {
+  const marks = parseMarks(code) ?? [];
+  const size = HEAD_TILE[headSize(count)];
+  return (
+    <>
+      <div
+        role="group"
+        aria-label={total === undefined ? `${text.feedbackLabel} ${code}, ${text.words(count)}` : headLabel(text, code, count, total)}
+        {...(total !== undefined && { "data-head": code, "data-guess": guess, "data-count": count, "data-total": total })}
+        tabIndex={headTab}
+        className="w-fit rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        <div className="flex gap-0.5" aria-hidden="true">
+          {Array.from(guess, (letter, i) => (
+            <Tile key={i} letter={letter} mark={marks[i] ?? 0} {...size} />
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-meta tabular-nums">{label ?? text.words(count)}</p>
+      </div>
+      <ul
+        data-cols={columns}
+        className="mt-2 grid"
+        style={{ gridTemplateColumns: `repeat(${columns}, ${WORD_W}px)`, gap: WORD_GAP }}
+      >
+        {words.map((w) => (
+          <li key={w}>
+            <WordText word={w} strong={w === highlightWord || w === picked} linked={linked} tabbable={w === tabWord} />
+          </li>
+        ))}
+      </ul>
+      {more > 0 && <p className="mt-1 text-[11px] leading-5 text-meta">{text.pathMore(more)}</p>}
+    </>
+  );
+}
+
+/** One word as plain mono text (no Mark colours); `strong` is the highlighted word. Linked, it is a button (only the tab stop is in the Tab order). */
+function WordText({ word, strong, linked, tabbable }: { word: string; strong: boolean; linked: boolean; tabbable: boolean }) {
+  const look = `block font-mono text-[11px] leading-5 uppercase ${strong ? "font-bold text-text" : "text-meta"}`;
+  if (!linked) return <span className={look}>{word}</span>;
+  return (
+    <button
+      type="button"
+      data-word={word}
+      tabIndex={tabbable ? 0 : -1}
+      aria-haspopup="dialog"
+      className={`${look} w-full cursor-pointer rounded-xs text-left hover:text-text focus-visible:outline-2 focus-visible:outline-accent`}
+    >
+      {word}
+    </button>
+  );
+}

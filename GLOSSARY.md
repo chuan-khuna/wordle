@@ -66,7 +66,7 @@ _Avoid_: remaining word, possible answer, option
 
 **Candidate Set**:
 All Candidates for a State. At the start of a Game it is the whole Answer List.
-_Avoid_: solution space, search space, pool
+_Avoid_: solution space, search space, pool (the Guess Pool is a different thing)
 
 **Suggestion**:
 The Guess the Solver recommends for the current State.
@@ -90,11 +90,31 @@ _Avoid_: score, pattern, hash
 
 **Expected Information**:
 How much a Guess is expected to shrink the Candidate Set, averaged over its Feedback Split and counted in bits.
-_Avoid_: entropy, entropy score, info gain
+_Avoid_: entropy, entropy score, info gain (an Article may name "entropy" once, to link the formula to its standard name)
+
+**Expected Candidates**:
+How many Candidates a Guess is expected to leave, averaged over its Feedback Split: the fewer, the better.
+_Avoid_: expected vocabulary size, expected words left, average group size
+
+**Guess Pool**:
+The list the Solver may take its Guesses from, the Opener included: the Answer List or the Guess List.
+_Avoid_: word list, dictionary, words (on its own)
+
+**Search Scope**:
+Which Guess Pool words the Solver considers for each Guess after the Opener: **Candidates only**, or **All words** in the Guess Pool, so a word that can't be the Answer may still be guessed to split the Candidates. The Opener may be any Guess Pool word under either Search Scope, so with Candidates only the Guess Pool decides only the Opener, since every Candidate is on the Answer List.
+_Avoid_: search mode, hard mode (Hard Mode is a different rule)
+
+**Ranking**:
+The measure the Solver uses to pick the best Guess among those it considers: highest Expected Information or lowest Expected Candidates.
+_Avoid_: score, metric, objective
 
 **Strategy**:
-The rule the Solver uses to pick a Suggestion, such as highest Expected Information.
+The rule the Solver uses to pick each Guess: one Guess Pool, one Search Scope and one Ranking, such as the Guess List, All words and highest Expected Information.
 _Avoid_: algorithm, heuristic, policy
+
+**Solve Tree**:
+Every Game one Strategy plays from one Opener, drawn as a tree: each Guess branches into one group per Feedback it got, and each branch ends at an Answer.
+_Avoid_: decision tree, game tree, strategy tree
 
 ## Using the app
 
@@ -118,5 +138,43 @@ How many Games in a Benchmark ended at each Guess Count, plus the number of Loss
 _Avoid_: histogram, stats
 
 **Average Guess Count**:
-The mean Guess Count across the won Games of a Benchmark.
+The mean Guess Count of a set of Games, such as a Benchmark or one Opener's row of the Guess Count Matrix. Every Game counts: each is played to a Win with no Guess Limit, so a Game that would be a Loss counts at the Guess Count it needed.
 _Avoid_: average score, mean tries
+
+**Guess Count Matrix**:
+A table of the Guess Count of every Game, one row per Opener in the Strategy's Guess Pool and one column per Answer, when one Strategy picks every Guess after the Opener. Each Game is played to a Win, so a Game that would be a Loss under the Guess Limit keeps the Guess Count it needed. The mean of a row is that Opener's Average Guess Count; Openers are compared by it.
+_Avoid_: turn to win matrix, turns matrix, score matrix
+
+**Opener Distribution**:
+How many Openers have each Average Guess Count, rounded to two decimals, under one Strategy. It is read from the Guess Count Matrix.
+_Avoid_: histogram, opener histogram, avg guess chart
+
+## Publishing
+
+**Article**:
+A short piece on the website that explains one idea, such as Feedback Split or Expected Information. It may build on other Articles, its Prerequisites.
+_Avoid_: post, page, chapter, lesson
+
+**Prerequisite**:
+An Article that another Article builds on and links back to.
+_Avoid_: dependency, parent
+
+**Series**:
+An ordered path through several Articles that tells one story, such as "Solving Wordle". A video follows a Series.
+_Avoid_: course, collection, playlist
+
+**Part**:
+A group of consecutive Articles in a Series that share one core idea, such as learning and building Wordle, or solving it. Each Article belongs to exactly one Part.
+_Avoid_: chapter, section, module, unit
+
+**Widget**:
+An interactive figure inside an Article that lets the reader try the idea, such as scoring a Guess or exploring a Feedback Split.
+_Avoid_: demo, playground, component
+
+**Margin note**:
+A short aside printed in the margin of an Article, beside the text it comments on.
+_Avoid_: sidenote, footnote, aside, marginalia, callout
+
+**Translation**:
+An Article, or the Series and its Parts, written in another language, such as Thai. It says the same thing as the English original, with the same Prerequisites, Part and Widgets. The original is always English.
+_Avoid_: localisation, version, edition, Thai Article

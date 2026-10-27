@@ -95,7 +95,7 @@ words = load_word_lists()
 answers = words.answers                 # sorted tuple
 guesses = tuple(sorted(words.guesses))
 
-matrix = np.load("matrices/guesses_vs_answers.npy", mmap_mode="r")
+matrix = np.load("precompute-cache/feedback/guesses_vs_answers.npy", mmap_mode="r")
 matrix[guesses.index("crane"), answers.index("cable")]   # 173
 ```
 
@@ -111,8 +111,12 @@ The matrices are dense and have no column names, so a table format (CSV, Parquet
 
 ## Generating
 
-`just matrices` (or `uv run src/precompute.py`) asks how many threads to use (1, 2, 4 or 8; about 4.4 s with one, 1.2 s with eight) and whether to overwrite existing files, then writes both files to `matrices/` at the repo root, which is gitignored. `--threads N`, `--out DIR` and `--yes` skip the questions. `matrix.load()` builds them if they are missing. The vectorised scoring follows the same two-pass rule as [feedback-scoring.md](feedback-scoring.md); `packages/wordle/tests/test_matrix.py` checks it against `wordle.engine.feedback.feedback`.
+`just precompute feedback` (or `uv run src/precompute.py`) asks how many threads to use (1, 2, 4 or 8; about 4.4 s with one, 1.2 s with eight) and whether to overwrite existing files, then writes both files to `precompute-cache/feedback/` at the repo root, which is gitignored (`precompute-cache/` holds every precomputed file, shared by the package, the backend and the gpui app). `--threads N`, `--out DIR` and `--yes` skip the questions. `matrix.load()` builds them if they are missing. The vectorised scoring follows the same two-pass rule as [feedback-scoring.md](feedback-scoring.md); `packages/wordle/tests/test_matrix.py` checks it against `wordle.engine.feedback.feedback`.
 
 ## The gpui app builds them too
 
-The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`, into its own `app/wordle-gpui/matrices/` (also gitignored). It is a separate app, so it never reads the Python package's `matrices/`. Both writers still give byte-identical files, so copying one folder into the other also works. The app reads the files with a small `.npy` header parser of its own in `solver/strategy.rs`, not the `npyz` crate.
+The Rust app writes the same files from its command palette (**Precompute matrices…**, see [gpui-app.md](gpui-app.md)), with `app/wordle-gpui/src/solver/matrix.rs`, into the same `precompute-cache/feedback/` (it finds the repo root from its own `CARGO_MANIFEST_DIR`, so the working directory does not matter). Both writers give byte-identical files, so it does not matter which one built them. The app reads the files with a small `.npy` header parser of its own in `solver/strategy.rs`, not the `npyz` crate, and refuses a file that is not `uint8` row by row. [`.npy` files in Python and Rust](npy-in-python-and-rust.md) compares the two byte by byte.
+
+## The web backend builds them too
+
+`app/backend/` reads the files `just precompute feedback` writes in `precompute-cache/feedback/`; it does not build them. See [web-backend.md](web-backend.md).

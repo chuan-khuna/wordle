@@ -1,0 +1,224 @@
+/* Design tokens: the one place for type, space, measure, rules, shape and focus. Components use the
+   Tailwind utilities these generate (font-serif, text-sm, py-section, max-w-measure, border-rule, ...),
+   never raw values. The ten palettes live in themes.css; this file only maps their role names. */
+
+/* Colour roles (set per theme by themes.css) as Tailwind colours: bg-surface, text-text, ... */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-overlay: var(--overlay);
+  --color-highlight-low: var(--highlight-low);
+  --color-highlight-med: var(--highlight-med);
+  --color-highlight-high: var(--highlight-high);
+  --color-text: var(--text);
+  --color-subtle: var(--subtle);
+  --color-muted: var(--muted);
+  --color-heading: var(--heading);
+  --color-error: var(--error);
+  --color-success: var(--success);
+  --color-accent: var(--accent);
+  --color-correct: var(--correct);
+  --color-on-correct: var(--on-correct);
+  --color-present: var(--present);
+  --color-on-present: var(--on-present);
+  --color-absent: var(--absent);
+  --color-on-absent: var(--on-absent);
+  /* Text on a Mark label in prose (<Mark>): black or white, whichever contrasts more with the Mark's
+     colour. The palettes' on-* roles are tuned for 2rem+ tile letters and fall under 4.5:1 for small text
+     in many palettes (see web-frontend.md); the better of black and white is always at least 4.5:1. */
+  --color-ink-correct: oklch(from var(--correct) clamp(0, (0.6 - l) * 1000, 1) 0 0);
+  --color-ink-present: oklch(from var(--present) clamp(0, (0.6 - l) * 1000, 1) 0 0);
+  --color-ink-absent: oklch(from var(--absent) clamp(0, (0.6 - l) * 1000, 1) 0 0);
+  --color-absent-key: var(--absent-key);
+  --color-on-absent-key: var(--on-absent-key);
+
+  /* Derived roles. `meta` is small metadata text: `subtle` pulled toward `text` so it stays at
+     least ~4.5:1 on `background` in the light palettes too (plain `subtle` is ~4.0:1 in Rosé Pine Dawn).
+     `rule` is the hairline colour for frames, row dividers and the chart grid; `rule-strong` for
+     input borders and table header lines. */
+  --color-meta: color-mix(in oklab, var(--subtle) 55%, var(--text));
+  --color-rule: var(--highlight-med);
+  --color-rule-strong: var(--highlight-high);
+}
+
+/* Type: families (loaded in layout.tsx with next/font, which sets --font-newsreader etc. on <html>),
+   scale (size and line-height), tracking. */
+@theme inline {
+  /* Noto Sans Thai Looped comes after the Latin family, so only Thai letters use it. Its variable exists only on Thai pages
+     (fonts-thai.ts); on English pages the fallback after the comma stands in. */
+  --font-serif: var(--font-newsreader), var(--font-noto-thai-looped, "Iowan Old Style"), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-inter), var(--font-noto-thai-looped, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  /* Letter tiles, as Wordle draws them: the UI sans, bold. Mono stays for code, Feedback digits and words as data. */
+  --font-tile: var(--font-inter), var(--font-noto-thai-looped, ui-sans-serif), ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme {
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.125rem; /* prose: 18px serif at 1.7 leading */
+  --text-base--line-height: 1.7;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.55;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 1.2;
+  --text-3xl: 2.375rem;
+  --text-3xl--line-height: 1.12;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.08;
+
+  --tracking-tight: -0.015em; /* display sizes */
+  --tracking-caps: 0.08em; /* small uppercase UI labels */
+
+  /* Space: Tailwind's 0.25rem scale for everything small, plus named steps for vertical rhythm. */
+  --spacing-gutter: 1.25rem; /* page side padding (see also sm:) */
+  --spacing-gutter-wide: 2rem;
+  --spacing-flow: 1.25rem; /* between blocks inside a section */
+  --spacing-figure: 2.5rem; /* above and below a Widget */
+  --spacing-section: 3.5rem; /* between page sections */
+
+  /* Measure: prose line length, and the page column. */
+  --container-measure: 68ch;
+  /* Article column: the measure, a gap, and the margin for Margin notes. Code blocks and Widgets span it all. */
+  --container-margin: 16rem;
+  --spacing-margin-gap: 2.5rem;
+  --container-article: calc(var(--container-measure) + var(--spacing-margin-gap) + var(--container-margin));
+  --container-page: 68rem;
+  --container-nav: 14rem;
+  /* An Article's Table of contents: a column left of the Article on wide windows (globals.css, .article-toc). */
+  --container-toc: 13rem;
+
+  /* Shape: small radius, no shadow. Tiles keep a 3px corner; everything else is square or 2px. */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+}
+
+/* Thai stacks vowels and tone marks above and below the line, so every step of the scale gets a taller line height on Thai pages
+   (body text about 1.8). The utilities read these variables, so a language-scoped override is enough. */
+:root:lang(th) {
+  --text-xs--line-height: 1.7;
+  --text-sm--line-height: 1.75;
+  --text-base--line-height: 1.8;
+  --text-lg--line-height: 1.7;
+  --text-xl--line-height: 1.55;
+  --text-2xl--line-height: 1.45;
+  --text-3xl--line-height: 1.35;
+  --text-4xl--line-height: 1.3;
+}
+
+/* shadcn/ui variables, mapped onto the roles above. The components in components/ui/ read these (bg-popover,
+   text-foreground, border-input, ...). Two shadcn names would collide with our roles, so they are not mapped:
+   shadcn's `accent` (hover fill) and `muted` (quiet fill) are written in the generated components as
+   `bg-highlight-med` and `bg-highlight-low`, and `muted-foreground` is `text-meta`. There is no `.dark`
+   class: the palettes in themes.css are the only dark mode. */
+@theme inline {
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --foreground: var(--text);
+  --card: var(--background);
+  --card-foreground: var(--text);
+  --popover: var(--overlay);
+  --popover-foreground: var(--text);
+  --primary: var(--text);
+  --primary-foreground: var(--background);
+  --secondary: var(--highlight-low);
+  --secondary-foreground: var(--text);
+  --muted-foreground: var(--color-meta);
+  --destructive: var(--error);
+  --border: var(--highlight-med);
+  --input: var(--highlight-high);
+  --ring: var(--accent);
+  --radius: 3px;
+}
+
+:root {
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --rule-width: 1px;
+}
+
+/* One visible focus ring for everything focusable; components do not restyle it. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Shared building blocks, written once with tokens. */
+
+/* Link in running UI text: text colour, underlined in the accent. */
+@utility link {
+  color: var(--text);
+  text-decoration-line: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: var(--rule-width);
+  text-underline-offset: 0.22em;
+  &:hover {
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* Small uppercase label in the UI sans: Widget titles, table heads, eyebrows. */
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 500;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--color-meta);
+}
+
+/* Form controls, buttons and tables are the shadcn components in components/ui/ (Input, Select, Button, Table),
+   restyled there with these tokens. */
+
+/* A word row that was refused shakes once, sideways. Not with reduced motion: the message and the red
+   border still say it. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+@utility animate-shake {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: shake 0.35s ease-in-out;
+  }
+}
+
+/* A Side-by-side Game tile turns face up, top edge first. Not with reduced motion: the tile just appears. */
+@keyframes flip-in {
+  from { transform: rotateX(90deg); }
+  to { transform: rotateX(0); }
+}
+@utility animate-flip-in {
+  display: inline-flex;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: flip-in 0.3s ease-out both;
+  }
+}

@@ -1,5 +1,6 @@
-//! The Solver's Strategy: suggest the Guess with the highest Expected Information, read from a
-//! Feedback matrix (see `matrix.rs`).
+//! The Solver's Strategies: suggest the Guess with the highest Expected Information, or the lowest
+//! Expected Candidates, read from a Feedback matrix (see `matrix.rs`). This mirrors
+//! `Solver.rank` and `Solver.suggest` in the Python package, tie-breaks included.
 //!
 //! A Guess splits the Candidates into groups, one for each Feedback it could produce (its Feedback
 //! Split). If a group holds `n` of the `N` Candidates, that Feedback turns up with probability
@@ -7,13 +8,19 @@
 //! those bits averaged over the split: `-Σ p·log2(p)`. A Guess that spreads the Candidates over many
 //! small groups scores high; one that leaves them in a single group scores 0.
 //!
+//! The Expected Candidates of a Guess is the expected size of the next Candidate Set, `Σ n²/N`: lower
+//! is better.
+//!
 //! Every Candidate is taken to be equally likely to be the Answer.
 //!
-//! Two choices change what is searched:
-//! - the **matrix set** picks the Guesses that exist: `Answers` (only Answer List words) or
-//!   `ValidGuesses` (every word on the Guess List);
-//! - the **search mode** picks which of those are tried: `Candidates` (only words that could still be
-//!   the Answer) or `Everything` (every word in the set, even ones already ruled out).
+//! Three choices make up a Strategy, and all eight combinations are named in `STRATEGIES`:
+//! - the **Guess Pool** (`MatrixSet`, the panel's **Words**) picks the Guesses that exist: `Answers`
+//!   (only Answer List words) or `ValidGuesses` (every word on the Guess List);
+//! - the **Search Scope** (`SearchMode`, the panel's **Search**) picks which of those are tried for
+//!   each Guess after the Opener: `Candidates` (only words that could still be the Answer) or
+//!   `Everything` (every word in the Guess Pool, even ones already ruled out). The Opener is ranked
+//!   over the whole Guess Pool under either (`SearchMode::for_guess`);
+//! - the **Ranking** (`Rank`, the panel's **Rank by**): `Rank::Bits` or `Rank::ExpectedCandidates`.
 
 use std::collections::HashSet;
 use std::io;
@@ -25,7 +32,7 @@ use super::matrix::{ANSWERS_FILE, GUESSES_FILE, pack};
 use crate::engine::words::{WORD_LENGTH, word_lists};
 
 /// How many different Feedback Codes there are (3⁵).
-const CODES: usize = 243;
+pub(crate) const CODES: usize = 243;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum MatrixSet {
@@ -44,6 +51,16 @@ impl MatrixSet {
             MatrixSet::ValidGuesses => GUESSES_FILE,
         }
     }
+
+    /// How many words the Guess Pool has: the rows of its Feedback matrix and of its Strategies'
+    /// Guess Count Matrices (2,315 or 14,855).
+    pub fn size(self) -> usize {
+        let lists = word_lists();
+        match self {
+            MatrixSet::Answers => lists.answers.len(),
+            MatrixSet::ValidGuesses => lists.guesses.len(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -52,6 +69,81 @@ pub enum SearchMode {
     Candidates,
     /// Every word in the matrix set.
     Everything,
+}
+
+impl SearchMode {
+    /// The Search Scope that picks the next Guess with `guesses_made` Guesses on the board: the
+    /// Opener is ranked over the whole Guess Pool whatever the setting (as the Python package's
+    /// `benchmark.best_opener` does), and the setting applies from the second Guess on.
+    pub fn for_guess(self, guesses_made: usize) -> SearchMode {
+        if guesses_made == 0 { SearchMode::Everything } else { self }
+    }
+}
+
+/// The measure the Suggestions are ranked by.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Rank {
+    /// Expected Information: most bits first.
+    Bits,
+    /// Expected Candidates: fewest Candidates left first.
+    ExpectedCandidates,
+}
+
+/// A named way of choosing Guesses, as in `STRATEGIES` of the Python package: a Guess Pool, a
+/// Search Scope and a Ranking. The id is `<ranking>-<pool>-<scope>`, with `Everything` written `all`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Strategy {
+    pub id: &'static str,
+    pub name: &'static str,
+    /// Its Guess Count Matrix, relative to the `guess-counts/` folder: `<ranking>/<pool>-<scope>.npy`.
+    pub path: &'static str,
+    pub set: MatrixSet,
+    pub mode: SearchMode,
+    pub by: Rank,
+}
+
+/// Every combination, ordered by Ranking, then Guess Pool, then Search Scope, as in the Python package.
+pub const STRATEGIES: [Strategy; 8] = [
+    Strategy { id: "bits-answers-candidates", name: "Expected Information, Answer List, Candidates only", path: "bits/answers-candidates.npy", set: MatrixSet::Answers, mode: SearchMode::Candidates, by: Rank::Bits },
+    Strategy { id: "bits-answers-all", name: "Expected Information, Answer List, All words", path: "bits/answers-all.npy", set: MatrixSet::Answers, mode: SearchMode::Everything, by: Rank::Bits },
+    Strategy { id: "bits-guesses-candidates", name: "Expected Information, Guess List, Candidates only", path: "bits/guesses-candidates.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Candidates, by: Rank::Bits },
+    Strategy { id: "bits-guesses-all", name: "Expected Information, Guess List, All words", path: "bits/guesses-all.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Everything, by: Rank::Bits },
+    Strategy { id: "expected-answers-candidates", name: "Expected Candidates, Answer List, Candidates only", path: "expected/answers-candidates.npy", set: MatrixSet::Answers, mode: SearchMode::Candidates, by: Rank::ExpectedCandidates },
+    Strategy { id: "expected-answers-all", name: "Expected Candidates, Answer List, All words", path: "expected/answers-all.npy", set: MatrixSet::Answers, mode: SearchMode::Everything, by: Rank::ExpectedCandidates },
+    Strategy { id: "expected-guesses-candidates", name: "Expected Candidates, Guess List, Candidates only", path: "expected/guesses-candidates.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Candidates, by: Rank::ExpectedCandidates },
+    Strategy { id: "expected-guesses-all", name: "Expected Candidates, Guess List, All words", path: "expected/guesses-all.npy", set: MatrixSet::ValidGuesses, mode: SearchMode::Everything, by: Rank::ExpectedCandidates },
+];
+
+impl Strategy {
+    /// The Strategy the panel's **Words**, **Search** and **Rank by** settings name: every
+    /// combination is one of the eight.
+    pub fn named(set: MatrixSet, mode: SearchMode, by: Rank) -> &'static Strategy {
+        STRATEGIES.iter().find(|strategy| strategy.set == set && strategy.mode == mode && strategy.by == by).expect("STRATEGIES holds every combination")
+    }
+
+    /// The Guess Pool in the Python package's words: "answers" or "guesses".
+    pub fn pool(&self) -> &'static str {
+        match self.set {
+            MatrixSet::Answers => "answers",
+            MatrixSet::ValidGuesses => "guesses",
+        }
+    }
+
+    /// The Search Scope in the Python package's words: "candidates" or "global".
+    pub fn scope(&self) -> &'static str {
+        match self.mode {
+            SearchMode::Candidates => "candidates",
+            SearchMode::Everything => "global",
+        }
+    }
+
+    /// The Ranking in the Python package's words: "bits" or "expected".
+    pub fn ranking(&self) -> &'static str {
+        match self.by {
+            Rank::Bits => "bits",
+            Rank::ExpectedCandidates => "expected",
+        }
+    }
 }
 
 /// A Feedback matrix read into memory: rows are Guesses, columns are the Answer List.
@@ -94,7 +186,7 @@ impl Matrix {
         Ok(Matrix::new(rows, lists.answers.clone(), bytes[start..].to_vec()))
     }
 
-    fn row(&self, index: usize) -> &[u8] {
+    pub(crate) fn row(&self, index: usize) -> &[u8] {
         let width = self.columns.len();
         &self.cells[index * width..(index + 1) * width]
     }
@@ -110,6 +202,10 @@ fn read_npy_header(bytes: &[u8]) -> Result<((usize, usize), usize), String> {
     let header = bytes.get(10..start).and_then(|header| std::str::from_utf8(header).ok()).ok_or("a broken .npy header")?;
     if !header.contains("'|u1'") {
         return Err("the cells are not u8".into());
+    }
+    // Column by column would swap what a row and a column mean.
+    if !header.contains("'fortran_order': False") {
+        return Err("the cells are not stored row by row".into());
     }
     let shape = header.split("'shape': (").nth(1).and_then(|rest| rest.split(')').next()).ok_or("no shape in the .npy header")?;
     let mut sizes = shape.split(',').filter_map(|size| size.trim().parse::<usize>().ok());
@@ -159,16 +255,45 @@ fn split_stats(codes: impl Iterator<Item = u8>, total: usize) -> (f64, f64) {
         sizes[code as usize] += 1;
     }
     let total = total as f64;
-    let mut bits = 0.0;
-    let mut expected_left = 0.0;
-    for &size in sizes.iter().filter(|&&size| size > 0) {
-        let size = f64::from(size);
-        let p = size / total;
-        bits -= p * p.log2();
-        expected_left += size * p;
+    // As the Python Solver: Σ p·log2(1/p) = log2 N − Σ n·log2 n / N, and Σ n² / N.
+    let mut n_log_n = [0.0; CODES];
+    let mut sum_squares = 0.0;
+    for (slot, &size) in n_log_n.iter_mut().zip(&sizes) {
+        if size > 0 {
+            let size = f64::from(size);
+            *slot = size * size.log2();
+            sum_squares += size * size;
+        }
     }
-    // `-0.0` is what a one-group split gives; show it as 0.
-    (bits.max(0.0), expected_left)
+    // A one-group split can come out a rounding error below 0; show it as 0.
+    ((total.log2() - numpy_sum(&n_log_n) / total).max(0.0), sum_squares / total)
+}
+
+/// The sum of `values` added in the order numpy's `sum` adds them (pairwise summation: blocks of
+/// up to 128 values, each added in eight interleaved running sums), so the bits come out the
+/// same as the Python Solver's to the last binary digit, not just to rounding error.
+pub(crate) fn numpy_sum(values: &[f64]) -> f64 {
+    let n = values.len();
+    if n < 8 {
+        values.iter().fold(0.0, |sum, value| sum + value)
+    } else if n <= 128 {
+        let mut lanes = [0.0; 8];
+        lanes.copy_from_slice(&values[..8]);
+        let whole = n - n % 8;
+        for block in values[8..whole].chunks_exact(8) {
+            for (lane, value) in lanes.iter_mut().zip(block) {
+                *lane += value;
+            }
+        }
+        let mut sum = ((lanes[0] + lanes[1]) + (lanes[2] + lanes[3])) + ((lanes[4] + lanes[5]) + (lanes[6] + lanes[7]));
+        for value in &values[whole..] {
+            sum += value;
+        }
+        sum
+    } else {
+        let half = n / 2 - (n / 2) % 8;
+        numpy_sum(&values[..half]) + numpy_sum(&values[half..])
+    }
 }
 
 /// One group of a Feedback Split: the Candidates that would give the same Feedback.
@@ -230,13 +355,22 @@ pub fn distribution(word: &str, candidates: &[usize]) -> Option<Distribution> {
     Some(Distribution { word: word.to_string(), candidates: candidates.len(), groups, bits, expected_left })
 }
 
-/// The best `limit` Guesses for these Candidates (columns of `matrix`), highest Expected
-/// Information first. Ties go to a word that could be the Answer, then to alphabetical order.
+/// `x` rounded to 9 decimals the way numpy's `np.round(x, 9)` does: scaled, rounded to the nearest
+/// even, scaled back. Measures within that of each other are a tie.
+pub(crate) fn round9(x: f64) -> f64 {
+    (x * 1e9).round_ties_even() / 1e9
+}
+
+/// The best `limit` Guesses for these Candidates (columns of `matrix`), best first by `by`. Ties
+/// (the measure rounded to 9 decimals) go to a word that could be the Answer, then to the other
+/// measure, then to alphabetical order. With two Candidates or fewer only Candidates are tried,
+/// whatever `mode` says: guessing one of them is never worse.
 /// With no Guesses made, the Candidates are the whole Answer List and this is the best Opener.
-pub fn suggest(matrix: &Matrix, candidates: &[usize], mode: SearchMode, limit: usize) -> Vec<Suggestion> {
+pub fn suggest(matrix: &Matrix, candidates: &[usize], mode: SearchMode, by: Rank, limit: usize) -> Vec<Suggestion> {
     if candidates.is_empty() {
         return Vec::new();
     }
+    let mode = if candidates.len() <= 2 { SearchMode::Candidates } else { mode };
     let candidate_words: HashSet<&str> = candidates.iter().map(|&index| matrix.columns[index]).collect();
 
     // The rows to try.
@@ -260,14 +394,19 @@ pub fn suggest(matrix: &Matrix, candidates: &[usize], mode: SearchMode, limit: u
         handles.into_iter().flat_map(|handle| handle.join().expect("a scoring thread panicked")).collect()
     });
 
+    // Best first: more bits is better, fewer Candidates left is better.
+    let by_bits = |a: &Suggestion, b: &Suggestion| round9(b.bits).total_cmp(&round9(a.bits));
+    let by_left = |a: &Suggestion, b: &Suggestion| round9(a.expected_left).total_cmp(&round9(b.expected_left));
     scored.sort_by(|a, b| {
-        // Bits within a rounding error are a tie.
-        if (a.bits - b.bits).abs() > 1e-9 { b.bits.total_cmp(&a.bits) } else { b.is_candidate.cmp(&a.is_candidate).then(a.word.cmp(b.word)) }
+        let (primary, secondary): (&dyn Fn(&Suggestion, &Suggestion) -> _, &dyn Fn(&Suggestion, &Suggestion) -> _) = match by {
+            Rank::Bits => (&by_bits, &by_left),
+            Rank::ExpectedCandidates => (&by_left, &by_bits),
+        };
+        primary(a, b).then(b.is_candidate.cmp(&a.is_candidate)).then_with(|| secondary(a, b)).then(a.word.cmp(b.word))
     });
     scored.truncate(limit);
     scored
 }
-
 
 #[cfg(test)]
 #[path = "strategy_tests.rs"]

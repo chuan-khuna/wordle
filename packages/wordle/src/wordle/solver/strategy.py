@@ -11,14 +11,18 @@ Candidates, each Feedback turns up with probability p = c / N, and:
 Both read straight off the counts of each Feedback Code in one matrix row,
 restricted to the Candidate columns, so no Feedback is ever worked out here.
 
-Two choices shape the search:
+Three choices make a Strategy:
 
-  - `pool`: which matrix supplies the Guesses. "answers" uses the
-    Answer × Answer matrix (only Answer List words), "guesses" uses the
+  - `pool`, the Guess Pool: which matrix supplies the Guesses. "answers" uses
+    the Answer × Answer matrix (only Answer List words), "guesses" uses the
     Guess × Answer matrix (any word on the Guess List).
-  - `scope`: "candidates" only considers words that could still be the
-    Answer; "global" considers every word in the pool, which can split the
-    Candidates better even though it can't Win this turn.
+  - `scope`, the Search Scope: "candidates" only considers words that could
+    still be the Answer; "global" (All words) considers every word in the
+    Guess Pool, which can split the Candidates better even though it can't
+    Win this turn. The Opener is ranked over the whole Guess Pool under either
+    Search Scope.
+  - `by`, the Ranking: "bits" (highest Expected Information) or "expected"
+    (lowest Expected Candidates).
 """
 
 from dataclasses import dataclass
@@ -37,6 +41,38 @@ type Rank = Literal["bits", "expected"]
 
 CODES = matrix.WIN + 1  # 243 possible Feedback Codes
 ROWS_PER_STEP = 1024  # matrix rows counted per step, to keep the working arrays small
+
+
+@dataclass(frozen=True)
+class Strategy:
+    """A named way of choosing Guesses: a Guess Pool, a Search Scope and a Ranking.
+
+    The id is `<ranking>-<pool>-<scope>`, with the "global" Search Scope written "all".
+    """
+
+    id: str
+    name: str
+    pool: Pool
+    scope: Scope
+    by: Rank
+
+    @property
+    def path(self) -> str:
+        """Its Guess Count Matrix, relative to the `guess-counts/` folder: `<ranking>/<pool>-<scope>.npy`."""
+        return f"{self.by}/{self.pool}-{'all' if self.scope == 'global' else self.scope}.npy"
+
+
+# Every combination, ordered by Ranking, then Guess Pool, then Search Scope.
+STRATEGIES = (
+    Strategy("bits-answers-candidates", "Expected Information, Answer List, Candidates only", "answers", "candidates", "bits"),
+    Strategy("bits-answers-all", "Expected Information, Answer List, All words", "answers", "global", "bits"),
+    Strategy("bits-guesses-candidates", "Expected Information, Guess List, Candidates only", "guesses", "candidates", "bits"),
+    Strategy("bits-guesses-all", "Expected Information, Guess List, All words", "guesses", "global", "bits"),
+    Strategy("expected-answers-candidates", "Expected Candidates, Answer List, Candidates only", "answers", "candidates", "expected"),
+    Strategy("expected-answers-all", "Expected Candidates, Answer List, All words", "answers", "global", "expected"),
+    Strategy("expected-guesses-candidates", "Expected Candidates, Guess List, Candidates only", "guesses", "candidates", "expected"),
+    Strategy("expected-guesses-all", "Expected Candidates, Guess List, All words", "guesses", "global", "expected"),
+)
 
 
 def pack(marks: Feedback) -> int:
@@ -132,6 +168,10 @@ class Solver:
         row = self.guesses_vs_answers[self._guess_row[guess]]
         return candidates[row[candidates] == code]
 
+    def codes(self, guess: str, candidates: np.ndarray) -> np.ndarray:
+        """The Feedback Code `guess` gets against each Candidate."""
+        return self.guesses_vs_answers[self._guess_row[guess]][candidates]
+
     def candidates(self, state: State) -> np.ndarray:
         """The Candidate Set for a State: every Answer that fits all its Feedback."""
         candidates = self.all_candidates()
@@ -141,6 +181,10 @@ class Solver:
 
     def words(self, candidates: np.ndarray) -> list[str]:
         return [self.answers[i] for i in candidates]
+
+    def pool_words(self, pool: Pool) -> tuple[str, ...]:
+        """The words of a Guess Pool, sorted: the rows of its matrix."""
+        return self.answers if pool == "answers" else self.guesses
 
     # Scoring
 

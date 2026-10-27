@@ -1,0 +1,37 @@
+---
+title: "Greedy vs optimal"
+summary: "How close a Solver that never plans ahead gets to the best possible play."
+prerequisites: [benchmark]
+part: solving-wordle
+---
+
+Our best Strategy is greedy. It plays the Guess that looks best for this step, and it does not plan. So how far is it from perfect play?
+
+This Article does not calculate the perfect Strategy. To find it, you must search every Guess at every step of every Game, and show that no other plan is better. Other people did this with a large amount of computer time. We use their result.
+
+## The optimum
+
+In January 2022, Alex Selby published [The best strategies for Wordle](https://sonorouschocolate.com/notes/index.php/The_best_strategies_for_Wordle). For the same 2,315 Answers, he found the Strategy with the lowest possible Average Guess Count:
+
+- its best first Guess is **<Word>salet</Word>**,
+- it needs 7,920 Guesses for all 2,315 Answers, an average of **3.4212**,
+- and it never needs more than five Guesses.
+
+Later, Bertsimas and Paskov got the same result as an exact solution, in [An Exact Solution to Wordle](https://doi.org/10.1287/opre.2022.0434) (*Operations Research*). They report the same Opener and an average of 3.421.
+
+Compare this with the best Strategy from the last Article, Expected Information, Guess List, All words, which starts with <Word>tarse</Word>:
+
+- it needs 7,939 Guesses for all 2,315 Answers, an average of **3.4294**,
+- and two of its Games need six Guesses.
+
+The greedy Solver needs 19 more Guesses in total. That is 0.008 Guesses for each Game, about a quarter of one percent. If you play Wordle every day for a year, the greedy Solver needs one extra Guess about every four months.
+
+<MarginNote>The comparison is close, but not exact. Selby's Guess List has 12,972 words, and ours has 14,855. The Answer Lists have the same size, but the Guess Lists are different.</MarginNote>
+
+## Why greedy is so close
+
+Greedy looks at one step. The optimum looks at the full Game. They do not even select the same Opener. <Word>salet</Word> is only tenth in the table from the Openers Article, with 5.835 bits, much lower than <Word>tarse</Word> with 5.947. <Word>salet</Word> gives a little less information with the first Guess, and in return it prepares a better second Guess.
+
+The useful result is that a one-step measure comes so close. A Guess that cuts the Candidate Set well now usually cuts it well later too. For a game of this size, simple counting gives almost all of the answer.
+
+You have now learned the rules, built a Game, measured a Guess by its split, and built a Solver that plays within a quarter of one percent of perfect play. The last Article plays every possible Opener to the end.

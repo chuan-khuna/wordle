@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "An interactive Wordle game and a solver that explains its guesses."
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = ["wordle"]
+dependencies = [
+    "manimgx>=0.1.1",
+    "wordle",
+]
 
 [tool.uv.sources]
 wordle = { workspace = true }
@@ -18,5 +21,5 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["packages"]
+testpaths = ["packages", "tests"]
 addopts = ["--import-mode=importlib"]

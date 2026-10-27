@@ -1,0 +1,64 @@
+---
+title: "Feedback Split and Expected Information"
+summary: "See every group that one Guess makes, and learn to measure the groups in bits."
+prerequisites: [candidate-set]
+part: solving-wordle
+---
+
+The last Article used one Feedback at a time. This Article looks at all the possible Feedbacks of one Guess together. Each possible Answer gives one <Term>Feedback</Term>, so a Guess divides the <Term>Candidate Set</Term> into groups, one group for each Feedback. These groups are the <Term>Feedback Split</Term>.
+
+The Widget shows <Word>crane</Word> as the first Guess, so the Candidate Set is all 2,315 words. Each bar is one Feedback, shown as five Mark tiles. The length of the bar is the size of its group:
+
+<SplitExplorer id="fs" guess="crane" />
+
+Select a bar to see the words in its group. The largest group has the Feedback with five <Mark kind="absent" /> tiles. It holds 263 words with none of <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter>, <Letter>n</Letter> or <Letter>e</Letter>, such as <Word>biddy</Word> and <Word>blood</Word>. At the other end, 29 Feedbacks each leave only one word. Only one word gets five <Mark kind="correct" /> tiles, and that word is <Word>crane</Word>.
+
+In total, <Word>crane</Word> makes 142 groups. A bad Guess makes few groups. Type <Word>fuzzy</Word> in the Guess row. It makes only 34 groups, and one of them holds 1,352 words. The reply to <Word>fuzzy</Word> tells you almost nothing.
+
+The title of the chart shows two numbers. They are the two measures of a split from the Article "What makes a good first Guess?".
+
+## Expected Candidates
+
+The first number is the <Term>Expected Candidates</Term>. If each word has the same chance to be the Answer, the chance of a group is proportional to its size. When the game shows the Feedback of a group, the words of that group are the words that are left. The average is 78.7 words for <Word>crane</Word>. For <Word>fuzzy</Word> it is 855.7.
+
+## Expected Information
+
+The second number is the <Term>Expected Information</Term>, in bits. A bit is one halving. A group with half of the words is worth one bit, because it cuts the Candidate Set in half. A group with a quarter of the words is worth two bits. In general, a group with the chance $p$ is worth $\log_2(1/p)$ bits, and the average over the full split is
+
+$$
+-\sum_i p_i \log_2 p_i
+$$
+
+<MarginNote>In information theory, the name of this formula is entropy. This Series uses that word only here. Everywhere else, it is Expected Information.</MarginNote>
+
+For <Word>crane</Word> it is 5.74 bits. To find one word out of 2,315, you need $\log_2 2315 = 11.18$ bits in total. So one Guess gives you about half of the bits that you need. If all the groups had the same size, 5.74 bits would leave $2315 / 2^{5.74} \approx 43$ words. The real expected number is 79, because the large groups count more than their share. This difference is the reason why the two numbers can disagree.
+
+## Both in Python
+
+To count the groups, use a dictionary. Put each Candidate into the group of the Feedback that the Guess would get:
+
+```python
+def split(guess, candidates):
+    groups = {}
+    for answer in candidates:
+        groups.setdefault(feedback(guess, answer), []).append(answer)
+    return groups
+
+sizes = [len(words) for words in split("crane", answers).values()]
+len(sizes), max(sizes)   # (142, 263)
+```
+
+The package counts the same groups from a row of the Feedback Matrix, for thousands of Guesses at the same time. The function below gives each Guess its two numbers. Both numbers come from the same group sizes:
+
+```python title="Scoring a Feedback Split" {6-7}
+def _score(counts: np.ndarray, total: int) -> tuple[np.ndarray, np.ndarray]:
+    """(bits, expected Candidates) for each row of Feedback counts."""
+    c = counts.astype(np.float64)
+    # Σ p log2(1/p) = log2 N − Σ c log2 c / N, with 0 · log2 0 taken as 0.
+    c_log_c = np.where(c > 0, c * np.log2(np.where(c > 0, c, 1)), 0.0)
+    bits = np.log2(total) - c_log_c.sum(axis=1) / total
+    expected = (c * c).sum(axis=1) / total
+    return bits, expected
+```
+
+The two highlighted lines are the two formulas. `bits` uses a different form of the same sum, $\log_2 N - \frac{1}{N}\sum c \log_2 c$, which needs only the group sizes. `expected` is $\sum c^2 / N$.

@@ -23,7 +23,8 @@ from wordle.engine.words import WORD_LENGTH, load_word_lists
 
 WIN = 3**WORD_LENGTH - 1  # 242: every letter Correct
 
-DEFAULT_DIR = Path(__file__).resolve().parents[5] / "matrices"
+CACHE_DIR = Path(__file__).resolve().parents[5] / "precompute-cache"  # every precomputed file, for all three apps
+DEFAULT_DIR = CACHE_DIR / "feedback"
 ANSWERS_FILE = "answers_vs_answers.npy"
 GUESSES_FILE = "guesses_vs_answers.npy"
 

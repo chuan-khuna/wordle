@@ -1,0 +1,66 @@
+---
+title: "The rules"
+summary: "What a Game is, how you win or lose one, and why the game keeps two lists of words."
+prerequisites: []
+part: wordle
+---
+
+Wordle has few rules. This Article gives all of them. The next two Articles turn them into Python.
+
+Each <Term>Game</Term> has one hidden five-letter word, the <Term>Answer</Term>. You must find it.
+
+To find the Answer, you make Guesses. A <Term>Guess</Term> is a five-letter word that the game accepts. After each Guess, the game shows <Term>Feedback</Term>, with one verdict for each letter. The next Article is about Feedback. For now, it is enough to know that Feedback is the only information the game gives you.
+
+You can make six Guesses. This is the <Term>Guess Limit</Term>. If a Guess is the Answer, you get a <Term>Win</Term> and the Game stops. If you make six Guesses and none of them is the Answer, the Game stops with a <Term>Loss</Term>.
+
+## Two word lists
+
+The game uses two lists of words. The difference between them becomes important when we start to solve the game.
+
+The <Term>Answer List</Term> contains the words that can be an Answer. It has 2,315 words, and they are all common words, such as <Word>crane</Word>, <Word>abide</Word> and <Word>watch</Word>.
+
+The <Term>Guess List</Term> contains every word that the game accepts as a Guess. It has 14,855 words, and it contains the full Answer List. So you can guess an unusual word such as <Word>tarse</Word>. It is never the Answer, but the game accepts it. If you type a word that is not on the Guess List, the game refuses it, and the refused word does not count as one of your six Guesses.
+
+This is how the Python package loads the two lists:
+
+```python title="The two word lists" {10-13,24}
+from dataclasses import dataclass
+from functools import cache
+from importlib.resources import files
+
+WORD_LENGTH = 5
+
+
+@dataclass(frozen=True)
+class WordLists:
+    answers: tuple[str, ...]
+    """The Answer List, sorted."""
+    guesses: frozenset[str]
+    """The Guess List. Contains every word in `answers`."""
+
+
+def _read(name: str) -> list[str]:
+    text = files("wordle").joinpath("data", name).read_text(encoding="utf-8")
+    return [line.strip() for line in text.splitlines() if line.strip()]
+
+
+@cache
+def load_word_lists() -> WordLists:
+    answers = tuple(sorted(_read("answers.txt")))
+    guesses = frozenset(_read("guesses.txt")) | frozenset(answers)
+    return WordLists(answers=answers, guesses=guesses)
+```
+
+The highlighted line near the end is the rule in code. The Guess List is the words in its own file, plus all the words of the Answer List.
+
+```python
+lists = load_word_lists()
+len(lists.answers), len(lists.guesses)         # (2315, 14855)
+"tarse" in lists.guesses, "tarse" in lists.answers   # (True, False)
+```
+
+## Six questions for 2,315 words
+
+Put the two numbers side by side. The Answer is one of 2,315 words, and you can ask six questions. Each Guess is a question, and its Feedback is the reply. The rest of this Series shows how to ask better questions.
+
+<WordList list="answers" />

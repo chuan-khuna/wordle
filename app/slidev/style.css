@@ -1,0 +1,29 @@
+/* Rosé Pine Dawn, the website's default theme (app/frontend/src/app/themes.css) */
+:root {
+  --bg: #faf4ed;
+  --surface: #fffaf3;
+  --text: #575279;
+  --muted: #9893a5;
+  --rule: #dfdad9;
+  --accent: #907aa9;
+  --correct: #286983;
+  --present: #ea9d34;
+  --absent: #9893a5;
+  --on-mark: #faf4ed;
+}
+
+.slidev-layout {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.slidev-layout h1 { color: var(--text); font-weight: 700; }
+.slidev-layout h2 { color: var(--muted); }
+
+/* A big figure with its label under it */
+.stat { display: flex; flex-direction: column; align-items: center; }
+.stat b { font-size: 3.2rem; line-height: 1.1; color: var(--correct); font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 0.95rem; }
+
+.muted { color: var(--muted); }
+.board { display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; }

@@ -1,0 +1,114 @@
+---
+title: "Feedback"
+summary: "How the game marks each letter of a Guess, and why a repeated letter needs two passes."
+prerequisites: [rules]
+part: wordle
+---
+
+After each Guess, the game shows <Term>Feedback</Term>. Feedback is five <Term of="Mark">Marks</Term>, one for each letter of the Guess. This Article shows how the game gives each Mark, and then gives a Python function that does the same.
+
+A letter is <Mark kind="correct" /> when it is in the Answer at the same position. A letter is <Mark kind="present" /> when it is in the Answer at a different position. A letter is <Mark kind="absent" /> when the Answer does not contain it. (Repeated letters add one more case to Absent. The second half of this Article explains it.)
+
+Three Marks for each of five letters give $3^5 = 243$ possible Feedbacks. Keep this number in mind. One Guess can never get more than 243 different replies.
+
+<MarginNote>Only 238 of them can occur. Four <Mark kind="correct" /> and one <Mark kind="present" /> is not possible, because the Present letter has only one free position, its own, and there it is Correct. For example, the game can never show <Word feedback="22221">crank</Word>. If <Letter>c</Letter>, <Letter>r</Letter>, <Letter>a</Letter> and <Letter>n</Letter> are Correct, the Answer is <Word>cran_</Word>. A <Letter>k</Letter> in that Answer must then be in the last position, where it is Correct. This removes 5 Feedbacks. We still count 243, because a Feedback that never occurs holds no words and changes no result.</MarginNote>
+
+## The repeated-letter rule
+
+Most letters are easy to mark. The problem is a Guess with the same letter two times. Look at this example. The Guess is <Word answer="abide">speed</Word> and the Answer is <Word>abide</Word>:
+
+<FeedbackScorer id="fb" guess="speed" answer="abide" />
+
+<Word>speed</Word> has two <Letter>e</Letter>s, but <Word>abide</Word> has only one. The first <Letter>e</Letter> is
+<Mark kind="present" />. The second <Letter>e</Letter> is <Mark kind="absent" />, although the Answer does contain an
+<Letter>e</Letter>. The first <Letter>e</Letter> already used the only <Letter>e</Letter> of the Answer.
+
+So the rule is this. The game marks a letter Correct or Present only as many times as the letter occurs in the Answer. To give those Marks in a fair order, the game works out the Feedback in two passes.
+
+**Pass one** goes through the Guess and finds each letter that is at the same position in the Answer. Each of these letters gets <Mark kind="correct" />. So Correct letters take their copy of the letter first.
+
+**Pass two** goes from left to right through the letters that remain. A letter gets <Mark kind="present" /> if the Answer still has an unused copy of that letter. If not, the letter gets <Mark kind="absent" />.
+
+The order of the passes is important. Change the Guess to <Word answer="crane">eerie</Word> and the Answer to <Word>crane</Word>. <Word>crane</Word> has one <Letter>e</Letter>, in the last position, and <Word>eerie</Word> also has an <Letter>e</Letter> in the last position. Pass one gives the Answer's <Letter>e</Letter> to that last letter, so it is <Mark kind="correct" />. No <Letter>e</Letter> is left for the two <Letter>e</Letter>s at the start, so both are <Mark kind="absent" />. With only one pass from left to right, the first <Letter>e</Letter> would take the Answer's <Letter>e</Letter> and get <Mark kind="present" />. That Feedback would be wrong.
+
+## The function in Python
+
+This is the full function. The highlighted lines are the two passes:
+
+```python title="Two-pass Feedback" {48-53,64-69}
+"""Work out the Feedback for a Guess: which letters are Correct, Present or Absent."""
+
+from collections import Counter
+from enum import Enum
+
+
+class Mark(Enum):
+    """The verdict on one letter of a Guess."""
+
+    ABSENT = 0  # the letter isn't in the Answer (or every copy of it is already used up)
+    PRESENT = 1  # the letter is in the Answer, but at a different position
+    CORRECT = 2  # the letter is in the Answer at this exact position
+
+
+# One Mark per letter of the Guess, in order.
+# Example: guess "crane" against answer "cable" gives
+# (CORRECT, ABSENT, PRESENT, ABSENT, CORRECT).
+type Feedback = tuple[Mark, ...]
+
+
+def feedback(guess: str, answer: str) -> Feedback:
+    """Mark each letter of `guess` against `answer`, using the official Wordle rules.
+
+    The tricky part is repeated letters. Each letter of the Answer can only
+    "pay for" one Mark. So if the Answer has one E and the Guess has two,
+    only one of the Guess's E's can be Correct or Present; the other is Absent.
+
+    We do two passes over the Guess:
+      1. Mark every letter that is in exactly the right position as Correct.
+      2. For the letters left over, mark them Present if the Answer still has
+         an unused copy of that letter, otherwise Absent.
+
+    Example: guess "speed" against answer "abide"
+      - Pass 1: no letter is in the right position.
+      - Pass 2: the Answer's leftover letters are a, b, i, d, e (one E).
+          s -> Absent, p -> Absent,
+          e -> Present (uses up the only E),
+          e -> Absent  (no E left),
+          d -> Present.
+    """
+    if len(guess) != len(answer):
+        raise ValueError(f"guess {guess!r} and answer {answer!r} have different lengths")
+
+    # Pair up the letters at each position: "speed" vs "abide" gives
+    # ("s", "a"), ("p", "b"), ("e", "i"), ("e", "d"), ("d", "e").
+    letter_pairs = list(zip(guess, answer))
+
+    # Pass 1: a letter in exactly the right position is Correct.
+    # Everything else starts as Absent; pass 2 may upgrade it to Present.
+    marks = [
+        Mark.CORRECT if guess_letter == answer_letter else Mark.ABSENT
+        for guess_letter, answer_letter in letter_pairs
+    ]
+
+    # Count the Answer's letters that pass 1 didn't use up.
+    # For "speed" vs "abide" nothing was Correct, so this is
+    # {"a": 1, "b": 1, "i": 1, "d": 1, "e": 1}.
+    unused_answer_letters = Counter(
+        answer_letter
+        for guess_letter, answer_letter in letter_pairs
+        if guess_letter != answer_letter
+    )
+
+    # Pass 2: going left to right, a non-Correct letter is Present
+    # if the Answer still has an unused copy of it.
+    for position, guess_letter in enumerate(guess):
+        if marks[position] is Mark.ABSENT and unused_answer_letters[guess_letter] > 0:
+            marks[position] = Mark.PRESENT
+            unused_answer_letters[guess_letter] -= 1  # that copy is now used up
+
+    return tuple(marks)
+```
+
+Pass one makes the list of Correct Marks. After pass one, the counter `unused_answer_letters` holds only the Answer letters that pass one did not use. Pass two takes letters from that counter, one at a time. That is why the second <Letter>e</Letter> of <Word>speed</Word> finds no <Letter>e</Letter> left.
+
+All the other ideas in this Series use this one function.

@@ -1,4 +1,5 @@
-//! The bar along the bottom of the window, like Zed's: the sidebar button on the left; the Guess
+//! The bar along the bottom of the window, like Zed's: the sidebar button on the left, with a note
+//! beside it (a precompute's progress is not here: the precompute view shows it); the Guess
 //! Limit, the Seed (with a button that copies it) and the Guesses left on the right; in Solver mode,
 //! how many Guesses have been entered instead.
 
@@ -55,7 +56,8 @@ impl WordleApp {
                             .when(self.sidebar_open, |button| button.bg(rgb(t.overlay)))
                             .on_click(cx.listener(|this, _, window, cx| this.toggle_sidebar(window, cx))),
                     )
-                    .when_some(self.status.clone(), |left, note| left.child(div().text_color(rgb(t.text)).child(note))),
+                    // A note, while one shows.
+                    .children(self.status.clone().map(|note| div().text_color(rgb(t.text)).child(note))),
             )
             .child(
                 div()

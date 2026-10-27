@@ -1,0 +1,166 @@
+[
+  {
+    "term": "Game",
+    "definition": "การเล่นหนึ่งครั้งเพื่อหา Answer เพียงคำเดียว ภายใน Guess Limit ของมัน"
+  },
+  {
+    "term": "Guess Limit",
+    "definition": "จำนวน Guess มากที่สุดที่ Game อนุญาต คือหกครั้งเหมือน Wordle หรือไม่จำกัด ซึ่ง Game จะจบก็ต่อเมื่อ Win เท่านั้น"
+  },
+  {
+    "term": "Answer",
+    "definition": "คำลับที่ผู้เล่นพยายามหา"
+  },
+  {
+    "term": "Guess",
+    "definition": "คำห้าตัวอักษรที่ส่งในระหว่าง Game คำนั้นต้องอยู่ใน Guess List"
+  },
+  {
+    "term": "Feedback",
+    "definition": "Mark ทั้งห้าที่เกมแสดงให้กับ Guess หนึ่งครั้ง หนึ่ง Mark ต่อหนึ่งตัวอักษร ตัวอักษรที่ซ้ำใน Guess จะได้ Correct หรือ Present เท่าจำนวนครั้งที่มันอยู่ใน Answer เท่านั้น และ Mark Correct จะถูกแจกก่อน"
+  },
+  {
+    "term": "Mark",
+    "definition": "ผลตัดสินของตัวอักษรหนึ่งตัวใน Guess: **Correct** (อยู่ใน Answer ที่ตำแหน่งนี้) **Present** (อยู่ใน Answer แต่ที่ตำแหน่งอื่น) หรือ **Absent** (ไม่อยู่ใน Answer หรือถูกนับไปแล้ว)"
+  },
+  {
+    "term": "State",
+    "definition": "Guess ทั้งหมดที่ทายไปแล้วใน Game พร้อม Feedback ของแต่ละ Guess"
+  },
+  {
+    "term": "Win",
+    "definition": "จุดจบของ Game ที่ Guess ตรงกับ Answer"
+  },
+  {
+    "term": "Loss",
+    "definition": "จุดจบของ Game ที่ถึง Guess Limit โดยไม่ได้ Win Game ที่ไม่มี Guess Limit จะแพ้ไม่ได้"
+  },
+  {
+    "term": "Hard Mode",
+    "definition": "กติกาที่ทุก Guess ต้องใช้ตัวอักษร Correct และ Present ที่เปิดเผยแล้วทั้งหมดซ้ำ และตัวอักษร Correct ต้องอยู่ที่เดิม"
+  },
+  {
+    "term": "Seed",
+    "definition": "ตัวเลขที่ใช้เลือก Answer ของ Game แบบสุ่ม Seed เดิมจะเลือก Answer เดิมเสมอ จึงเล่น Game ซ้ำได้"
+  },
+  {
+    "term": "Answer List",
+    "definition": "รายการคำที่เป็น Answer ได้"
+  },
+  {
+    "term": "Guess List",
+    "definition": "คำทุกคำที่ยอมรับเป็น Guess ซึ่งรวม Answer List ทั้งหมดไว้ด้วย"
+  },
+  {
+    "term": "Solver",
+    "definition": "ผู้เล่นที่เลือก Guess เองโดยอัตโนมัติจาก State"
+  },
+  {
+    "term": "Candidate",
+    "definition": "คำใน Answer List ที่จะให้ Feedback ตรงกับทุก Feedback ใน State ที่ผ่านมา จึงยังเป็น Answer ได้"
+  },
+  {
+    "term": "Candidate Set",
+    "definition": "Candidate ทั้งหมดของ State หนึ่ง ตอนเริ่ม Game จะเป็น Answer List ทั้งหมด"
+  },
+  {
+    "term": "Suggestion",
+    "definition": "Guess ที่ Solver แนะนำสำหรับ State ปัจจุบัน"
+  },
+  {
+    "term": "Opener",
+    "definition": "Guess แรกของ Game"
+  },
+  {
+    "term": "Feedback Split",
+    "definition": "วิธีที่ Guess หนึ่งที่เป็นไปได้จะแบ่ง Candidate Set ออกเป็นกลุ่ม โดยหนึ่งกลุ่มต่อหนึ่ง Feedback ที่ Guess นั้นให้ได้"
+  },
+  {
+    "term": "Feedback Matrix",
+    "definition": "ตารางของ Feedback ของทุก Guess เทียบกับทุก Answer ที่คำนวณไว้ครั้งเดียวก่อนเริ่ม Game ใด ๆ เพื่อให้ Solver ค้น Feedback ได้เลยโดยไม่ต้องคำนวณ มีสองตาราง: ตารางหนึ่งมี Answer List เป็นแถว อีกตารางมี Guess List เป็นแถว แต่ละช่องคือ Feedback Code"
+  },
+  {
+    "term": "Feedback Code",
+    "definition": "Feedback หนึ่งชุดที่อัดเป็นตัวเลขตัวเดียวตั้งแต่ 0 ถึง 242 โดยอ่าน Mark ทั้งห้าเป็นเลขฐาน 3 (Absent เป็น 0, Present เป็น 1, Correct เป็น 2) เริ่มจากตัวอักษรแรก 242 คือ Win"
+  },
+  {
+    "term": "Expected Information",
+    "definition": "Guess หนึ่งคาดว่าจะทำให้ Candidate Set เล็กลงได้มากแค่ไหน เฉลี่ยตาม Feedback Split ของมัน และนับเป็นบิต"
+  },
+  {
+    "term": "Expected Candidates",
+    "definition": "Guess หนึ่งคาดว่าจะเหลือ Candidate กี่คำ เฉลี่ยตาม Feedback Split ของมัน ยิ่งน้อยยิ่งดี"
+  },
+  {
+    "term": "Guess Pool",
+    "definition": "รายการที่ Solver เลือก Guess ได้ รวมถึง Opener ด้วย: Answer List หรือ Guess List"
+  },
+  {
+    "term": "Search Scope",
+    "definition": "คำใน Guess Pool ที่ Solver พิจารณาสำหรับแต่ละ Guess หลัง Opener: **Candidates only** หรือ **All words** ใน Guess Pool ซึ่งคำที่เป็น Answer ไม่ได้ก็ยังอาจถูกทายเพื่อแบ่ง Candidate ได้ Opener เป็นคำใดใน Guess Pool ก็ได้ไม่ว่าจะใช้ Search Scope ไหน ดังนั้นเมื่อใช้ Candidates only Guess Pool จึงมีผลแค่กับ Opener เพราะ Candidate ทุกคำอยู่ใน Answer List อยู่แล้ว"
+  },
+  {
+    "term": "Ranking",
+    "definition": "เกณฑ์ที่ Solver ใช้เลือก Guess ที่ดีที่สุดในบรรดาคำที่พิจารณา: Expected Information สูงสุด หรือ Expected Candidates ต่ำสุด"
+  },
+  {
+    "term": "Strategy",
+    "definition": "กฎที่ Solver ใช้เลือกแต่ละ Guess ประกอบด้วย Guess Pool หนึ่งอย่าง Search Scope หนึ่งอย่าง และ Ranking หนึ่งอย่าง เช่น Guess List, All words และ Expected Information สูงสุด"
+  },
+  {
+    "term": "Play",
+    "definition": "การใช้แอปเล่น Game: แอปถือ Answer ไว้ และคุณเป็นคนทาย Guess"
+  },
+  {
+    "term": "Assist",
+    "definition": "การใช้ Solver ขณะที่คุณเล่น Wordle ที่อื่น: คุณใส่แต่ละ Guess พร้อม Feedback ของมัน แล้วแอปจะแสดง Suggestion และ Candidate Set"
+  },
+  {
+    "term": "Benchmark",
+    "definition": "การรันที่ Solver เล่น Game ให้ทุกคำใน Answer List ด้วย Strategy หนึ่ง"
+  },
+  {
+    "term": "Guess Count",
+    "definition": "จำนวน Guess ที่ Solver ต้องใช้เพื่อ Win Game หนึ่ง"
+  },
+  {
+    "term": "Guess Distribution",
+    "definition": "จำนวน Game ใน Benchmark ที่จบที่ Guess Count แต่ละค่า บวกจำนวน Loss"
+  },
+  {
+    "term": "Average Guess Count",
+    "definition": "ค่าเฉลี่ยของ Guess Count ของชุด Game เช่น Benchmark หรือแถวของ Opener หนึ่งใน Guess Count Matrix ทุก Game นับหมด: แต่ละ Game เล่นจนถึง Win โดยไม่มี Guess Limit ดังนั้น Game ที่ควรจะเป็น Loss จะนับที่ Guess Count ที่มันต้องใช้"
+  },
+  {
+    "term": "Guess Count Matrix",
+    "definition": "ตารางของ Guess Count ของทุก Game หนึ่งแถวต่อหนึ่ง Opener ใน Guess Pool ของ Strategy และหนึ่งคอลัมน์ต่อหนึ่ง Answer เมื่อ Strategy หนึ่งเลือกทุก Guess หลัง Opener แต่ละ Game เล่นจนถึง Win ดังนั้น Game ที่จะเป็น Loss ภายใต้ Guess Limit ก็ยังเก็บ Guess Count ที่มันต้องใช้ ค่าเฉลี่ยของแถวคือ Average Guess Count ของ Opener นั้น และใช้ค่านี้เปรียบเทียบ Opener"
+  },
+  {
+    "term": "Opener Distribution",
+    "definition": "จำนวน Opener ที่มี Average Guess Count แต่ละค่า ปัดเป็นทศนิยมสองตำแหน่ง ภายใต้ Strategy หนึ่ง อ่านได้จาก Guess Count Matrix"
+  },
+  {
+    "term": "Article",
+    "definition": "บทความสั้นบนเว็บไซต์ที่อธิบายหนึ่งแนวคิด เช่น Feedback Split หรือ Expected Information อาจต่อยอดจาก Article อื่น ซึ่งคือ Prerequisite ของมัน"
+  },
+  {
+    "term": "Prerequisite",
+    "definition": "Article ที่ Article อื่นต่อยอดจากมันและลิงก์กลับไปหา"
+  },
+  {
+    "term": "Series",
+    "definition": "เส้นทางที่เรียงลำดับผ่านหลาย Article เพื่อเล่าเรื่องเดียว เช่น \"การแก้ Wordle\" โดยมีวิดีโอที่ตามมาหลัง Series"
+  },
+  {
+    "term": "Part",
+    "definition": "กลุ่ม Article ที่ต่อเนื่องกันใน Series ซึ่งมีแนวคิดหลักเดียวกัน เช่น การเรียนรู้และสร้าง Wordle หรือการแก้ Wordle แต่ละ Article อยู่ใน Part เดียวเท่านั้น"
+  },
+  {
+    "term": "Widget",
+    "definition": "รูปที่โต้ตอบได้ใน Article ซึ่งให้ผู้อ่านลองแนวคิดนั้นเอง เช่น ให้คะแนน Guess หรือสำรวจ Feedback Split"
+  },
+  {
+    "term": "Margin note",
+    "definition": "หมายเหตุสั้น ๆ ที่พิมพ์ไว้ที่ขอบของ Article ข้างข้อความที่มันกล่าวถึง"
+  }
+]

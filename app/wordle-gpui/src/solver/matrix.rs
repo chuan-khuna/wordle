@@ -10,6 +10,7 @@
 
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
 use crate::engine::words::{WORD_LENGTH, word_lists};
@@ -23,12 +24,28 @@ pub const GUESSES_FILE: &str = "guesses_vs_answers.npy";
 /// The thread counts the app offers.
 pub const THREAD_CHOICES: [usize; 4] = [1, 2, 4, 8];
 
-/// Where the matrices go: `matrices/` in this app's own folder, apart from the Python package's.
+/// Where the matrices go: `precompute-cache/feedback/` at the repo root, shared with the Python package and the
+/// backend, which write the same files byte for byte.
 pub fn default_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("matrices")
+    let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).ancestors().nth(2).expect("the app is two folders below the repo root");
+    repo_root.join("precompute-cache").join("feedback")
 }
 
 type Letters = [u8; WORD_LENGTH];
+
+/// How many rows a thread scores between two progress reports.
+const REPORT_ROWS: usize = 256;
+
+/// What `build_with` reports as it goes, for a progress bar and a log.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Event {
+    /// A matrix of `rows` × `columns` cells is being filled.
+    Started { file: &'static str, rows: usize, columns: usize },
+    /// `done` of its `rows` rows are filled (from any thread, every few hundred rows, and at the end).
+    Rows { file: &'static str, done: usize, rows: usize },
+    /// The matrix was written to `path`, `bytes` long.
+    Saved { file: &'static str, path: PathBuf, rows: usize, columns: usize, bytes: usize },
+}
 
 fn letters(word: &str) -> Letters {
     word.as_bytes().try_into().expect("a word on the lists has five letters")
@@ -65,6 +82,12 @@ pub fn pack(guess: &Letters, answer: &Letters) -> u8 {
 /// than one thread the rows are split into blocks, one for each thread; the blocks don't overlap,
 /// so no thread touches another's cells.
 pub fn score_matrix(guesses: &[&str], answers: &[&str], threads: usize) -> Vec<u8> {
+    score_matrix_with(guesses, answers, threads, &|_| {})
+}
+
+/// `score_matrix`, calling `rows_done` with how many rows are filled every `REPORT_ROWS` rows a
+/// thread scores, and when a thread finishes its block. Called from any thread, out of order.
+pub fn score_matrix_with(guesses: &[&str], answers: &[&str], threads: usize, rows_done: &(dyn Fn(usize) + Sync)) -> Vec<u8> {
     let guesses: Vec<Letters> = guesses.iter().map(|word| letters(word)).collect();
     let answers: Vec<Letters> = answers.iter().map(|word| letters(word)).collect();
     let mut matrix = vec![0u8; guesses.len() * answers.len()];
@@ -73,15 +96,25 @@ pub fn score_matrix(guesses: &[&str], answers: &[&str], threads: usize) -> Vec<u
     }
 
     let rows_per_thread = guesses.len().div_ceil(threads.max(1));
+    let done = AtomicUsize::new(0);
     thread::scope(|scope| {
         let blocks = matrix.chunks_mut(rows_per_thread * answers.len()).zip(guesses.chunks(rows_per_thread));
         for (cells, rows) in blocks {
-            let answers = &answers;
+            let (answers, done) = (&answers, &done);
             scope.spawn(move || {
+                let mut unreported = 0;
                 for (row, guess) in cells.chunks_mut(answers.len()).zip(rows) {
                     for (cell, answer) in row.iter_mut().zip(answers) {
                         *cell = pack(guess, answer);
                     }
+                    unreported += 1;
+                    if unreported == REPORT_ROWS {
+                        rows_done(done.fetch_add(unreported, Ordering::Relaxed) + unreported);
+                        unreported = 0;
+                    }
+                }
+                if unreported > 0 {
+                    rows_done(done.fetch_add(unreported, Ordering::Relaxed) + unreported);
                 }
             });
         }
@@ -94,29 +127,44 @@ pub fn score_matrix(guesses: &[&str], answers: &[&str], threads: usize) -> Vec<u
 /// package's `np.load(..., mmap_mode="r")` read it.
 pub fn npy_bytes(rows: usize, cols: usize, cells: &[u8]) -> Vec<u8> {
     assert_eq!(rows * cols, cells.len());
+    let mut bytes = npy_header(rows, cols);
+    bytes.extend_from_slice(cells);
+    bytes
+}
+
+/// The header that `npy_bytes` puts before the cells: magic, version, length and the padded dict.
+pub fn npy_header(rows: usize, cols: usize) -> Vec<u8> {
     let mut header = format!("{{'descr': '|u1', 'fortran_order': False, 'shape': ({rows}, {cols}), }}");
     // Magic (6) + version (2) + header length (2) + the header and its closing newline.
     let unpadded = 10 + header.len() + 1;
     header.push_str(&" ".repeat(unpadded.next_multiple_of(64) - unpadded));
     header.push('\n');
 
-    let mut bytes = Vec::with_capacity(10 + header.len() + cells.len());
+    let mut bytes = Vec::with_capacity(10 + header.len());
     bytes.extend_from_slice(b"\x93NUMPY\x01\x00");
     bytes.extend_from_slice(&(header.len() as u16).to_le_bytes());
     bytes.extend_from_slice(header.as_bytes());
-    bytes.extend_from_slice(cells);
     bytes
 }
 
 /// Score every pair on `threads` threads and write both matrices into `directory` (made if
 /// missing, files replaced). Returns the two paths: answers-vs-answers, then guesses-vs-answers.
 pub fn build(directory: &Path, threads: usize) -> io::Result<(PathBuf, PathBuf)> {
+    build_with(directory, threads, &|_| {})
+}
+
+/// `build`, reporting each matrix's start, its rows and its file as `Event`s.
+pub fn build_with(directory: &Path, threads: usize, events: &(dyn Fn(Event) + Sync)) -> io::Result<(PathBuf, PathBuf)> {
     let lists = word_lists();
     let answers = &lists.answers;
     let mut guesses: Vec<&str> = lists.guesses.iter().copied().collect();
     guesses.sort_unstable();
 
-    let guesses_vs_answers = score_matrix(&guesses, answers, threads);
+    let (rows, columns) = (guesses.len(), answers.len());
+    events(Event::Started { file: GUESSES_FILE, rows, columns });
+    let guesses_vs_answers = score_matrix_with(&guesses, answers, threads, &|done| events(Event::Rows { file: GUESSES_FILE, done, rows }));
+
+    events(Event::Started { file: ANSWERS_FILE, rows: columns, columns });
 
     // Each Answer's row of the Guess matrix: the Answer List is inside the Guess List.
     let mut answers_vs_answers = Vec::with_capacity(answers.len() * answers.len());
@@ -124,12 +172,16 @@ pub fn build(directory: &Path, threads: usize) -> io::Result<(PathBuf, PathBuf)>
         let row = guesses.binary_search(answer).expect("the Guess List contains every Answer");
         answers_vs_answers.extend_from_slice(&guesses_vs_answers[row * answers.len()..(row + 1) * answers.len()]);
     }
+    events(Event::Rows { file: ANSWERS_FILE, done: columns, rows: columns });
 
     std::fs::create_dir_all(directory)?;
     let answers_path = directory.join(ANSWERS_FILE);
     let guesses_path = directory.join(GUESSES_FILE);
-    std::fs::write(&answers_path, npy_bytes(answers.len(), answers.len(), &answers_vs_answers))?;
-    std::fs::write(&guesses_path, npy_bytes(guesses.len(), answers.len(), &guesses_vs_answers))?;
+    for (file, path, rows, cells) in [(ANSWERS_FILE, &answers_path, columns, &answers_vs_answers), (GUESSES_FILE, &guesses_path, rows, &guesses_vs_answers)] {
+        let bytes = npy_bytes(rows, columns, cells);
+        std::fs::write(path, &bytes)?;
+        events(Event::Saved { file, path: path.clone(), rows, columns, bytes: bytes.len() });
+    }
     Ok((answers_path, guesses_path))
 }
 

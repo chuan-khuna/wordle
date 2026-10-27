@@ -1,4 +1,7 @@
 import random
+from pathlib import Path
+
+import numpy as np
 
 from wordle.engine.feedback import feedback
 from wordle.engine.words import load_word_lists
@@ -42,3 +45,30 @@ def test_threads_give_the_same_matrix():
     guesses = tuple(sorted(lists.guesses))[:700]  # several chunks
     answers = lists.answers[:100]
     assert (score_matrix(guesses, answers, threads=4) == score_matrix(guesses, answers)).all()
+
+
+REPO = Path(__file__).resolve().parents[3]
+# The header of a 14,855 x 2,315 uint8 `.npy`, as the gpui app's `npy_bytes` writes it
+# (pinned in app/wordle-gpui/src/solver/matrix_tests.rs too), so both tools write the same file.
+NPY_HEADER = (
+    b"\x93NUMPY\x01\x00\x76\x00{'descr': '|u1', 'fortran_order': False, 'shape': (14855, 2315), }"
+    + b" " * 51
+    + b"\n"
+)
+
+
+def test_npy_header_is_the_one_the_gpui_app_writes(tmp_path):
+    saved = tmp_path / "saved.npy"
+    np.save(saved, np.zeros((14855, 2315), dtype=np.uint8))
+    mapped = np.lib.format.open_memmap(tmp_path / "mapped.npy", mode="w+", dtype=np.uint8, shape=(14855, 2315))
+    del mapped
+    for path in (saved, tmp_path / "mapped.npy"):
+        assert path.read_bytes()[:128] == NPY_HEADER, path.name
+
+
+def test_the_gpui_app_has_the_same_word_lists():
+    # Rows and columns are these lists sorted, so a different copy would shift every cell.
+    for name in ("answers.txt", "guesses.txt"):
+        package = REPO / "packages/wordle/src/wordle/data" / name
+        gpui = REPO / "app/wordle-gpui/data" / name
+        assert package.read_bytes() == gpui.read_bytes(), name

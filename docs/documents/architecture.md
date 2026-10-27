@@ -12,11 +12,20 @@ The repo is a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspa
 
 ```
 pyproject.toml              workspace root
-justfile                    `just wordle`, `just matrices`, `just wordle-gpui`, `just test`, `just test-gpui`
+.env.example                every setting, with its default; copy it to `.env` (gitignored), the one settings file of the project (see "Settings")
+justfile                    loads `.env` into every recipe (`set dotenv-load`); `just wordle`, `just wordle-gpui`, and the groups in `just/`: `just precompute …`, `just cache …`, `just test …`, `just web …`, `just animate …` (`just` lists them all)
 src/main.py                 entry point: `uv run src/main.py`
 src/precompute.py           entry point: `uv run src/precompute.py` (precompute the Feedback matrices)
+src/precompute_guess_counts.py  entry point: `uv run src/precompute_guess_counts.py` (precompute the Guess Count Matrices)
+src/migrate_guess_counts.py  entry point: `uv run src/migrate_guess_counts.py` (turn a version 1 Guess Count Matrix folder into version 2)
+src/precompute_benchmark.py  entry point: `uv run src/precompute_benchmark.py` (precompute the website's Benchmark and Opener leaderboard)
+src/precompute_backup.py    `just cache backup` / `just cache restore` (see [precompute-backup.md](precompute-backup.md))
+tests/                      tests of the `src/` scripts (`test_precompute_backup.py`); `uv run pytest` at the root runs them with the packages' tests
+precompute-cache/           gitignored: every precomputed file, shared by all three apps (feedback/ matrices, guess-counts/ matrices and summary, benchmark/ JSON)
 app/
   wordle-gpui/              the desktop app in Rust + gpui (see gpui-app.md)
+  backend/                  the website's FastAPI app: its own uv project outside the workspace, depending on `packages/wordle` through a path dependency (see web-backend.md)
+  frontend/                 the website's Next.js app (App Router, TypeScript, Tailwind, bun), proxying /api to the backend (see web-frontend.md)
 packages/
   wordle/                   the game package (installable, has the `wordle` command)
     pyproject.toml
@@ -26,7 +35,7 @@ packages/
         words.py            loads the Answer List and Guess List
         game.py             Game, Guess, State
       cli.py                the terminal game (questionary + rich)
-      solver/               matrix.py (Feedback matrices), strategy.py (the Solver), cli.py (the questions asked by `just matrices`)
+      solver/               matrix.py (Feedback matrices), guess_count_matrix.py (Guess Count Matrix), guess_count_migration.py (version 1 to 2), benchmark.py (the website's Benchmark and Opener leaderboard), strategy.py (the Solver), cli.py (the questions asked by the precompute commands)
       __main__.py           `python -m wordle`
       data/                 answers.txt, guesses.txt, SOURCES.md
     tests/
@@ -54,10 +63,36 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `uv run src/main.py` | Start the game (menu) |
 | `uv run wordle` | Same, via the package's console script |
 | `uv run python -m wordle` | Same, via `__main__.py` |
-| `uv run pytest` | Run the tests of every package |
+| `uv run pytest` | Run the tests of every package and of `src/` (`tests/`) |
+| `just precompute guess-counts` | Precompute the Guess Count Matrix of each Strategy and its summary. See [guess-count-matrix.md](guess-count-matrix.md) |
+| `just precompute migrate` | Turn a version 1 Guess Count Matrix folder into version 2 without playing again. See [guess-count-matrix.md](guess-count-matrix.md#migrating-a-version-1-folder) |
+| `just precompute benchmark` | Precompute the Benchmark and Opener leaderboard the website backend serves. See [web-backend.md](web-backend.md#benchmark-and-openers) |
+| `just web backend` | Serve the website backend with uvicorn. See [web-backend.md](web-backend.md) |
+| `just web frontend` | Serve the website frontend (Next.js dev server). See [web-frontend.md](web-frontend.md) |
+| `just web` | Serve the backend and the frontend together. See [web-frontend.md](web-frontend.md) |
+| `just test backend` | Run the website backend's tests. See [web-backend.md](web-backend.md) |
 | `uv build --package wordle` | Build a wheel; it includes the word lists |
 
 All three game commands take `--answer WORD` or `--seed N` to skip the menu, and `--unlimited` for no Guess Limit.
+
+## Settings
+
+The website's settings live in one `.env` at the root (`cp .env.example .env`; without it the defaults apply). Each app reads it, so it works however you start them:
+
+| Reader | How |
+| --- | --- |
+| every `just` recipe | `set dotenv-load` in the `justfile` |
+| the backend (`uvicorn` run alone) | `main.py` calls python-dotenv's `load_dotenv` on the root `.env` |
+| the frontend (`bun run dev` alone) | `next.config.ts` calls `process.loadEnvFile` on the root `.env` |
+
+A variable set in the shell always wins over the file (`BACKEND_URL=... just web frontend`).
+
+| Variable | Read by | Default | What it does |
+| --- | --- | --- | --- |
+| `BACKEND_URL` | frontend | `http://127.0.0.1:8000` | Where Next proxies `/api/*`. See [web-frontend.md](web-frontend.md) |
+| `CORS_ORIGINS` | backend | empty (no CORS) | Origins that may call the API from a browser directly. The website doesn't need it. See [web-backend.md](web-backend.md) |
+
+The terminal game and the gpui app read no settings. The Rust tests' `WORDLE_PYTHON_GUESS_COUNTS` and `WORDLE_PYTHON_BENCHMARK` are usually set per run, but `just test gpui` would pick them up from `.env` too (see [gpui-app.md](gpui-app.md)).
 
 ## Dependencies
 
@@ -66,6 +101,8 @@ All three game commands take `--answer WORD` or `--seed N` to skip the menu, and
 | `questionary` | Menus and text prompts with live validation |
 | `numpy` | Scoring every Guess against every Answer for the Feedback matrices |
 | `rich` | Drawing the board, keyboard and panel in colour |
+| `tqdm` | The progress bars of `just precompute guess-counts` |
+| `termcolor` | The yellow "Openers" label of that command's overall bar |
 | `pytest` (dev) | Tests |
 
 `engine/` uses only the standard library.
