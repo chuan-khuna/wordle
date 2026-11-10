@@ -129,7 +129,8 @@ export function TermTip({
           onFocus={keep}
         >
           <Ancestors.Provider value={nested}>
-            <strong className="font-medium">{term}</strong>:{" "}
+            <div className="mb-1 font-semibold">{term}</div>
+            <p>
             {splitDefinition(definition, terms, nested).map((part, i) =>
               part.kind === "term" ? (
                 <TermTip key={i} term={part.term} definition={glossary(lang).get(part.term.toLowerCase())!.definition} lang={lang}>
@@ -145,6 +146,7 @@ export function TermTip({
                 <span key={i}>{part.text}</span>
               ),
             )}
+            </p>
           </Ancestors.Provider>
         </Popover.Content>
       </Popover.Portal>
