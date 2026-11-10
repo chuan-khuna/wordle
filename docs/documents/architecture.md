@@ -69,7 +69,7 @@ Keeping the screen code out of `engine/` means the Solver and Benchmark can play
 | `just precompute benchmark` | Precompute the Benchmark and Opener leaderboard the website backend serves. See [web-backend.md](web-backend.md#benchmark-and-openers) |
 | `just web backend` | Serve the website backend with uvicorn. See [web-backend.md](web-backend.md) |
 | `just web frontend` | Serve the website frontend (Next.js dev server). See [web-frontend.md](web-frontend.md) |
-| `just web` | Serve the backend and the frontend together. See [web-frontend.md](web-frontend.md) |
+| `just web` (or `mise run web`) | Serve the backend and the frontend together. See [web-frontend.md](web-frontend.md) |
 | `just test backend` | Run the website backend's tests. See [web-backend.md](web-backend.md) |
 | `uv build --package wordle` | Build a wheel; it includes the word lists |
 

@@ -1,0 +1,8 @@
+{
+  "name": "wordle-app",
+  "private": true,
+  "scripts": {
+    "api": "just web backend",
+    "web": "just web frontend"
+  }
+}
