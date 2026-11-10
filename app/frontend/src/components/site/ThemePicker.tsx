@@ -26,9 +26,29 @@ const getServerChoice = () => DEFAULT_THEME;
 
 /**
  * The theme menu: an icon button that opens a radio list of the palettes, Light then Dark,
- * with the current choice checked. The choice is saved in localStorage (`wordle-theme`)
+ * each with a swatch of its background and accent, correct and present colours, and the current choice checked. The choice is saved in localStorage (`wordle-theme`)
  * and announced with a `wordle-theme` event, which the head script (lib/theme-script.ts) applies.
  */
+/**
+ * A small preview of a palette: its background with three dots, its accent, correct and
+ * present colours. `data-theme` on the swatch scopes that palette's variables to it, so no
+ * colours are repeated here.
+ */
+function ThemeSwatch({ id }: { id: string }) {
+  return (
+    <span
+      data-theme={id}
+      aria-hidden="true"
+      className="flex h-5 shrink-0 items-center -space-x-1 rounded-sm border border-highlight-high bg-background px-1"
+    >
+      {/* Overlapping dots, each ringed in the background so the overlap reads as a cut. */}
+      <span className="size-2.5 rounded-full bg-accent ring-1 ring-background" />
+      <span className="size-2.5 rounded-full bg-correct ring-1 ring-background" />
+      <span className="size-2.5 rounded-full bg-present ring-1 ring-background" />
+    </span>
+  );
+}
+
 export function ThemePicker({ align = "start" }: { align?: "start" | "end" }) {
   const choice = useSyncExternalStore(subscribe, getChoice, getServerChoice);
 
@@ -51,18 +71,20 @@ export function ThemePicker({ align = "start" }: { align?: "start" | "end" }) {
           <PaletteIcon />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="w-56">
+      <DropdownMenuContent align={align} className="w-64">
         <DropdownMenuRadioGroup value={choice} onValueChange={choose}>
           <DropdownMenuLabel>Light</DropdownMenuLabel>
           {light.map((theme) => (
-            <DropdownMenuRadioItem key={theme.id} value={theme.id}>
+            <DropdownMenuRadioItem key={theme.id} value={theme.id} className="gap-2">
+              <ThemeSwatch id={theme.id} />
               {theme.name}
             </DropdownMenuRadioItem>
           ))}
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Dark</DropdownMenuLabel>
           {dark.map((theme) => (
-            <DropdownMenuRadioItem key={theme.id} value={theme.id}>
+            <DropdownMenuRadioItem key={theme.id} value={theme.id} className="gap-2">
+              <ThemeSwatch id={theme.id} />
               {theme.name}
             </DropdownMenuRadioItem>
           ))}
