@@ -76,7 +76,7 @@ Versions (current when the app was made, all at least 7 days old): Next 16.4, Re
 | Command | What it does |
 | --- | --- |
 | `just web frontend` | Dev server on http://localhost:3000 (takes `next dev` options, e.g. `--port 3001`) |
-| `just web` | Backend (port 8000) and frontend (port 3000) together; Ctrl-C stops both |
+| `just web` (or `mise run web`) | Backend (port 8000) and frontend (port 3000) together; Ctrl-C stops both. `mise run web` is a `mise.toml` task that calls `just web` |
 | `bun run build` | Production build |
 | `bun run lint` | ESLint |
 | `bun run typecheck` | `tsc --noEmit` |
