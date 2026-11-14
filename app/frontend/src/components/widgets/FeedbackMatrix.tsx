@@ -1,40 +1,54 @@
 "use client";
 
+import { RotateCcw } from "lucide-react";
 import { Popover } from "radix-ui";
-import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ControlPanel } from "@/components/controls/ControlPanel";
 import { FIELD_LABEL } from "@/components/controls/Field";
 import { SegmentedControl } from "@/components/controls/SegmentedControl";
+import { Button } from "@/components/ui/button";
 import { type SolveResponse, getFeedbackMatrix, postCandidates } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import {
+  CANDIDATE_ROLES,
+  CENTRE_PARAM_DEFAULT,
   type Cell,
+  FIT,
   LEGEND_CODES,
   PLAY_STEP_MS,
   SCALE_ROLES,
   type Rgb,
-  ZOOMS,
-  type Zoom,
+  type Viewport,
+  ZOOM_PARAM_DEFAULT,
   answerIndex,
+  axisTicks,
   buildScale,
   cellAt,
   cellRect,
+  clampViewport,
   dimmedMask,
   fadeProgress,
+  fillCandidateRow,
   fillDimRow,
   fillGrid,
-  gridSize,
+  gridBox,
   guessRows,
+  letterSpans,
   marksOfCode,
+  maxZoom,
   mixLevels,
+  panBy,
   parseHex,
-  parseZoom,
+  parseViewport,
   playNext,
   playStart,
   sizesPerStep,
   stateKey,
   statesPerStep,
+  viewportParams,
+  visibleCells,
+  zoomAround,
 } from "@/lib/widgets/matrix-grid";
 import type { Mark } from "@/lib/wordle/feedback";
 import { GuessStrip } from "./_components/GuessStrip";
@@ -44,7 +58,7 @@ import { WidgetFrame } from "./_components/ui";
 import { CARD } from "./_components/useHoverCard";
 import { useLoad } from "./_components/useLoad";
 import { useReducedMotion } from "./_components/useReducedMotion";
-import { useWidgetParam } from "./_components/useWidgetParam";
+import { useParamInitial, useParamSync, useWidgetParam } from "./_components/useWidgetParam";
 
 /** Grey, if a theme role cannot be read (it always can in the ten themes). */
 const FALLBACK: Rgb = [128, 128, 128];
@@ -55,10 +69,14 @@ function themeScale(): Uint8ClampedArray {
   return buildScale(SCALE_ROLES.map((role) => parseHex(style.getPropertyValue(role)) ?? FALLBACK));
 }
 
-/** The dimming veil's colour: the page background, so a dimmed column fades into the page. */
-function themeVeil(): Rgb {
-  return parseHex(getComputedStyle(document.documentElement).getPropertyValue("--background")) ?? FALLBACK;
+/** A theme role's colour, read from `<html>` (set by `data-theme`). */
+function themeColour(role: string): Rgb {
+  return parseHex(getComputedStyle(document.documentElement).getPropertyValue(role)) ?? FALLBACK;
 }
+
+/** What the cells are coloured by: their Feedback Code (the Feedback view), or only whether their column is still a Candidate (the Candidate view). */
+const MODES = ["feedback", "candidates"] as const;
+type Mode = (typeof MODES)[number];
 
 /**
  * The Feedback Matrix page's content: the Solver's Game (`GameInputs`, the URL params `answer`, `pool`, `scope`,
@@ -67,12 +85,13 @@ function themeVeil(): Rgb {
  * One cell per (Guess, Answer) pair, rows Guesses and columns Answers, both in Answer List order (`answers`, the
  * build-time list, sorted as the backend's matrix is), so the Wins are the diagonal. The bytes come from
  * `GET /api/feedback-matrix`. They are painted once into a one-pixel-per-cell image (an offscreen canvas), which is
- * drawn scaled to the visible canvas with smoothing off; a theme change refills the image, a resize or a scroll only
- * redraws it. Zoom (fit, 2×, 4×, 8×; the `zoom` URL param), the dimming layer and the hover card are in `Grid`.
+ * drawn scaled to the visible canvas with smoothing off; a theme change refills the image, a zoom, a pan or a resize
+ * only redraws it. The view (`view=candidates` for the Candidate view) is chosen here, for the legend; the zoom and
+ * pan (the `zoom` and `centre` URL params), the a–z ticks, the dimming layer and the hover card are in `Grid`.
  */
 export function FeedbackMatrix({ answers, lang = DEFAULT_LANGUAGE }: { answers: readonly string[]; lang?: Language }) {
   return (
-    <Suspense fallback={<div className="aspect-square w-full bg-overlay" />}>
+    <Suspense fallback={<div className="h-64 w-full bg-overlay" />}>
       <Matrix answers={answers} lang={lang} />
     </Suspense>
   );
@@ -126,6 +145,10 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
   };
   const reducedMotion = useReducedMotion();
   const best = !game.custom && game.data ? game.data.steps[0].guess : "";
+  const [modeText, setModeText] = useWidgetParam(undefined, "view", "feedback");
+  const mode: Mode = modeText === "candidates" ? "candidates" : "feedback";
+  // The strip's element, so the grid fits the viewport below it.
+  const stripId = useId();
 
   const sets = useCandidateSets(shown);
   const states = useMemo(() => (shown ? statesPerStep(shown) : []), [shown]);
@@ -168,6 +191,7 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
       <GameInputs game={game} best={best} lang={lang} />
       {shown && (
         <GuessStrip
+          id={stripId}
           data={shown}
           step={step}
           first={0}
@@ -213,11 +237,21 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
           ) : wrongSize ? (
             <p className="text-sm text-error">{text.matrixWrongSize}</p>
           ) : cells ? (
-            <Grid cells={cells} answers={answers} layer={layer} fade={!reducedMotion} label={text.matrixLabel(side.toLocaleString("en-US"))} lang={lang} />
+            <Grid
+              cells={cells}
+              answers={answers}
+              layer={layer}
+              fade={!reducedMotion}
+              mode={mode}
+              setMode={setModeText}
+              stripId={shown ? stripId : undefined}
+              label={text.matrixLabel(side.toLocaleString("en-US"))}
+              lang={lang}
+            />
           ) : (
-            <div className="grid aspect-square w-full place-items-center bg-overlay text-sm text-meta">{text.matrixLoading}</div>
+            <div className="grid h-64 w-full place-items-center bg-overlay text-sm text-meta">{text.matrixLoading}</div>
           )}
-          <Legend lang={lang} />
+          <Legend mode={mode} lang={lang} />
         </div>
       </WidgetFrame>
     </ControlPanel>
@@ -252,34 +286,57 @@ function useCandidateSets(game: SolveResponse | null): { words: Record<string, s
   return { words, failures };
 }
 
-/** The zoom buttons' names other than `fit`'s. */
-const ZOOM_NAMES = { "2": "2×", "4": "4×", "8": "8×" } as const;
+/** The x axis's strip above the frame (letters, ticks and the Answer marker) and the y axis's strip left of it, in CSS px. */
+const AXIS_X = 24;
+const AXIS_Y = 18;
+/** Room the grid leaves below the viewport's height for the gaps around it, in CSS px. */
+const SLACK = 32;
+/** The smallest the grid gets when the viewport is short (a phone held sideways); the content width still caps it. */
+const MIN_FIT = 200;
+/** The least room, in CSS px, between two letters' labels on the x and the y axis. */
+const LABEL_GAP_X = 12;
+const LABEL_GAP_Y = 16;
+/** How far a pointer moves before a press is a drag, not a click or a tap, in CSS px. */
+const DRAG_PX = 4;
+/** One `+` or `-` key: the zoom factor. One arrow key: the share of the frame it pans. */
+const KEY_ZOOM = 1.5;
+const KEY_PAN = 0.1;
+/** How long the zoom and centre wait before going to the URL, so a drag or a wheel spin writes it once. */
+const URL_DELAY_MS = 300;
 
 /** Where the pointer last was over the frame, and whether it is a mouse (a touch or a pen taps instead of hovering). */
 type Pointer = { x: number; y: number; mouse: boolean };
 
 /**
- * The grid in a square frame. At `fit` the whole grid fills the frame; at 2×, 4× or 8× (the `zoom` URL param) the frame
- * scrolls over a grid that many times wider, so the page never scrolls sideways. The visible canvas is only the frame's
- * size: each draw scales the one-pixel-per-cell image by the zoom and shifts it by the scroll, with smoothing off, so
- * cells stay crisp at every zoom. Hovering (or tapping) a cell outlines it and shows its Guess, Answer and Feedback in a card.
+ * The grid in a square frame that fits the page: its side is the smaller of the content width (less the y axis) and the
+ * viewport's height less the sticky Guess strip, the toolbar and the x axis, so the whole grid is in view and nothing
+ * scrolls. At fit (zoom 1) the whole grid fills the frame; the wheel (desktop) or a pinch (phone) zooms around the
+ * pointer, a drag pans, and the view never shows past the grid's edges (`clampViewport`). Reset and a double-click go
+ * back to fit; with the focus on the frame, `+` / `-` zoom, the arrow keys pan and `0` fits. The zoom and centre go to the
+ * URL (`zoom`, `centre`) once they settle. The visible canvas is only the frame's size: each draw copies the cells in
+ * view from the one-pixel-per-cell image, scaled, with smoothing off, so cells stay crisp at every zoom.
  *
- * The Game (`layer`) is drawn over the grid without touching its image: the dimming is a second offscreen image, one
- * pixel per column (the veil over each column no longer a Candidate, clear over the rest), drawn stretched over the
- * whole grid with the same transform, so a step change refills 2,315 pixels, not 5.4 million. The rows of the Guesses
- * played are outlined (elements in the scrolling spacer, so they scroll with it), and a marker above the frame points
- * at the Answer's column, moved with the horizontal scroll at each draw.
+ * The a–z ticks on both axes mark where each first letter's words begin (`axisTicks`), and follow the zoom and pan.
+ * Hovering (or tapping) a cell outlines it and shows its Guess, Answer and Feedback in a card.
  *
- * With `fade`, a new mask does not switch the columns at once: each animation frame for `FADE_MS` mixes the dimming
- * levels on the screen towards the new mask (`mixLevels`, eased by `fadeProgress`), refills the one-row image and
- * redraws. Only the 2,315-pixel row is refilled; the grid image is untouched. Without `fade` (`prefers-reduced-motion`)
- * the new mask shows at once.
+ * The Game (`layer`) is drawn over the grid without touching its image: a second offscreen image, one pixel per column,
+ * drawn stretched over the grid with the same mapping. In the Feedback view it is a veil over each column no longer a
+ * Candidate (`fillDimRow`); in the Candidate view it replaces the Feedback colours, a Candidate's column blue and the
+ * rest grey (`fillCandidateRow`), so switching the view refills 2,315 pixels, not 5.4 million. The rows of the Guesses
+ * played are outlined, and a marker on the x axis points at the Answer's column.
+ *
+ * With `fade`, a new mask does not switch the columns at once: each animation frame for `FADE_MS` mixes the levels on
+ * the screen towards the new mask (`mixLevels`, eased by `fadeProgress`), refills the one-row image and redraws, in
+ * either view. Without `fade` (`prefers-reduced-motion`) the new mask shows at once.
  */
 function Grid({
   cells,
   answers,
   layer,
   fade,
+  mode,
+  setMode,
+  stripId,
   label,
   lang,
 }: {
@@ -287,69 +344,88 @@ function Grid({
   answers: readonly string[];
   layer: GameLayer | null;
   fade: boolean;
+  mode: Mode;
+  setMode: (mode: Mode) => void;
+  stripId: string | undefined;
   label: string;
   lang: Language;
 }) {
   const text = pageText(lang);
   const side = answers.length;
-  const [zoomText, setZoomText] = useWidgetParam(undefined, "zoom", "fit");
-  const zoom = parseZoom(zoomText);
-  const zoomed = zoom !== "fit";
-  const zoomLabelId = useId();
+  const spans = useMemo(() => letterSpans(answers), [answers]);
+  const modeLabelId = useId();
   const boxRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLCanvasElement | null>(null);
-  const dimRef = useRef<HTMLCanvasElement | null>(null);
-  const markerRef = useRef<HTMLDivElement>(null);
-  // The frame's width (CSS px): the grid's side at `fit`, which the zoom levels multiply.
-  const [fitWidth, setFitWidth] = useState(0);
+  const rowRef = useRef<HTMLCanvasElement | null>(null);
+  // The frame's side in CSS px: the grid's side at fit.
+  const [fit, setFit] = useState(0);
+  const max = maxZoom(fit, side);
+  // The viewport asked for (from the URL, then by the reader); `view` is what the frame can show of it.
+  const zoomParam = useParamInitial(undefined, "zoom", ZOOM_PARAM_DEFAULT);
+  const centreParam = useParamInitial(undefined, "centre", CENTRE_PARAM_DEFAULT);
+  const [wanted, setWanted] = useState<Viewport>(() => parseViewport(zoomParam, centreParam));
+  const view = useMemo(() => clampViewport(wanted, max), [wanted, max]);
   const [hover, setHover] = useState<Cell | null>(null);
-  // So a scroll under a resting mouse moves the card to the cell now under it.
+  // So a zoom or pan under a resting mouse moves the card to the cell now under it.
   const pointer = useRef<Pointer | null>(null);
-  // The view's centre as a fraction of the grid, kept across a zoom change.
-  const centre = useRef<{ x: number; y: number } | null>(null);
-  const size = gridSize(fitWidth, zoom);
-  const answerCol = layer?.answerCol ?? -1;
-  const mask = layer?.mask ?? null;
+  // The pointers down on the frame (client px), the one-pointer drag, and the two-pointer pinch.
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null);
+  const pinch = useRef<{ dist: number; mid: { x: number; y: number }; view: Viewport } | null>(null);
+  // The view, fit and most zoom the event handlers start from (a wheel or a drag can fire twice before a render).
+  const live = useRef({ view, fit, max });
+  useLayoutEffect(() => {
+    live.current = { view, fit, max };
+  }, [view, fit, max]);
+  const modeRef = useRef(mode);
+
+  // The zoom and centre go to the URL once they have settled.
+  const [saved, setSaved] = useState(wanted);
+  useEffect(() => {
+    if (fit <= 0) return;
+    const timer = window.setTimeout(() => setSaved(view), URL_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [view, fit]);
+  const params = viewportParams(saved);
+  useParamSync(undefined, "zoom", params.zoom, ZOOM_PARAM_DEFAULT);
+  useParamSync(undefined, "centre", params.centre, CENTRE_PARAM_DEFAULT);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
-    const frame = frameRef.current;
-    const image = imageRef.current;
-    if (!canvas || !frame || !image || size <= 0) return;
-    const ratio = window.devicePixelRatio;
-    const width = frame.clientWidth;
-    const height = frame.clientHeight;
-    const w = Math.max(1, Math.round(width * ratio));
-    const h = Math.max(1, Math.round(height * ratio));
-    if (canvas.width !== w || canvas.height !== h) {
+    if (!canvas || fit <= 0) return;
+    const ratio = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(fit * ratio));
+    if (canvas.width !== w || canvas.height !== w) {
       canvas.width = w;
-      canvas.height = h;
+      canvas.height = w;
     }
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
     const context = canvas.getContext("2d");
     if (!context) return;
     context.setTransform(1, 0, 0, 1, 0, 0);
-    context.clearRect(0, 0, w, h);
+    context.clearRect(0, 0, w, w);
     context.imageSmoothingEnabled = false;
-    // In device pixels, with the grid's top-left corner at minus the scroll.
-    context.setTransform(ratio, 0, 0, ratio, -frame.scrollLeft * ratio, -frame.scrollTop * ratio);
-    context.drawImage(image, 0, 0, size, size);
-    if (dimRef.current) context.drawImage(dimRef.current, 0, 0, size, size);
-    const marker = markerRef.current;
-    if (marker && answerCol >= 0) {
-      const x = ((answerCol + 0.5) * size) / side - frame.scrollLeft;
-      marker.style.transform = `translateX(${x}px)`;
-      marker.style.visibility = x >= 0 && x <= width ? "visible" : "hidden";
-    }
-  }, [size, side, answerCol]);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    // Only the cells in view, copied from the one-pixel-per-cell images to where they fall in the frame.
+    const { left, top, size } = gridBox(view, fit);
+    const step = size / side;
+    const { col0, col1, row0, row1 } = visibleCells(view, fit, side);
+    if (col1 <= col0 || row1 <= row0) return;
+    const x = left + col0 * step;
+    const y = top + row0 * step;
+    const width = (col1 - col0) * step;
+    const height = (row1 - row0) * step;
+    if (mode === "feedback" && imageRef.current) context.drawImage(imageRef.current, col0, row0, col1 - col0, row1 - row0, x, y, width, height);
+    if (rowRef.current) context.drawImage(rowRef.current, col0, 0, col1 - col0, 1, x, y, width, height);
+  }, [view, fit, side, mode]);
   const drawRef = useRef(draw);
   useLayoutEffect(() => {
     drawRef.current = draw;
-  }, [draw]);
+    modeRef.current = mode;
+    draw();
+  }, [draw, mode]);
 
   // The one-pixel-per-cell image, kept offscreen: filled from the bytes once, and again when the theme changes.
   useEffect(() => {
@@ -371,109 +447,207 @@ function Grid({
     return () => theme.disconnect();
   }, [cells, side]);
 
-  // The dimming layer, one pixel per column, and how dimmed each column is on the screen now (0 lit to 1 dimmed).
+  // The one-row layer, one pixel per column, and how dimmed each column is on the screen now (0 lit to 1 dimmed).
   const levels = useRef<Float32Array | null>(null);
-  const dim = useRef<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; pixels: ImageData } | null>(null);
-  const paintDim = useCallback(() => {
-    const row = dim.current;
-    if (!row || !levels.current) return;
-    fillDimRow(levels.current, themeVeil(), row.pixels.data);
-    row.context.putImageData(row.pixels, 0, 0);
-    dimRef.current = row.canvas;
-    drawRef.current();
-  }, []);
-
-  // A new mask (a step change): fade the levels from what is on the screen to the mask, or switch at once without `fade`.
-  useEffect(() => {
-    if (!mask) {
-      levels.current = null;
-      dimRef.current = null;
-      drawRef.current();
-      return;
-    }
-    if (!dim.current || dim.current.canvas.width !== mask.length) {
+  const row = useRef<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; pixels: ImageData } | null>(null);
+  const paintRow = useCallback(() => {
+    if (!row.current || row.current.canvas.width !== side) {
       const canvas = document.createElement("canvas");
-      canvas.width = mask.length;
+      canvas.width = side;
       canvas.height = 1;
       const context = canvas.getContext("2d");
       if (!context) return;
-      dim.current = { canvas, context, pixels: context.createImageData(mask.length, 1) };
+      row.current = { canvas, context, pixels: context.createImageData(side, 1) };
     }
-    if (!levels.current || levels.current.length !== mask.length) levels.current = new Float32Array(mask.length);
+    if (!levels.current || levels.current.length !== side) levels.current = new Float32Array(side);
+    const { canvas, context, pixels } = row.current;
+    if (modeRef.current === "candidates") fillCandidateRow(levels.current, themeColour(CANDIDATE_ROLES[0]), themeColour(CANDIDATE_ROLES[1]), pixels.data);
+    else fillDimRow(levels.current, themeColour("--background"), pixels.data);
+    context.putImageData(pixels, 0, 0);
+    rowRef.current = canvas;
+    drawRef.current();
+  }, [side]);
+
+  // A new mask (a step change): fade the levels from what is on the screen to the mask, or switch at once without
+  // `fade`. No Game yet: every column lit.
+  const mask = layer?.mask ?? null;
+  useEffect(() => {
+    const target = mask ?? new Uint8Array(side);
+    if (!levels.current || levels.current.length !== target.length) levels.current = new Float32Array(target.length);
     const shown = levels.current;
     const from = shown.slice();
     let frame = 0;
     const start = performance.now();
     const tick = (now: number) => {
       const t = fade ? fadeProgress(now - start) : 1;
-      mixLevels(from, mask, t, shown);
-      paintDim();
+      mixLevels(from, target, t, shown);
+      paintRow();
       if (t < 1) frame = requestAnimationFrame(tick);
     };
     tick(start);
     // A fade cut short leaves the levels part way; the next one starts from there.
     return () => cancelAnimationFrame(frame);
-  }, [mask, fade, paintDim]);
+  }, [mask, side, fade, paintRow]);
 
-  // A theme change repaints the row in the new background colour, at the levels on the screen.
+  // Switching the view repaints the one-row layer only (the grid image is kept); a theme change repaints it too.
   useEffect(() => {
-    const theme = new MutationObserver(paintDim);
+    paintRow();
+  }, [mode, paintRow]);
+  useEffect(() => {
+    const theme = new MutationObserver(paintRow);
     theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => theme.disconnect();
-  }, [paintDim]);
+  }, [paintRow]);
 
-  // The frame is as wide as the content column, and square.
+  // The frame's side: the content width less the y axis, or the viewport's height less the sticky strip, the toolbar
+  // and the x axis, whichever is smaller.
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
-    const resize = new ResizeObserver(() => {
-      setFitWidth(box.clientWidth);
-      drawRef.current();
-    });
+    const strip = stripId ? document.getElementById(stripId) : null;
+    const measure = () => {
+      const width = box.clientWidth - AXIS_Y;
+      const height = window.innerHeight - (strip?.offsetHeight ?? 0) - (toolbarRef.current?.offsetHeight ?? 0) - AXIS_X - SLACK;
+      setFit(Math.max(0, Math.floor(Math.min(width, Math.max(height, MIN_FIT)))));
+    };
+    const resize = new ResizeObserver(measure);
     resize.observe(box);
-    return () => resize.disconnect();
-  }, []);
+    if (strip) resize.observe(strip);
+    if (toolbarRef.current) resize.observe(toolbarRef.current);
+    window.addEventListener("resize", measure);
+    return () => {
+      resize.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [stripId]);
 
-  // After a zoom change, scroll so the view's centre stays where it was; then draw.
-  useLayoutEffect(() => {
-    const frame = frameRef.current;
-    if (frame && centre.current && size > 0) {
-      frame.scrollLeft = centre.current.x * size - frame.clientWidth / 2;
-      frame.scrollTop = centre.current.y * size - frame.clientHeight / 2;
-      centre.current = null;
-    }
-    draw();
-  }, [draw, size]);
-
-  const setZoom = (next: Zoom) => {
-    const frame = frameRef.current;
-    if (frame && size > 0) {
-      centre.current = { x: (frame.scrollLeft + frame.clientWidth / 2) / size, y: (frame.scrollTop + frame.clientHeight / 2) / size };
-    }
-    setHover(null);
-    setZoomText(next);
+  /** A point on the screen in CSS px from the frame's top-left corner. */
+  const local = (clientX: number, clientY: number) => {
+    const at = frameRef.current?.getBoundingClientRect();
+    return { x: clientX - (at?.left ?? 0), y: clientY - (at?.top ?? 0) };
   };
-
-  /** The cell under a point on the screen, or null off the grid or over the frame's scrollbars. */
-  const cellUnder = (clientX: number, clientY: number): Cell | null => {
-    const frame = frameRef.current;
-    const grid = gridRef.current;
-    if (!frame || !grid) return null;
-    const view = frame.getBoundingClientRect();
-    if (clientX - view.left >= frame.clientWidth || clientY - view.top >= frame.clientHeight) return null;
-    const at = grid.getBoundingClientRect();
-    return cellAt(clientX - at.left, clientY - at.top, fitWidth, zoom, side);
+  /** The cell under a point on the screen at `view` (the one shown, by default), or null outside the frame or off the grid. */
+  const cellUnder = (clientX: number, clientY: number, at: Viewport = live.current.view): Cell | null => {
+    const p = local(clientX, clientY);
+    return cellAt(p.x, p.y, at, live.current.fit, side);
   };
   const point = (cell: Cell | null) => setHover((was) => (was && cell && was.row === cell.row && was.col === cell.col ? was : cell));
   const track = (e: React.PointerEvent) => {
     pointer.current = { x: e.clientX, y: e.clientY, mouse: e.pointerType === "mouse" };
   };
 
-  const onScroll = () => {
-    requestAnimationFrame(() => drawRef.current());
+  /** Move the view (from the one on the screen), then show the cell now under a resting mouse; a touch's card closes. */
+  const change = (next: (view: Viewport, fit: number, max: number) => Viewport) => {
+    const now = live.current;
+    const moved = next(now.view, now.fit, now.max);
+    live.current = { ...now, view: moved };
+    setWanted(moved);
     const last = pointer.current;
-    if (last?.mouse) point(cellUnder(last.x, last.y));
+    if (last?.mouse && !drag.current?.moved) point(cellUnder(last.x, last.y, moved));
     else setHover(null);
+  };
+  const changeRef = useRef(change);
+  useLayoutEffect(() => {
+    changeRef.current = change;
+  });
+
+  // The wheel zooms around the pointer (a trackpad pinch is a wheel with Ctrl, so it zooms faster). The listener is
+  // not passive, so the page does not scroll under it; zooming out at fit lets the wheel scroll the page instead.
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const onWheel = (e: WheelEvent) => {
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      const dy = e.deltaY * unit;
+      if (dy === 0 || (dy > 0 && live.current.view.zoom <= 1)) return;
+      e.preventDefault();
+      const factor = Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.002));
+      const at = frame.getBoundingClientRect();
+      const x = e.clientX - at.left;
+      const y = e.clientY - at.top;
+      changeRef.current((v, f, m) => zoomAround(v, factor, x, y, f, m));
+    };
+    frame.addEventListener("wheel", onWheel, { passive: false });
+    return () => frame.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const startPinch = () => {
+    const [a, b] = [...pointers.current.values()];
+    pinch.current = { dist: Math.hypot(b.x - a.x, b.y - a.y) || 1, mid: local((a.x + b.x) / 2, (a.y + b.y) / 2), view: live.current.view };
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    track(e);
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    // So a drag keeps its pointer when it leaves the frame (a pointer the browser no longer tracks cannot be captured).
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 1) drag.current = { x: e.clientX, y: e.clientY, moved: false };
+    else if (pointers.current.size === 2) {
+      // A second finger: a pinch, never a tap.
+      startPinch();
+      if (drag.current) drag.current.moved = true;
+      setHover(null);
+    }
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    track(e);
+    const down = pointers.current;
+    if (down.has(e.pointerId)) {
+      down.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const start = pinch.current;
+      if (down.size >= 2 && start) {
+        // Zoom by how far the fingers spread, around where they started, and pan by how far their middle moved.
+        const [a, b] = [...down.values()];
+        const factor = Math.hypot(b.x - a.x, b.y - a.y) / start.dist;
+        const mid = local((a.x + b.x) / 2, (a.y + b.y) / 2);
+        change((_, f, m) => panBy(zoomAround(start.view, factor, start.mid.x, start.mid.y, f, m), mid.x - start.mid.x, mid.y - start.mid.y, f, m));
+        return;
+      }
+      const d = drag.current;
+      if (d) {
+        const dx = e.clientX - d.x;
+        const dy = e.clientY - d.y;
+        if (!d.moved && Math.hypot(dx, dy) < DRAG_PX) return;
+        drag.current = { x: e.clientX, y: e.clientY, moved: true };
+        change((v, f, m) => panBy(v, dx, dy, f, m));
+        return;
+      }
+    }
+    if (e.pointerType === "mouse") point(cellUnder(e.clientX, e.clientY));
+  };
+
+  const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    const down = pointers.current;
+    if (!down.delete(e.pointerId)) return;
+    const d = drag.current;
+    if (down.size === 0) {
+      drag.current = null;
+      pinch.current = null;
+      // A mouse shows the cell under it again after a drag; a tap (a press with no drag) shows the cell tapped.
+      if (e.type === "pointerup" && (e.pointerType === "mouse" || !d?.moved)) point(cellUnder(e.clientX, e.clientY));
+    } else if (down.size === 1) {
+      // A pinch with one finger lifted carries on as a drag from the finger left.
+      const [only] = [...down.values()];
+      drag.current = { ...only, moved: true };
+      pinch.current = null;
+    }
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const zoomed = live.current.view.zoom > 1;
+    const step = live.current.fit * KEY_PAN;
+    const pans: Record<string, [number, number]> = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] };
+    if (e.key === "+" || e.key === "=") change((v, f, m) => zoomAround(v, KEY_ZOOM, f / 2, f / 2, f, m));
+    else if (e.key === "-" || e.key === "_") change((v, f, m) => zoomAround(v, 1 / KEY_ZOOM, f / 2, f / 2, f, m));
+    else if (e.key === "0") change(() => FIT);
+    else if (e.key in pans && zoomed) change((v, f, m) => panBy(v, pans[e.key][0], pans[e.key][1], f, m));
+    else if (e.key === "Escape") return setHover(null);
+    else return;
+    e.preventDefault();
   };
 
   // The card's anchor: the hovered cell's box on the screen, read when the card is placed.
@@ -481,117 +655,157 @@ function Grid({
     () => ({
       current: {
         getBoundingClientRect: () => {
-          const at = gridRef.current?.getBoundingClientRect();
+          const at = frameRef.current?.getBoundingClientRect();
           if (!hover || !at) return new DOMRect();
-          const rect = cellRect(hover, fitWidth, zoom, side);
+          const rect = cellRect(hover, view, fit, side);
           return new DOMRect(at.left + rect.x, at.top + rect.y, rect.size, rect.size);
         },
       },
     }),
-    [hover, fitWidth, zoom, side],
+    [hover, view, fit, side],
   );
 
-  const box = hover ? cellRect(hover, fitWidth, zoom, side) : null;
+  const box = gridBox(view, fit);
+  const xTicks = axisTicks(spans, box.left, box.size, side, fit, LABEL_GAP_X);
+  const yTicks = axisTicks(spans, box.top, box.size, side, fit, LABEL_GAP_Y);
+  const hovered = hover ? cellRect(hover, view, fit, side) : null;
   // The outline round the hovered cell: at least 5 px, so it shows when a cell is under a pixel.
-  const outline = box ? Math.max(box.size, 5) : 0;
+  const outline = hovered ? Math.max(hovered.size, 5) : 0;
   const guess = hover ? answers[hover.row] : "";
   const answer = hover ? answers[hover.col] : "";
   const marks = hover ? marksOfCode(cells[hover.row * side + hover.col]) : "";
+  const marker = layer && layer.answerCol >= 0 ? cellRect({ row: 0, col: layer.answerCol }, view, fit, side) : null;
+  const markerX = marker ? marker.x + marker.size / 2 : -1;
+  const zoomText = view.zoom < 10 ? view.zoom.toFixed(1) : view.zoom.toFixed(0);
 
   return (
-    <div className="grid gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <span id={zoomLabelId} className={FIELD_LABEL}>
-          {text.matrixZoom}
+    <div ref={boxRef} className="grid min-w-0 gap-2">
+      <div ref={toolbarRef} className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <span className="flex items-center gap-2">
+          <span id={modeLabelId} className={FIELD_LABEL}>
+            {text.matrixView}
+          </span>
+          <SegmentedControl labelledBy={modeLabelId} value={mode} onChange={setMode} options={MODES} names={{ feedback: text.matrixViewFeedback, candidates: text.matrixViewCandidates }} />
         </span>
-        <SegmentedControl labelledBy={zoomLabelId} value={zoom} onChange={setZoom} options={ZOOMS} names={{ fit: text.matrixZoomFit, ...ZOOM_NAMES }} />
+        <span className="flex items-center gap-2">
+          <Button size="sm" disabled={view.zoom <= 1} onClick={() => change(() => FIT)}>
+            <RotateCcw aria-hidden />
+            {text.matrixReset}
+          </Button>
+          <span className="text-xs text-meta tabular-nums">{text.matrixZoomLevel(zoomText)}</span>
+        </span>
+        <span className="text-xs text-meta">{text.matrixZoomHint}</span>
       </div>
-      {layer && (
-        // The Answer's column: a marker above the frame, moved to the column (less the scroll) at each draw.
-        <div className="relative -mb-1 h-2.5 w-full overflow-hidden" role="img" aria-label={text.matrixAnswerColumn(layer.answer)}>
-          <div
-            ref={markerRef}
-            className="absolute top-0 left-0 -ml-[5px] h-0 w-0 border-x-[5px] border-t-[8px] border-x-transparent"
-            style={{ borderTopColor: "var(--accent)", visibility: "hidden" }}
-            aria-hidden
-          />
+      <div className="grid" style={{ gridTemplateColumns: `${AXIS_Y}px ${fit}px`, gridTemplateRows: `${AXIS_X}px ${fit}px` }}>
+        <div />
+        {/* The x axis: a letter over each first letter's span, a tick where it begins, and the Answer's column marker. */}
+        <div className="relative overflow-hidden">
+          <div aria-hidden>
+            {xTicks.map((t) => (
+              <Fragment key={t.letter}>
+                {t.at !== null && <span className="absolute bottom-0 h-1.5 w-px bg-muted" style={{ left: t.at }} />}
+                {t.label !== null && (
+                  <span className="absolute top-0 -translate-x-1/2 font-mono text-xs leading-none text-meta" style={{ left: t.label }}>
+                    {t.letter}
+                  </span>
+                )}
+              </Fragment>
+            ))}
+          </div>
+          {layer && (
+            <div
+              role="img"
+              aria-label={text.matrixAnswerColumn(layer.answer)}
+              className="absolute bottom-0 -ml-[5px] h-0 w-0 border-x-[5px] border-t-[8px] border-x-transparent"
+              style={{ left: markerX, borderTopColor: "var(--accent)", visibility: markerX >= 0 && markerX <= fit ? "visible" : "hidden" }}
+            />
+          )}
         </div>
-      )}
-      <div ref={boxRef} className="relative aspect-square w-full max-w-full bg-overlay">
-        <canvas ref={canvasRef} role="img" aria-label={label} className="absolute top-0 left-0 block" />
+        {/* The y axis, the same for the Guesses. */}
+        <div className="relative overflow-hidden" aria-hidden>
+          {yTicks.map((t) => (
+            <Fragment key={t.letter}>
+              {t.at !== null && <span className="absolute right-0 h-px w-1.5 bg-muted" style={{ top: t.at }} />}
+              {t.label !== null && (
+                <span className="absolute left-0 -translate-y-1/2 font-mono text-xs leading-none text-meta" style={{ top: t.label }}>
+                  {t.letter}
+                </span>
+              )}
+            </Fragment>
+          ))}
+        </div>
         <div
           ref={frameRef}
-          className="absolute inset-0 overflow-auto overscroll-contain"
-          tabIndex={zoomed ? 0 : undefined}
-          role={zoomed ? "region" : undefined}
-          aria-label={zoomed ? text.matrixScroll : undefined}
-          onScroll={onScroll}
-          onPointerDown={track}
-          onPointerMove={(e) => {
-            track(e);
-            if (e.pointerType === "mouse") point(cellUnder(e.clientX, e.clientY));
-          }}
+          tabIndex={0}
+          role="region"
+          aria-label={text.matrixPan}
+          className={`relative overflow-hidden bg-overlay select-none ${view.zoom > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-crosshair"}`}
+          // Zoomed in, every gesture is the grid's; at fit a vertical swipe still scrolls the page.
+          style={{ width: fit, height: fit, touchAction: view.zoom > 1 ? "none" : "pan-y" }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
           onPointerLeave={(e) => {
-            if (e.pointerType !== "mouse") return;
+            if (e.pointerType !== "mouse" || drag.current) return;
             pointer.current = null;
             setHover(null);
           }}
-          onClick={(e) => {
-            // A tap (a click with no pan) shows the cell tapped; a mouse already shows the cell under it.
-            if (pointer.current && !pointer.current.mouse) point(cellUnder(e.clientX, e.clientY));
-          }}
+          onDoubleClick={() => change(() => FIT)}
+          onKeyDown={onKeyDown}
         >
-          <div ref={gridRef} className="relative" style={{ width: size, height: size }}>
-            {layer?.rows.map(({ row, current }) => {
-              const rect = cellRect({ row, col: 0 }, fitWidth, zoom, side);
-              // At least 3 px tall, so a row shows when it is under a pixel.
-              const tall = Math.max(rect.size, 3);
-              return (
-                <div
-                  key={row}
-                  className="pointer-events-none absolute left-0"
-                  style={{
-                    top: rect.y + rect.size / 2 - tall / 2,
-                    width: size,
-                    height: tall,
-                    boxShadow: `0 0 0 1px var(--background), 0 0 0 2px ${current ? "var(--accent)" : "var(--text)"}`,
-                  }}
-                  aria-hidden
-                />
-              );
-            })}
-            {box && (
+          <canvas ref={canvasRef} role="img" aria-label={label} className="absolute top-0 left-0 block" style={{ width: fit, height: fit }} />
+          {layer?.rows.map(({ row: r, current }) => {
+            const rect = cellRect({ row: r, col: 0 }, view, fit, side);
+            // At least 3 px tall, so a row shows when it is under a pixel.
+            const tall = Math.max(rect.size, 3);
+            const top = rect.y + rect.size / 2 - tall / 2;
+            if (top > fit || top + tall < 0) return null;
+            return (
               <div
-                className="pointer-events-none absolute rounded-[1px]"
+                key={r}
+                className="pointer-events-none absolute left-0"
                 style={{
-                  left: box.x + box.size / 2 - outline / 2,
-                  top: box.y + box.size / 2 - outline / 2,
-                  width: outline,
-                  height: outline,
-                  boxShadow: "0 0 0 1px var(--background), 0 0 0 2px var(--text)",
+                  top,
+                  width: fit,
+                  height: tall,
+                  boxShadow: `0 0 0 1px var(--background), 0 0 0 2px ${current ? "var(--accent)" : "var(--text)"}`,
                 }}
                 aria-hidden
               />
-            )}
-          </div>
+            );
+          })}
+          {hovered && (
+            <div
+              className="pointer-events-none absolute rounded-[1px]"
+              style={{
+                left: hovered.x + hovered.size / 2 - outline / 2,
+                top: hovered.y + hovered.size / 2 - outline / 2,
+                width: outline,
+                height: outline,
+                boxShadow: "0 0 0 1px var(--background), 0 0 0 2px var(--text)",
+              }}
+              aria-hidden
+            />
+          )}
         </div>
-        <Popover.Root open={hover !== null} onOpenChange={(open) => !open && setHover(null)}>
-          <Popover.Anchor virtualRef={anchor} />
-          <Popover.Portal>
-            <Popover.Content
-              side="top"
-              sideOffset={6}
-              collisionPadding={20}
-              aria-label={hover ? text.matrixCell(guess, answer, marks) : undefined}
-              className={`${CARD} pointer-events-none`}
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onCloseAutoFocus={(e) => e.preventDefault()}
-            >
-              {hover && <CellCard guess={guess} answer={answer} marks={marks} lang={lang} />}
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
       </div>
+      <Popover.Root open={hover !== null} onOpenChange={(open) => !open && setHover(null)}>
+        <Popover.Anchor virtualRef={anchor} />
+        <Popover.Portal>
+          <Popover.Content
+            side="top"
+            sideOffset={6}
+            collisionPadding={20}
+            aria-label={hover ? text.matrixCell(guess, answer, marks) : undefined}
+            className={`${CARD} pointer-events-none`}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            {hover && <CellCard guess={guess} answer={answer} marks={marks} lang={lang} />}
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </div>
   );
 }
@@ -615,9 +829,31 @@ function CellCard({ guess, answer, marks, lang }: { guess: string; answer: strin
   );
 }
 
-/** The scale as a bar in the same theme roles, with three Feedbacks as Tiles under it: all Absent, all Present, the Win. */
-function Legend({ lang }: { lang: Language }) {
+/**
+ * The legend for the view shown. The Feedback view: the scale as a bar in the same theme roles, with three Feedbacks as
+ * Tiles under it (all Absent, all Present, the Win). The Candidate view: a swatch for a Candidate's column and one for
+ * a column no longer a Candidate, in the same theme roles as the grid.
+ */
+function Legend({ mode, lang }: { mode: Mode; lang: Language }) {
   const text = pageText(lang);
+  if (mode === "candidates") {
+    return (
+      <figure className="grid gap-2" aria-label={text.matrixCandidateLegend}>
+        <figcaption className="text-xs text-meta">{text.matrixCandidateLegend}</figcaption>
+        <ul className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-meta">
+          {[
+            [CANDIDATE_ROLES[0], text.matrixLegendCandidate],
+            [CANDIDATE_ROLES[1], text.matrixLegendGone],
+          ].map(([role, name]) => (
+            <li key={role} className="flex items-center gap-2">
+              <span className="size-3 rounded-xs" style={{ background: `var(${role})` }} aria-hidden />
+              {name}
+            </li>
+          ))}
+        </ul>
+      </figure>
+    );
+  }
   return (
     <figure className="grid gap-2" aria-label={text.matrixLegend}>
       <figcaption className="text-xs text-meta">{text.matrixLegend}</figcaption>

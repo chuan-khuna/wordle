@@ -1,6 +1,8 @@
 /* Generated from app/wordle-gpui/src/theme/*.rs: the same ten palettes and role names.
    A theme is the [data-theme] attribute on <html>; Paint roles (correct, present, absent,
-   absent-key) are a fill plus --on-<role>, the colour of the letter drawn on it. */
+   absent-key) are a fill plus --on-<role>, the colour of the letter drawn on it.
+   --candidate is web-only (the gpui app has no such role): the palette's blue, the Feedback
+   Matrix page's Candidate view. */
 
 [data-theme="rose-pine"] {
   color-scheme: dark;
@@ -17,6 +19,7 @@
   --error: #eb6f92;
   --success: #9ccfd8;
   --accent: #c4a7e7;
+  --candidate: #9ccfd8;
   --correct: #31748f;
   --on-correct: #e0def4;
   --present: #f6c177;
@@ -42,6 +45,7 @@
   --error: #f38ba8;
   --success: #94e2d5;
   --accent: #b4befe;
+  --candidate: #89b4fa;
   --correct: #a6e3a1;
   --on-correct: #1e1e2e;
   --present: #f9e2af;
@@ -67,6 +71,7 @@
   --error: #d14d41;
   --success: #879a39;
   --accent: #3aa99f;
+  --candidate: #4385be;
   --correct: #879a39;
   --on-correct: #100f0f;
   --present: #d0a215;
@@ -92,6 +97,7 @@
   --error: #f7768e;
   --success: #1abc9c;
   --accent: #bb9af7;
+  --candidate: #7aa2f7;
   --correct: #9ece6a;
   --on-correct: #16161e;
   --present: #e0af68;
@@ -117,6 +123,7 @@
   --error: #e67e80;
   --success: #83c092;
   --accent: #7fbbb3;
+  --candidate: #7fbbb3;
   --correct: #a7c080;
   --on-correct: #232a2e;
   --present: #dbbc7f;
@@ -142,6 +149,7 @@
   --error: #e46876;
   --success: #7aa89f;
   --accent: #957fb8;
+  --candidate: #7e9cd8;
   --correct: #98bb6c;
   --on-correct: #16161d;
   --present: #e6c384;
@@ -167,6 +175,7 @@
   --error: #bf616a;
   --success: #8fbcbb;
   --accent: #88c0d0;
+  --candidate: #81a1c1;
   --correct: #a3be8c;
   --on-correct: #2e3440;
   --present: #ebcb8b;
@@ -192,6 +201,7 @@
   --error: #b4637a;
   --success: #56949f;
   --accent: #907aa9;
+  --candidate: #286983;
   --correct: #286983;
   --on-correct: #faf4ed;
   --present: #ea9d34;
@@ -217,6 +227,7 @@
   --error: #d20f39;
   --success: #179299;
   --accent: #7287fd;
+  --candidate: #1e66f5;
   --correct: #40a02b;
   --on-correct: #eff1f5;
   --present: #df8e1d;
@@ -242,6 +253,7 @@
   --error: #af3029;
   --success: #66800b;
   --accent: #24837b;
+  --candidate: #205ea6;
   --correct: #66800b;
   --on-correct: #fffcf0;
   --present: #d0a215;

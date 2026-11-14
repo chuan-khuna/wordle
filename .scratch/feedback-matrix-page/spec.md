@@ -15,7 +15,9 @@ A new page under **Explore** in the sidebar, after Follow an Answer, in English 
 - **The grid**: the Answer × Answer Feedback Matrix drawn on a `<canvas>`, one cell per (Guess, Answer) pair.
   - x: every Answer List word (the Answer). y: every Answer List word (the Guess). Both axes in Answer List order (alphabetical), so the Win cells (Feedback Code 242) form the diagonal.
   - Each cell's colour is its Feedback Code, 0 to 242, on one sequential scale built from the theme's colours, so it reads in every theme, light and dark. A legend shows the scale with a few labelled Feedbacks as Tiles (`00000`, a middle code, `22222`).
-  - The whole grid fits the content width by default. Zoom buttons (fit, 2×, 4×, 8×) enlarge it inside a scrolling frame, so single cells can be picked out on a phone too.
+  - A Candidate view (a "Colour by" switch: Feedback or Candidates) drops the Feedback colours: each column still a Candidate is blue and the rest grey (at step 0 the whole grid is blue), both from the theme; the legend follows the view.
+  - a–z ticks on both axes: a tick where each first letter's words begin, its letter centred on that letter's span; crowded labels are dropped, the ticks stay. They follow the zoom and pan.
+  - The grid is a square that fits both the content width and the viewport height below the sticky Guess strip, so the whole grid is in view at once and nothing scrolls: no scrollbar in the frame, and the page never scrolls sideways. The wheel (desktop) or a pinch (phone) zooms around the pointer, a drag pans when zoomed in, and the view never shows past the grid's edges; fit is the smallest zoom. Reset and a double-click go back to fit; with the focus on the grid, `+` / `-` zoom and the arrow keys pan. Single cells can be picked out on a phone too.
   - Hovering (or tapping) a cell shows the Guess, the Answer and the Feedback as Tiles.
 - **Going dark, one Guess at a time**: the reader picks an Answer and a Strategy, and the Solver plays that Answer.
   - Inputs: the Answer (an Answer List word), the Strategy (the existing `StrategyPicker`) and the Opener (default: the Strategy's best, as on `/follow`).
@@ -25,7 +27,7 @@ A new page under **Explore** in the sidebar, after Follow an Answer, in English 
   - A strip of Guesses with their Feedback, like `/follow`'s, with Prev, Next and Play. Play steps through the Guesses on a timer, fading the columns out between steps, and stops at the Win.
   - The current Candidate Set size is shown beside the strip ("2,315 → 147 → 12 → 1").
 
-Every input is a URL param (`answer`, `pool`, `scope`, `by`, `opener`, `step`, `zoom`), so a view can be shared. Page text lives in the typed page text table for both languages.
+Every input is a URL param (`answer`, `pool`, `scope`, `by`, `opener`, `step`, `view`, `zoom`, `centre`), so a view can be shared. Page text lives in the typed page text table for both languages.
 
 ## User Stories
 
@@ -55,18 +57,23 @@ Every input is a URL param (`answer`, `pool`, `scope`, `by`, `opener`, `step`, `
 - **The Game**: one `GET /api/solve` call (with `opener` when given). The Candidate Set after each Guess is worked out on the frontend from the steps' Guesses and Feedback with the existing `/api/candidates` (one call per step, cached), since a Guess List Guess has no row in this matrix.
 - **New pure frontend module (matrix grid)**, tested on its own:
   - Feedback Code → colour index on the scale;
-  - pixel → (row, column) at a zoom level and back;
+  - the viewport (a zoom, 1 at fit, and the grid point at the frame's centre): zoom around a point, pan, clamping to the grid's edges and to the most zoom (a cell 40 px wide), the cells in view, and the `zoom` / `centre` URL params (the old stepped `zoom` values `fit`, `2`, `4`, `8` still read);
+  - pixel → (row, column) at any zoom and centre, and back;
+  - the a–z tick positions (the first index of each letter in the Answer List) and the ticks in view at a zoom and pan, with overlapping labels dropped;
+  - the Candidate view's one-row colours (blue to grey by each column's level);
   - the dimmed-column mask for a step from the Candidate Sets;
   - the Candidate Set sizes per step;
   - which Guesses have a row.
-- **Drawing**: an `ImageData` the size of the grid (one pixel per cell) is filled once from the bytes and the colour scale, then drawn scaled to the canvas with smoothing off. Dimming is a second layer (a mask image or per-column overlay), so a step change does not refill 5.4 million pixels. Theme changes refill the image.
+- **Drawing**: an `ImageData` the size of the grid (one pixel per cell) is filled once from the bytes and the colour scale; each draw copies only the cells in view onto a canvas the frame's size, scaled, with smoothing off. Dimming is a second layer (a one-pixel-per-column image drawn stretched over the grid), so a step change does not refill 5.4 million pixels. The Candidate view fills that same layer with opaque blue and grey and skips the grid image, so switching views never refills the grid image. Theme changes refill both.
+- **Theme**: the Candidate view's blue is a new web-only theme role, `--candidate` (each palette's own blue), added to every block of `themes.css`; grey is `--muted`.
+- **Fit and gestures**: the frame's side is the smaller of the content width and the viewport height less the sticky strip, the toolbar and the x axis; the frame has `overflow: hidden`. The wheel listener is not passive, so it zooms instead of scrolling the page (zooming out at fit still scrolls the page). `touch-action` is `pan-y` at fit and `none` when zoomed. The zoom and centre are written to the URL once they settle, not on every frame.
 - **Page**: a view component taking the language, rendered by both route groups, like `FollowView`. Added to `EXPLORE_PAGES` with its text keys.
 - **Docs**: `web-frontend.md`, `web-backend.md` and the `INDEX.md` summaries are updated with each change.
 
 ## Testing Decisions
 
 - **Backend, through the HTTP endpoint**: the matrix endpoint returns 2,315² bytes; cell `[g, a]` equals the Feedback of Answer List words g and a (spot checks, including a repeated-letter pair); every diagonal cell is 242; 503 when the matrix is missing.
-- **Frontend, the pure matrix-grid module** with `bun test`: colour indices at 0 and 242, pixel ↔ cell at each zoom including the edges, the dimmed mask from a recorded solve response, sizes per step, Guesses with no row.
+- **Frontend, the pure matrix-grid module** with `bun test`: colour indices at 0 and 242, pixel ↔ cell at any zoom and centre including the edges, zoom around a point, pan and clamping, the a–z ticks (letters with very few words, crowded labels), the URL params, the dimmed mask from a recorded solve response, sizes per step, Guesses with no row.
 - No unit tests for React components, as elsewhere. `bun run screenshot` gets the page (top of page, light and dark, phone and desktop). `page-text.test.ts` and `paths.test.ts` cover the new text and paths.
 
 ## Out of Scope
@@ -81,4 +88,4 @@ Every input is a URL param (`answer`, `pool`, `scope`, `by`, `opener`, `step`, `
 ## Further Notes
 
 - 5.4 MB raw; the bytes are highly repetitive (most cells are low codes), so gzip should cut them a lot. Measure before deciding whether a smaller encoding is needed.
-- At fit zoom one cell is less than a pixel on most screens, so hover picks the cell under the pointer at the grid's resolution; the zoom levels exist so a reader can be precise.
+- At fit zoom one cell is less than a pixel on most screens, so hover picks the cell under the pointer at the grid's resolution; zooming in is there so a reader can be precise.

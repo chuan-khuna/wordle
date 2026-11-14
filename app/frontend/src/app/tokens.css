@@ -17,6 +17,7 @@
   --color-error: var(--error);
   --color-success: var(--success);
   --color-accent: var(--accent);
+  --color-candidate: var(--candidate);
   --color-correct: var(--correct);
   --color-on-correct: var(--on-correct);
   --color-present: var(--present);

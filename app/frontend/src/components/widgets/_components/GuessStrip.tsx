@@ -15,7 +15,8 @@ import { Tile } from "./Tile";
  * step in words, live) and `children` (the page's own controls or notes). Steps run from `first` (1 on Follow an Answer;
  * 0, before any Guess, on the Feedback Matrix page) to the Game's last Guess. The current Guess is marked
  * (`aria-current="step"`); a Guess is a button that calls `go` with its number. With `play` (opt-in; the Feedback Matrix
- * page) a Play button follows Next, showing Pause while `play.playing`; it calls `play.toggle`.
+ * page) a Play button follows Next, showing Pause while `play.playing`; it calls `play.toggle`. `id` (optional) names the
+ * strip's element, so a page can measure it (the Feedback Matrix page fits its grid in the viewport below it).
  */
 export function GuessStrip({
   data,
@@ -26,6 +27,7 @@ export function GuessStrip({
   status,
   play,
   children,
+  id,
 }: {
   data: SolveResponse;
   step: number;
@@ -35,11 +37,12 @@ export function GuessStrip({
   status: ReactNode;
   play?: { playing: boolean; toggle: () => void };
   children?: ReactNode;
+  id?: string;
 }) {
   const text = pageText(lang);
   const total = data.guesses;
   return (
-    <ControlPanel plain className="sticky top-0 z-10 -mx-gutter border-b border-rule bg-background px-gutter py-2 sm:-mx-gutter-wide sm:px-gutter-wide">
+    <ControlPanel plain id={id} className="sticky top-0 z-10 -mx-gutter border-b border-rule bg-background px-gutter py-2 sm:-mx-gutter-wide sm:px-gutter-wide">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-2">
           <Button disabled={step <= first} onClick={() => go(step - 1)} aria-label={text.prevGuess}>

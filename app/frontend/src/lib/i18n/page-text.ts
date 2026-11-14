@@ -120,13 +120,22 @@ export type PageText = {
   matrixLabel: (count: string) => string;
   matrixLoading: string;
   matrixWrongSize: string;
-  /** The legend's caption (its Tiles are Feedbacks). */
+  /** The Feedback view legend's caption (its Tiles are Feedbacks). */
   matrixLegend: string;
-  /** The zoom buttons' label and the name of the level that fits the whole grid (the others are "2×", "4×", "8×"). */
-  matrixZoom: string;
-  matrixZoomFit: string;
-  /** The zoomed frame's accessible name (it scrolls, and takes the focus so the arrow keys scroll it). */
-  matrixScroll: string;
+  /** The Feedback view / Candidate view switch: its label and the two views' names. */
+  matrixView: string;
+  matrixViewFeedback: string;
+  matrixViewCandidates: string;
+  /** The Candidate view legend: its caption and its two swatches (a Candidate, an Answer no longer one). */
+  matrixCandidateLegend: string;
+  matrixLegendCandidate: string;
+  matrixLegendGone: string;
+  /** The zoom: the Reset button (back to fit), the zoom shown beside it, and the short how-to beside that. */
+  matrixReset: string;
+  matrixZoomLevel: (zoom: string) => string;
+  matrixZoomHint: string;
+  /** The grid's accessible name as a focusable region, with its keys (`+` / `-` zoom, the arrow keys pan, `0` fits). */
+  matrixPan: string;
   /** The hover card: the Guess row's label (the Answer's is `answerLabel`) and the card's accessible name. */
   matrixGuess: string;
   matrixCell: (guess: string, answer: string, marks: string) => string;
@@ -282,16 +291,23 @@ export const EN: PageText = {
   pathWin: (n, g) => `Guess ${n}: ${g.toUpperCase()}, Win`,
   matrix: "Feedback Matrix",
   matrixIntro: "The Solver never works a Feedback out during a Game: it looks it up in a Feedback Matrix. This is the Answer List one, every Guess against every Answer, as one picture.",
-  matrixHelp: "Each row is a Guess and each column an Answer, both in Answer List order (alphabetical), so the Wins form the diagonal. A cell's colour is its Feedback Code: the more Correct and Present letters, the brighter. Pick an Answer and a Strategy, then step through the Solver's Game with Prev and Next, or press Play to watch it play out: after each Guess, the columns of the Answers that are no longer Candidates go dark, the rows of the Guesses played are outlined, and the marker above the grid follows the Answer's column.",
+  matrixHelp: "Each row is a Guess and each column an Answer, both in Answer List order (alphabetical), so the Wins form the diagonal. A cell's colour is its Feedback Code: the more Correct and Present letters, the brighter. Pick an Answer and a Strategy, then step through the Solver's Game with Prev and Next, or press Play to watch it play out: after each Guess, the columns of the Answers that are no longer Candidates go dark, the rows of the Guesses played are outlined, and the marker above the grid follows the Answer's column. The letters on the axes mark where the words of each first letter begin. Colour by Candidates to see only which Answers are still Candidates (blue) and which are not (grey). Scroll or pinch to zoom in, and drag to move around.",
   matrixFigure: "Answer × Answer Feedback Matrix",
   matrixAxes: (first, last, count) => `Columns: the Answer. Rows: the Guess. Both run through the ${count} Answer List words, ${first.toUpperCase()} to ${last.toUpperCase()}.`,
   matrixLabel: (count) => `The Feedback Matrix: ${count} Guesses (rows) by ${count} Answers (columns), each cell coloured by its Feedback Code`,
   matrixLoading: "Loading the Feedback Matrix…",
   matrixWrongSize: "The Feedback Matrix does not match the Answer List. Run `just precompute feedback` again.",
   matrixLegend: "Feedback Code, from all Absent (0) to the Win (242)",
-  matrixZoom: "Zoom",
-  matrixZoomFit: "Fit",
-  matrixScroll: "The Feedback Matrix, zoomed in: scroll to move around it",
+  matrixView: "Colour by",
+  matrixViewFeedback: "Feedback",
+  matrixViewCandidates: "Candidates",
+  matrixCandidateLegend: "Each column: its Answer is still a Candidate, or no longer one",
+  matrixLegendCandidate: "Candidate",
+  matrixLegendGone: "No longer a Candidate",
+  matrixReset: "Reset zoom",
+  matrixZoomLevel: (z) => `Zoom ${z}×`,
+  matrixZoomHint: "Scroll or pinch to zoom, drag to move, double-click to fit.",
+  matrixPan: "The Feedback Matrix. Scroll or pinch to zoom and drag to move; with the focus here, + and − zoom, the arrow keys move and 0 fits the whole grid.",
   matrixGuess: "Guess",
   matrixCell: (g, a, m) => `Guess ${g.toUpperCase()}, Answer ${a.toUpperCase()}, Feedback ${m}`,
   matrixStart: "Before Guess 1",
@@ -435,16 +451,23 @@ export const TH: PageText = {
   pathWin: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} Win`,
   matrix: "Feedback Matrix",
   matrixIntro: "ระหว่าง Game นั้น Solver ไม่คำนวณ Feedback เลย แต่เปิดหาใน Feedback Matrix นี่คือตารางของ Answer List คือทุก Guess เทียบกับทุก Answer แสดงเป็นภาพเดียว",
-  matrixHelp: "แต่ละแถวคือ Guess และแต่ละคอลัมน์คือ Answer ทั้งสองแกนเรียงตาม Answer List (ตามตัวอักษร) ช่องที่เป็น Win จึงเรียงเป็นเส้นทแยง สีของช่องคือ Feedback Code ยิ่งมีตัวอักษร Correct และ Present มาก สียิ่งสว่าง เลือก Answer และ Strategy แล้วกด Prev และ Next เพื่อไล่ดูเกมของ Solver หรือกดปุ่มเล่นเพื่อดูเกมเล่นไปเอง หลังแต่ละ Guess คอลัมน์ของ Answer ที่ไม่ใช่ Candidate แล้วจะมืดลง แถวของ Guess ที่เล่นไปแล้วจะมีกรอบ และเครื่องหมายเหนือภาพจะชี้คอลัมน์ของ Answer",
+  matrixHelp: "แต่ละแถวคือ Guess และแต่ละคอลัมน์คือ Answer ทั้งสองแกนเรียงตาม Answer List (ตามตัวอักษร) ช่องที่เป็น Win จึงเรียงเป็นเส้นทแยง สีของช่องคือ Feedback Code ยิ่งมีตัวอักษร Correct และ Present มาก สียิ่งสว่าง เลือก Answer และ Strategy แล้วกด Prev และ Next เพื่อไล่ดูเกมของ Solver หรือกดปุ่มเล่นเพื่อดูเกมเล่นไปเอง หลังแต่ละ Guess คอลัมน์ของ Answer ที่ไม่ใช่ Candidate แล้วจะมืดลง แถวของ Guess ที่เล่นไปแล้วจะมีกรอบ และเครื่องหมายเหนือภาพจะชี้คอลัมน์ของ Answer ตัวอักษรบนแกนบอกว่าคำที่ขึ้นต้นด้วยตัวอักษรนั้นเริ่มตรงไหน เลือกระบายสีตาม Candidate เพื่อดูแค่ว่า Answer ไหนยังเป็น Candidate (สีน้ำเงิน) และไหนไม่เป็นแล้ว (สีเทา) เลื่อนล้อเมาส์หรือถ่างสองนิ้วเพื่อซูมเข้า แล้วลากเพื่อเลื่อนไปดูส่วนอื่น",
   matrixFigure: "Feedback Matrix แบบ Answer × Answer",
   matrixAxes: (first, last, count) => `คอลัมน์คือ Answer แถวคือ Guess ทั้งสองแกนไล่ตามคำใน Answer List ทั้ง ${count} คำ ตั้งแต่ ${first.toUpperCase()} ถึง ${last.toUpperCase()}`,
   matrixLabel: (count) => `Feedback Matrix: Guess ${count} แถว คูณ Answer ${count} คอลัมน์ แต่ละช่องมีสีตาม Feedback Code`,
   matrixLoading: "กำลังโหลด Feedback Matrix…",
   matrixWrongSize: "Feedback Matrix ไม่ตรงกับ Answer List ให้รัน `just precompute feedback` อีกครั้ง",
   matrixLegend: "Feedback Code ตั้งแต่ Absent ทั้งหมด (0) ถึง Win (242)",
-  matrixZoom: "ซูม",
-  matrixZoomFit: "พอดีกรอบ",
-  matrixScroll: "Feedback Matrix แบบซูมเข้า เลื่อนเพื่อดูส่วนอื่น",
+  matrixView: "ระบายสีตาม",
+  matrixViewFeedback: "Feedback",
+  matrixViewCandidates: "Candidate",
+  matrixCandidateLegend: "แต่ละคอลัมน์: Answer นั้นยังเป็น Candidate อยู่ หรือไม่เป็นแล้ว",
+  matrixLegendCandidate: "ยังเป็น Candidate",
+  matrixLegendGone: "ไม่เป็น Candidate แล้ว",
+  matrixReset: "รีเซ็ตการซูม",
+  matrixZoomLevel: (z) => `ซูม ${z}×`,
+  matrixZoomHint: "เลื่อนล้อเมาส์หรือถ่างสองนิ้วเพื่อซูม ลากเพื่อเลื่อน ดับเบิลคลิกเพื่อดูทั้งภาพ",
+  matrixPan: "Feedback Matrix เลื่อนล้อเมาส์หรือถ่างสองนิ้วเพื่อซูม ลากเพื่อเลื่อน เมื่อโฟกัสอยู่ที่ภาพ กด + และ − เพื่อซูม ปุ่มลูกศรเพื่อเลื่อน และ 0 เพื่อดูทั้งภาพ",
   matrixGuess: "Guess",
   matrixCell: (g, a, m) => `Guess ${g.toUpperCase()} กับ Answer ${a.toUpperCase()} ได้ Feedback ${m}`,
   matrixStart: "ก่อน Guess แรก",

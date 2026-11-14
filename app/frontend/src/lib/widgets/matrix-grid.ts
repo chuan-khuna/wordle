@@ -1,7 +1,8 @@
 /**
  * The Feedback Matrix page's grid, as pure functions: the colour scale a Feedback Code is drawn in, and the
- * one-pixel-per-cell image the canvas scales up. The page draws the Answer × Answer Feedback Matrix, row by row:
- * rows Guesses, columns Answers, both in Answer List order.
+ * one-pixel-per-cell image the canvas scales up, the viewport (zoom and centre) with its pixel ↔ cell maths, the a–z
+ * ticks, and the Game on the grid. The page draws the Answer × Answer Feedback Matrix, row by row: rows Guesses,
+ * columns Answers, both in Answer List order.
  */
 
 /** The highest Feedback Code: every letter Correct, a Win. */
@@ -75,44 +76,172 @@ export function fillGrid(cells: Uint8Array, scale: Uint8ClampedArray, out: Uint8
   for (let i = 0; i < cells.length; i++) target[i] = words[cells[i]];
 }
 
-/** The zoom levels, as the `zoom` URL param writes them: the whole grid fits the frame, or 2, 4 or 8 times that. */
-export const ZOOMS = ["fit", "2", "4", "8"] as const;
-export type Zoom = (typeof ZOOMS)[number];
+const clamp = (n: number, lo: number, hi: number) => Math.min(Math.max(n, lo), hi);
 
-/** A `zoom` URL param as a zoom level: anything that is not one is `fit`. */
-export function parseZoom(text: string | null | undefined): Zoom {
-  return (ZOOMS as readonly string[]).includes(text ?? "") ? (text as Zoom) : "fit";
+/**
+ * What part of the grid the square frame shows: `zoom`, how many times the fitted size the grid is drawn (1 fits the
+ * whole grid in the frame, and is the least), and the grid point at the frame's centre, `x` across the columns and `y`
+ * down the rows, as fractions of the grid's side (0 to 1).
+ */
+export type Viewport = { zoom: number; x: number; y: number };
+
+/** The whole grid in the frame. */
+export const FIT: Viewport = { zoom: 1, x: 0.5, y: 0.5 };
+
+/** How big a cell may grow, in CSS pixels: the most zoom is where a cell is this wide. */
+export const MAX_CELL_PX = 40;
+
+/** The most zoom for a grid of `side` × `side` cells fitted to a frame `fit` CSS pixels a side: a cell `MAX_CELL_PX` wide (never under 1). */
+export function maxZoom(fit: number, side: number): number {
+  if (!(fit > 0) || side <= 0) return 1;
+  return Math.max(1, (MAX_CELL_PX * side) / fit);
 }
 
-/** How many times the fitted width a zoom level draws the grid. */
-export function zoomFactor(zoom: Zoom): number {
-  return zoom === "fit" ? 1 : Number(zoom);
+/**
+ * A viewport the frame can show: the zoom between 1 (fit) and `max`, and the centre kept far enough in that the frame
+ * never shows past the grid's edges (at fit, the grid's middle). A value that is not a number reads as fit's.
+ */
+export function clampViewport(view: Viewport, max: number): Viewport {
+  const zoom = clamp(Number.isFinite(view.zoom) ? view.zoom : 1, 1, Math.max(1, max));
+  const half = 0.5 / zoom;
+  const at = (v: number) => clamp(Number.isFinite(v) ? v : 0.5, half, 1 - half);
+  return { zoom, x: at(view.x), y: at(view.y) };
 }
 
-/** The grid's side in CSS pixels at a zoom level, when it fits a frame `fitWidth` wide. */
-export function gridSize(fitWidth: number, zoom: Zoom): number {
-  return fitWidth * zoomFactor(zoom);
+/** Where the grid is drawn in a square frame `fit` CSS pixels a side: its top-left corner, from the frame's, and its side. */
+export function gridBox(view: Viewport, fit: number): { left: number; top: number; size: number } {
+  const size = fit * view.zoom;
+  return { left: fit / 2 - view.x * size, top: fit / 2 - view.y * size, size };
+}
+
+/**
+ * Zoom by `factor` (above 1 in, below 1 out) around the point (`px`, `py`) of the frame, in CSS pixels from its top-left
+ * corner: the grid point under it stays under it, unless that would show past the grid's edges (`clampViewport`).
+ */
+export function zoomAround(view: Viewport, factor: number, px: number, py: number, fit: number, max: number): Viewport {
+  if (!(fit > 0)) return view;
+  const before = gridBox(view, fit);
+  const gx = (px - before.left) / before.size;
+  const gy = (py - before.top) / before.size;
+  const zoom = clamp(view.zoom * factor, 1, Math.max(1, max));
+  const size = fit * zoom;
+  return clampViewport({ zoom, x: gx + (fit / 2 - px) / size, y: gy + (fit / 2 - py) / size }, max);
+}
+
+/** Drag the grid by (`dx`, `dy`) CSS pixels (right and down positive), clamped to the grid's edges. */
+export function panBy(view: Viewport, dx: number, dy: number, fit: number, max: number): Viewport {
+  if (!(fit > 0)) return view;
+  const size = fit * view.zoom;
+  return clampViewport({ zoom: view.zoom, x: view.x - dx / size, y: view.y - dy / size }, max);
 }
 
 /** A cell of the grid: its row (the Guess) and its column (the Answer), both indices into the Answer List. */
 export type Cell = { row: number; col: number };
 
 /**
- * The cell under the point (`x`, `y`) on the grid, in CSS pixels from the grid's top-left corner, when the grid of
- * `side` × `side` cells fits a frame `fitWidth` wide and is drawn at `zoom`; null off the grid. A cell covers
- * [start, end) on each axis, so a point on the line between two cells is in the later one.
+ * The cell under the point (`px`, `py`) of the frame, in CSS pixels from its top-left corner, when the grid of
+ * `side` × `side` cells is drawn at `view` in a frame `fit` pixels a side; null outside the frame or off the grid. A cell
+ * covers [start, end) on each axis, so a point on the line between two cells is in the later one.
  */
-export function cellAt(x: number, y: number, fitWidth: number, zoom: Zoom, side: number): Cell | null {
-  const size = gridSize(fitWidth, zoom);
-  if (side <= 0 || size <= 0 || !(x >= 0 && y >= 0 && x < size && y < size)) return null;
+export function cellAt(px: number, py: number, view: Viewport, fit: number, side: number): Cell | null {
+  if (side <= 0 || !(fit > 0) || !(px >= 0 && py >= 0 && px < fit && py < fit)) return null;
+  const { left, top, size } = gridBox(view, fit);
+  const x = px - left;
+  const y = py - top;
+  if (!(x >= 0 && y >= 0 && x < size && y < size)) return null;
   const index = (p: number) => Math.min(side - 1, Math.floor((p * side) / size));
   return { row: index(y), col: index(x) };
 }
 
-/** Where a cell is drawn: its top-left corner and side in CSS pixels from the grid's top-left corner, as for `cellAt`. */
-export function cellRect(cell: Cell, fitWidth: number, zoom: Zoom, side: number): { x: number; y: number; size: number } {
-  const step = gridSize(fitWidth, zoom) / side;
-  return { x: cell.col * step, y: cell.row * step, size: step };
+/** Where a cell is drawn: its top-left corner and side in CSS pixels from the frame's top-left corner, as for `cellAt`. */
+export function cellRect(cell: Cell, view: Viewport, fit: number, side: number): { x: number; y: number; size: number } {
+  const { left, top, size } = gridBox(view, fit);
+  const step = size / side;
+  return { x: left + cell.col * step, y: top + cell.row * step, size: step };
+}
+
+/**
+ * The cells any part of which is in the frame: columns [`col0`, `col1`) and rows [`row0`, `row1`). The canvas draws only
+ * these from the one-pixel-per-cell image, so a deep zoom never draws a grid tens of thousands of pixels wide.
+ */
+export function visibleCells(view: Viewport, fit: number, side: number): { col0: number; col1: number; row0: number; row1: number } {
+  const { left, top, size } = gridBox(view, fit);
+  if (!(size > 0) || side <= 0) return { col0: 0, col1: 0, row0: 0, row1: 0 };
+  const first = (offset: number) => clamp(Math.floor((-offset * side) / size), 0, side);
+  const end = (offset: number) => clamp(Math.ceil(((fit - offset) * side) / size), 0, side);
+  return { col0: first(left), col1: end(left), row0: first(top), row1: end(top) };
+}
+
+/** The URL params' values at fit, left out of the URL: `zoom` 1 and `centre` the grid's middle. */
+export const ZOOM_PARAM_DEFAULT = "1";
+export const CENTRE_PARAM_DEFAULT = "0.5,0.5";
+
+/**
+ * A viewport from the `zoom` and `centre` URL params: `zoom` a number, 1 or more (1 is fit; the old stepped values
+ * `fit`, `2`, `4` and `8` read as 1, 2, 4 and 8), `centre` two fractions "x,y". Anything else reads as fit's. Not
+ * clamped: the most zoom depends on the frame.
+ */
+export function parseViewport(zoom: string | null | undefined, centre: string | null | undefined): Viewport {
+  const z = zoom === "fit" ? 1 : Number(zoom ?? "");
+  const parts = (centre ?? "").split(",").map((p) => (p.trim() === "" ? Number.NaN : Number(p)));
+  const ok = parts.length === 2 && parts.every((v) => Number.isFinite(v) && v >= 0 && v <= 1);
+  return { zoom: Number.isFinite(z) && z >= 1 ? z : 1, x: ok ? parts[0] : 0.5, y: ok ? parts[1] : 0.5 };
+}
+
+/** A viewport as the `zoom` (two decimals) and `centre` (five, a fraction of a cell at the most zoom) URL params. */
+export function viewportParams(view: Viewport): { zoom: string; centre: string } {
+  const round = (v: number, places: number) => String(Number(v.toFixed(places)));
+  return { zoom: round(view.zoom, 2), centre: `${round(view.x, 5)},${round(view.y, 5)}` };
+}
+
+/** The words of one first letter in the Answer List (sorted): indices [`start`, `end`). */
+export type LetterSpan = { letter: string; start: number; end: number };
+
+/** The Answer List's first letters, in order, each with its span; a letter no Answer starts with (x) has none. */
+export function letterSpans(answers: readonly string[]): LetterSpan[] {
+  const spans: LetterSpan[] = [];
+  answers.forEach((word, i) => {
+    const last = spans[spans.length - 1];
+    if (last && last.letter === word[0]) last.end = i + 1;
+    else spans.push({ letter: word[0], start: i, end: i + 1 });
+  });
+  return spans;
+}
+
+/**
+ * A tick on an axis: `at`, where its letter's first word starts (null when that is outside the frame but some of the
+ * letter's words are in it), and `label`, where its letter is written (null when the label is dropped), both in CSS
+ * pixels along the axis from the frame's edge.
+ */
+export type Tick = { letter: string; at: number | null; label: number | null };
+
+/**
+ * The ticks on one axis `length` CSS pixels long, with the grid drawn from `offset` at side `size` (`gridBox`'s left or
+ * top, and size) over `side` cells. A letter shows when any of its words is in view. Its label is centred on the part
+ * of its span in view (kept `gap` / 2 from the axis's ends), and a label closer than `gap` to one already placed is
+ * dropped, the letters with the most of their span in view placed first; every tick line stays.
+ */
+export function axisTicks(spans: readonly LetterSpan[], offset: number, size: number, side: number, length: number, gap: number): Tick[] {
+  if (side <= 0 || !(size > 0)) return [];
+  const px = (index: number) => offset + (index * size) / side;
+  const shown = spans.flatMap((span) => {
+    const a = px(span.start);
+    const b = px(span.end);
+    if (b <= 0 || a >= length) return [];
+    const lo = Math.max(a, 0);
+    const hi = Math.min(b, length);
+    const centre = length >= gap ? clamp((lo + hi) / 2, gap / 2, length - gap / 2) : length / 2;
+    return [{ letter: span.letter, at: a >= 0 ? a : null, centre, width: hi - lo }];
+  });
+  const placed: number[] = [];
+  const keep = new Set<string>();
+  for (const t of [...shown].sort((p, q) => q.width - p.width)) {
+    if (placed.every((c) => Math.abs(c - t.centre) >= gap)) {
+      placed.push(t.centre);
+      keep.add(t.letter);
+    }
+  }
+  return shown.map((t) => ({ letter: t.letter, at: t.at, label: keep.has(t.letter) ? t.centre : null }));
 }
 
 /** The Game the page plays: the Solver's Guesses, each with its Feedback, as `GET /api/solve` returns them. */
@@ -194,6 +323,23 @@ export function fillDimRow(mask: ArrayLike<number>, veil: Rgb, out: Uint8Clamped
     out[i * 4 + 1] = veil[1];
     out[i * 4 + 2] = veil[2];
     out[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, mask[i])) * alpha * 255);
+  }
+}
+
+/** The Candidate view's theme roles: a Candidate's column, and a column no longer a Candidate. */
+export const CANDIDATE_ROLES = ["--candidate", "--muted"] as const;
+
+/**
+ * Fill `out` (RGBA, one pixel per column, as a one-row `ImageData`'s `data`) with the Candidate view: each column in
+ * `lit` (a Candidate) at level 0, in `gone` (no longer one) at level 1, mixed between mid-fade. Every pixel is opaque,
+ * so the page draws this row stretched over the whole grid in place of the Feedback colours.
+ */
+export function fillCandidateRow(levels: ArrayLike<number>, lit: Rgb, gone: Rgb, out: Uint8ClampedArray): void {
+  if (out.length !== levels.length * 4) throw new Error(`the row has ${out.length / 4} pixels for ${levels.length} columns`);
+  for (let i = 0; i < levels.length; i++) {
+    const t = Math.min(1, Math.max(0, levels[i]));
+    for (let c = 0; c < 3; c++) out[i * 4 + c] = Math.round(lit[c] + (gone[c] - lit[c]) * t);
+    out[i * 4 + 3] = 255;
   }
 }
 

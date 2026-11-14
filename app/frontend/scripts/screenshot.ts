@@ -43,12 +43,12 @@ const { values, positionals } = parseArgs({
 /** A WidgetFrame: every Widget and every <Boards> is a labelled section whose first child is its eyebrow title. */
 const FIGURE = "section[aria-label]:has(> h3.eyebrow)";
 
-/** The home page, every Article, the Opener Distribution and Opener Split pages (the latter also with `?compare=fuzzy`), the Follow an Answer page at step 1 and step 4 and as the Answer's path, the Feedback Matrix page (whole and mid-Game, after Guess 2), then the Thai pages (`/th`, `/th/openers`, `/th/opener-split` and its compare view, `/th/follow`, `/th/matrix` and every Article that has a Translation). */
+/** The home page, every Article, the Opener Distribution and Opener Split pages (the latter also with `?compare=fuzzy`), the Follow an Answer page at step 1 and step 4 and as the Answer's path, the Feedback Matrix page (whole, mid-Game after Guess 2, and the Candidate view after Guess 2), then the Thai pages (`/th`, `/th/openers`, `/th/opener-split` and its compare view, `/th/follow`, `/th/matrix` and every Article that has a Translation). */
 function allPaths(): string[] {
   const files = readdirSync(path.join(root, "content/articles")).filter((f) => f.endsWith(".mdx"));
   const thaiDir = path.join(root, "content/th/articles");
   const thai = existsSync(thaiDir) ? readdirSync(thaiDir).filter((f) => f.endsWith(".mdx")).sort().map((f) => `/th/articles/${f.replace(/^\d{2}-/, "").replace(/\.mdx$/, "")}`) : [];
-  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/opener-split", "/opener-split?compare=fuzzy", "/follow?answer=watch&step=1", "/follow?answer=watch&step=4", "/follow?answer=watch&view=path", "/matrix", "/matrix?answer=watch&step=2", "/th", ...thai, "/th/openers", "/th/opener-split", "/th/opener-split?compare=fuzzy", "/th/follow?answer=watch&step=2", "/th/matrix"];
+  return ["/", ...parseArticleFiles(files).map((a) => `/articles/${a.slug}`), "/openers", "/opener-split", "/opener-split?compare=fuzzy", "/follow?answer=watch&step=1", "/follow?answer=watch&step=4", "/follow?answer=watch&view=path", "/matrix", "/matrix?answer=watch&step=2", "/matrix?answer=watch&step=2&view=candidates", "/th", ...thai, "/th/openers", "/th/opener-split", "/th/opener-split?compare=fuzzy", "/th/follow?answer=watch&step=2", "/th/matrix"];
 }
 
 /** "Feedback Split explorer" -> "feedback-split-explorer". */
