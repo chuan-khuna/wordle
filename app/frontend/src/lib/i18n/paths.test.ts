@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { articleLink, articlePath, followPath, homePath, languageOf, openerSplitPath, openersPath, pathIn } from "@/lib/i18n/paths";
+import { articleLink, articlePath, followPath, homePath, languageOf, matrixPath, openerSplitPath, openersPath, pathIn } from "@/lib/i18n/paths";
 
 test("pathIn swaps English paths to Thai", () => {
   expect(pathIn("/", "th")).toBe("/th");
@@ -47,6 +47,8 @@ test("the named helpers build each page's path, English by default", () => {
   expect(followPath("th")).toBe("/th/follow");
   expect(followPath("en", { answer: "watch", opener: "salet" })).toBe("/follow?answer=watch&opener=salet");
   expect(followPath("th", { answer: "watch", opener: "salet" })).toBe("/th/follow?answer=watch&opener=salet");
+  expect(matrixPath()).toBe("/matrix");
+  expect(matrixPath("th")).toBe("/th/matrix");
 });
 
 test("articleLink points an untranslated Article at its English page", () => {

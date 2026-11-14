@@ -1,4 +1,4 @@
-"""The FastAPI app (`uvicorn wordle_backend.main:app`): Feedback, Candidates, Feedback Splits, Suggestions, step-through Games, the Benchmark, Openers and Guess Counts.
+"""The FastAPI app (`uvicorn wordle_backend.main:app`): Feedback, Candidates, Feedback Splits, Suggestions, step-through Games, the Benchmark, Openers, Guess Counts and the Feedback Matrix.
 
 The endpoints live in `routers/`, one module per area. Bad input gets HTTP 400
 and `{"detail": "<message>"}`, never FastAPI's default 422.
@@ -22,7 +22,7 @@ from wordle.solver import benchmark, guess_count_matrix
 from wordle.solver.matrix import ANSWERS_FILE, DEFAULT_DIR, GUESSES_FILE
 from wordle_backend.common import BadRequest, NotPrecomputed
 from wordle_backend.routers import benchmark as benchmark_router
-from wordle_backend.routers import candidates, feedback, guess_counts, solve, suggestions
+from wordle_backend.routers import candidates, feedback, feedback_matrix, guess_counts, solve, suggestions
 from wordle_backend.solver import WebSolver
 
 # Variables already set in the environment win over the file.
@@ -44,6 +44,9 @@ async def lifespan(app: FastAPI):
             "Run `just precompute feedback` first."
         )
     app.state.solver = WebSolver.load(DEFAULT_DIR)
+    # /api/feedback-matrix serves this file's cells, read and gzipped on its first request.
+    app.state.feedback_matrix_file = DEFAULT_DIR / ANSWERS_FILE
+    app.state.feedback_matrix = None
     # The Benchmark files are optional: without them only those two endpoints answer 503.
     app.state.benchmark, app.state.openers = benchmark.load()
     # So is the Guess Count Matrix summary: without it only /api/guess-counts answers 503.
@@ -57,7 +60,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)  # /api/guess-counts is ab
 if origins := cors_origins(os.environ.get("CORS_ORIGINS", "")):
     app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 
-for router_module in (feedback, candidates, suggestions, solve, benchmark_router, guess_counts):
+for router_module in (feedback, candidates, suggestions, solve, benchmark_router, guess_counts, feedback_matrix):
     app.include_router(router_module.router)
 
 

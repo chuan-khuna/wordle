@@ -107,6 +107,18 @@ export type PageText = {
   pathGuess: (number: number) => string;
   winLabel: string;
   pathWin: (number: number, guess: string) => string;
+  /** The Feedback Matrix page: its link under Explore, title, intro and help text. */
+  matrix: string;
+  matrixIntro: string;
+  matrixHelp: string;
+  /** The grid's figure title, the line naming its axes (first and last Answer List word, how many), the canvas's accessible name, and what it says while loading or when the bytes do not fit the Answer List. */
+  matrixFigure: string;
+  matrixAxes: (first: string, last: string, count: string) => string;
+  matrixLabel: (count: string) => string;
+  matrixLoading: string;
+  matrixWrongSize: string;
+  /** The legend's caption (its Tiles are Feedbacks). */
+  matrixLegend: string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
   /** The home page's Explore section: its intro, "Builds on" label, and for each Explore page its purpose and three points (see `lib/explore.ts`). */
@@ -124,6 +136,10 @@ export type PageText = {
   exploreFollowPoint1: string;
   exploreFollowPoint2: string;
   exploreFollowPoint3: string;
+  exploreMatrixPurpose: string;
+  exploreMatrixPoint1: string;
+  exploreMatrixPoint2: string;
+  exploreMatrixPoint3: string;
   /** "Watch from 4:10": a link into the Series video. */
   watchFrom: (timestamp: string) => string;
   /** The Opener Distribution page's intro, then its help text (which ends before the "How it works" link and `sentenceEnd`). */
@@ -244,6 +260,15 @@ export const EN: PageText = {
   pathGuess: (n) => `Guess ${n}`,
   winLabel: "Win",
   pathWin: (n, g) => `Guess ${n}: ${g.toUpperCase()}, Win`,
+  matrix: "Feedback Matrix",
+  matrixIntro: "The Solver never works a Feedback out during a Game: it looks it up in a Feedback Matrix. This is the Answer List one, every Guess against every Answer, as one picture.",
+  matrixHelp: "Each row is a Guess and each column an Answer, both in Answer List order (alphabetical), so the Wins form the diagonal. A cell's colour is its Feedback Code: the more Correct and Present letters, the brighter.",
+  matrixFigure: "Answer × Answer Feedback Matrix",
+  matrixAxes: (first, last, count) => `Columns: the Answer. Rows: the Guess. Both run through the ${count} Answer List words, ${first.toUpperCase()} to ${last.toUpperCase()}.`,
+  matrixLabel: (count) => `The Feedback Matrix: ${count} Guesses (rows) by ${count} Answers (columns), each cell coloured by its Feedback Code`,
+  matrixLoading: "Loading the Feedback Matrix…",
+  matrixWrongSize: "The Feedback Matrix does not match the Answer List. Run `just precompute feedback` again.",
+  matrixLegend: "Feedback Code, from all Absent (0) to the Win (242)",
   howItWorks: "How it works",
   exploreIntro: "Interactive pages that go beyond the Articles.",
   exploreBuildsOn: "Builds on",
@@ -259,6 +284,10 @@ export const EN: PageText = {
   exploreFollowPoint1: "Pick any Answer, a Strategy, and an Opener (the Strategy's best unless you choose another).",
   exploreFollowPoint2: "Step through the Guesses with Prev and Next; each shows the words still possible, with the Answer's group outlined.",
   exploreFollowPoint3: "Switch to Answer's path to see the Answer's group after every Guess as one chain.",
+  exploreMatrixPurpose: "See the whole Answer × Answer Feedback Matrix the Solver looks Feedback up in, as one picture.",
+  exploreMatrixPoint1: "One cell per Guess and Answer, both in Answer List order, so the Wins run down the diagonal.",
+  exploreMatrixPoint2: "Each cell's colour is its Feedback Code, from all Absent to the Win.",
+  exploreMatrixPoint3: "Bright squares along the diagonal are words that start with the same letter.",
   watchFrom: (t) => `Watch from ${t}`,
   openersIntro: "Play every word on the Guess List as the Opener, let the Solver finish each Game, and count how many Openers land at each Average Guess Count.",
   openersHelp:
@@ -371,6 +400,15 @@ export const TH: PageText = {
   pathGuess: (n) => `Guess ที่ ${n}`,
   winLabel: "Win",
   pathWin: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} Win`,
+  matrix: "Feedback Matrix",
+  matrixIntro: "ระหว่าง Game นั้น Solver ไม่คำนวณ Feedback เลย แต่เปิดหาใน Feedback Matrix นี่คือตารางของ Answer List คือทุก Guess เทียบกับทุก Answer แสดงเป็นภาพเดียว",
+  matrixHelp: "แต่ละแถวคือ Guess และแต่ละคอลัมน์คือ Answer ทั้งสองแกนเรียงตาม Answer List (ตามตัวอักษร) ช่องที่เป็น Win จึงเรียงเป็นเส้นทแยง สีของช่องคือ Feedback Code ยิ่งมีตัวอักษร Correct และ Present มาก สียิ่งสว่าง",
+  matrixFigure: "Feedback Matrix แบบ Answer × Answer",
+  matrixAxes: (first, last, count) => `คอลัมน์คือ Answer แถวคือ Guess ทั้งสองแกนไล่ตามคำใน Answer List ทั้ง ${count} คำ ตั้งแต่ ${first.toUpperCase()} ถึง ${last.toUpperCase()}`,
+  matrixLabel: (count) => `Feedback Matrix: Guess ${count} แถว คูณ Answer ${count} คอลัมน์ แต่ละช่องมีสีตาม Feedback Code`,
+  matrixLoading: "กำลังโหลด Feedback Matrix…",
+  matrixWrongSize: "Feedback Matrix ไม่ตรงกับ Answer List ให้รัน `just precompute feedback` อีกครั้ง",
+  matrixLegend: "Feedback Code ตั้งแต่ Absent ทั้งหมด (0) ถึง Win (242)",
   howItWorks: "ดูว่าทำงานอย่างไร",
   exploreIntro: "หน้าแบบโต้ตอบที่ไปไกลกว่า Article",
   exploreBuildsOn: "ต่อยอดจาก",
@@ -386,6 +424,10 @@ export const TH: PageText = {
   exploreFollowPoint1: "เลือก Answer ใดก็ได้ พร้อม Strategy และ Opener (Opener ที่ดีที่สุดของ Strategy นั้น ถ้าไม่เลือกเอง)",
   exploreFollowPoint2: "ไล่ดู Guess ด้วย Prev และ Next แต่ละ Guess แสดงคำที่ยังเป็นไปได้ และกลุ่มของ Answer จะมีกรอบ",
   exploreFollowPoint3: "เลือกเส้นทางของ Answer เพื่อดูกลุ่มของ Answer หลังทุก Guess เป็นสายเดียว",
+  exploreMatrixPurpose: "ดู Feedback Matrix แบบ Answer × Answer ทั้งตารางที่ Solver ใช้เปิดหา Feedback เป็นภาพเดียว",
+  exploreMatrixPoint1: "หนึ่งช่องต่อหนึ่งคู่ Guess กับ Answer ทั้งสองแกนเรียงตาม Answer List ช่องที่เป็น Win จึงเรียงเป็นเส้นทแยง",
+  exploreMatrixPoint2: "สีของแต่ละช่องคือ Feedback Code ของช่องนั้น ตั้งแต่ Absent ทั้งหมดไปจนถึง Win",
+  exploreMatrixPoint3: "บล็อกตามแนวทแยงคือคำที่ขึ้นต้นด้วยตัวอักษรเดียวกัน",
   watchFrom: (t) => `ดูตั้งแต่ ${t}`,
   openersIntro: "ลองใช้ทุกคำใน Guess List เป็น Opener ให้ Solver เล่นแต่ละ Game จนจบ แล้วนับว่ามี Opener กี่คำที่ได้ Average Guess Count ในแต่ละช่วง",
   openersHelp:

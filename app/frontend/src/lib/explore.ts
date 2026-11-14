@@ -1,6 +1,6 @@
 import type { Language } from "@/lib/i18n/language";
 import type { PageText } from "@/lib/i18n/page-text";
-import { followPath, openerSplitPath, openersPath } from "@/lib/i18n/paths";
+import { followPath, matrixPath, openerSplitPath, openersPath } from "@/lib/i18n/paths";
 
 /** The keys of the page text table that hold plain strings. */
 type TextKey = { [K in keyof PageText]: PageText[K] extends string ? K : never }[keyof PageText];
@@ -41,5 +41,13 @@ export const EXPLORE_PAGES: ExplorePage[] = [
     purpose: "exploreFollowPurpose",
     points: ["exploreFollowPoint1", "exploreFollowPoint2", "exploreFollowPoint3"],
     articles: ["greedy-strategy"],
+  },
+  {
+    id: "matrix",
+    path: (lang) => matrixPath(lang),
+    name: "matrix",
+    purpose: "exploreMatrixPurpose",
+    points: ["exploreMatrixPoint1", "exploreMatrixPoint2", "exploreMatrixPoint3"],
+    articles: ["candidate-set"],
   },
 ];

@@ -19,7 +19,7 @@ type Group = { id: string; number: number; title: string; articles: Item[] };
 
 /**
  * The site-wide sidebar: the site title (home) at the top with the language toggle and the theme menu (a palette icon) beside it, then the Articles
- * grouped under their Part titles, then an Explore heading linking to the Opener Distribution, Opener Split and Follow an Answer pages. A sticky full-height column from `lg`; below that a compact top bar whose button opens
+ * grouped under their Part titles, then an Explore heading linking to the Opener Distribution, Opener Split, Follow an Answer and Feedback Matrix pages. A sticky full-height column from `lg`; below that a compact top bar whose button opens
  * the menu, beside the theme menu button. One markup, so CSS only decides what is shown.
  */
 export function Sidebar({ title, parts, lang = DEFAULT_LANGUAGE, translatedSlugs = [] }: { title: string; parts: Group[]; lang?: Language; translatedSlugs?: string[] }) {

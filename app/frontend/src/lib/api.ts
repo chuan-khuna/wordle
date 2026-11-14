@@ -1,5 +1,5 @@
 /** Calls to the backend through the `/api` proxy. A non-2xx response throws an Error carrying the API's `detail` message. */
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+async function request(path: string, init?: RequestInit): Promise<Response> {
   let res: Response;
   try {
     res = await fetch(path, init);
@@ -15,7 +15,12 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {}
     throw new Error(detail);
   }
-  return (await res.json()) as T;
+  return res;
+}
+
+/** A JSON endpoint of the backend. */
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  return (await (await request(path, init)).json()) as T;
 }
 
 export interface FeedbackResponse {
@@ -171,3 +176,10 @@ export interface GuessCountsResponse {
 
 export const getGuessCounts = (strategy: string, signal?: AbortSignal) =>
   api<GuessCountsResponse>(`/api/guess-counts?strategy=${encodeURIComponent(strategy)}`, { signal });
+
+/**
+ * The Answer × Answer Feedback Matrix: one Feedback Code per byte, row by row, rows Guesses and columns Answers, both
+ * in Answer List order (2,315² bytes, sent gzipped and cached by the browser).
+ */
+export const getFeedbackMatrix = async (signal?: AbortSignal) =>
+  new Uint8Array(await (await request("/api/feedback-matrix", { signal })).arrayBuffer());

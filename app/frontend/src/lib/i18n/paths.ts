@@ -33,6 +33,8 @@ export const followPath = (lang: Language = DEFAULT_LANGUAGE, params: Record<str
   const query = new URLSearchParams(params).toString();
   return pathIn("/follow", lang) + (query && `?${query}`);
 };
+/** The path of the Feedback Matrix page. */
+export const matrixPath = (lang: Language = DEFAULT_LANGUAGE) => pathIn("/matrix", lang);
 /**
  * Where a link to an Article goes from a page in `lang`: its page in that language, or the English page when it has no Translation
  * (a Thai route is not generated for it).
