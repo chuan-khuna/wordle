@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { MIDDLE_CODE, SCALE_STEPS, WIN_CODE, ZOOMS, buildScale, cellAt, cellRect, colourIndex, fillGrid, gridSize, marksOfCode, parseHex, parseZoom, zoomFactor } from "@/lib/widgets/matrix-grid";
+import candidatesWatch from "@/lib/widgets/fixtures/candidates-watch-crane.json";
+import solveCrane from "@/lib/widgets/fixtures/solve-crane-crane.json";
+import solveWatch from "@/lib/widgets/fixtures/solve-watch-crane.json";
+import { DIM_ALPHA, MIDDLE_CODE, SCALE_STEPS, WIN_CODE, ZOOMS, answerIndex, buildScale, cellAt, cellRect, colourIndex, dimmedMask, fillDimRow, fillGrid, gridSize, guessRows, marksOfCode, parseHex, parseZoom, sizesPerStep, stateKey, statesPerStep, zoomFactor } from "@/lib/widgets/matrix-grid";
+import { answerList } from "@/lib/wordle/words";
+
+const answers = answerList();
 
 test("colourIndex puts all Absent at the bottom of the scale and the Win at the top", () => {
   expect(colourIndex(0)).toBe(0);
@@ -104,4 +110,72 @@ test("cellRect is where cellAt finds the cell, at every zoom", () => {
   expect(cellRect({ row: 0, col: 0 }, fit, "8", side)).toEqual({ x: 0, y: 0, size: (fit * 8) / side });
   const last = cellRect({ row: side - 1, col: side - 1 }, fit, "2", side);
   expect(last.x + last.size).toBeCloseTo(fit * 2);
+});
+
+test("statesPerStep starts with no Guess and adds one Guess a step", () => {
+  const states = statesPerStep(solveWatch);
+  expect(states).toHaveLength(5);
+  expect(states[0]).toEqual([]);
+  expect(states[2]).toEqual([
+    { guess: "crane", feedback: "10100" },
+    { guess: "moist", feedback: "00001" },
+  ]);
+  expect(stateKey(states[0])).toBe("");
+  expect(stateKey(states[2])).toBe("crane:10100,moist:00001");
+});
+
+test("sizesPerStep runs from the whole Answer List to the Win", () => {
+  expect(sizesPerStep(solveWatch)).toEqual([2315, 27, 6, 1, 1]);
+  expect(sizesPerStep({ steps: [] })).toEqual([]);
+});
+
+test("an Answer equal to the Opener is one step from the whole Answer List to 1", () => {
+  expect(solveCrane.steps[0].guess).toBe("crane");
+  expect(sizesPerStep(solveCrane)).toEqual([2315, 1]);
+  expect(statesPerStep(solveCrane)).toEqual([[], [{ guess: "crane", feedback: "22222" }]]);
+  const row = answerIndex(answers, "crane");
+  expect(guessRows(solveCrane, answers)).toEqual([row]);
+  const mask = dimmedMask(answers, ["crane"]);
+  expect(mask[row]).toBe(0);
+  expect(mask.reduce((n, m) => n + m, 0)).toBe(answers.length - 1);
+});
+
+test("answerIndex finds a word's place in the sorted Answer List, -1 off it", () => {
+  expect(answerIndex(answers, answers[0])).toBe(0);
+  expect(answerIndex(answers, answers[answers.length - 1])).toBe(answers.length - 1);
+  expect(answers[answerIndex(answers, "watch")]).toBe("watch");
+  expect(answerIndex(answers, "blowy")).toBe(-1);
+  expect(answerIndex(answers, "tarse")).toBe(-1);
+  expect(answerIndex([], "watch")).toBe(-1);
+});
+
+test("guessRows gives each Guess on the Answer List its row and a Guess List Guess none", () => {
+  // BLOWY is on the Guess List only.
+  expect(guessRows(solveWatch, answers)).toEqual([answerIndex(answers, "crane"), answerIndex(answers, "moist"), null, answerIndex(answers, "watch")]);
+});
+
+test("dimmedMask dims nothing at step 0 and every non-Candidate after each Guess", () => {
+  expect(dimmedMask(answers, null).every((m) => m === 0)).toBe(true);
+  const sizes = sizesPerStep(solveWatch);
+  candidatesWatch.forEach((words, k) => {
+    const mask = dimmedMask(answers, words);
+    expect(mask).toHaveLength(answers.length);
+    const lit = answers.filter((_, col) => mask[col] === 0);
+    expect(lit).toEqual(words);
+    expect(lit).toHaveLength(sizes[k + 1]);
+    expect(mask[answerIndex(answers, "watch")]).toBe(0);
+  });
+});
+
+test("dimmedMask ignores a word off the Answer List", () => {
+  const mask = dimmedMask(answers, ["watch", "blowy"]);
+  expect(mask.reduce((n, m) => n + m, 0)).toBe(answers.length - 1);
+});
+
+test("fillDimRow veils the dimmed columns and leaves the lit ones clear", () => {
+  const out = new Uint8ClampedArray(3 * 4);
+  fillDimRow(new Uint8Array([1, 0, 1]), [10, 20, 30], out);
+  const a = Math.round(DIM_ALPHA * 255);
+  expect([...out]).toEqual([10, 20, 30, a, 10, 20, 30, 0, 10, 20, 30, a]);
+  expect(() => fillDimRow(new Uint8Array(2), [0, 0, 0], out)).toThrow();
 });

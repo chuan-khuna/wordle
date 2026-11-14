@@ -114,3 +114,86 @@ export function cellRect(cell: Cell, fitWidth: number, zoom: Zoom, side: number)
   const step = gridSize(fitWidth, zoom) / side;
   return { x: cell.col * step, y: cell.row * step, size: step };
 }
+
+/** The Game the page plays: the Solver's Guesses, each with its Feedback, as `GET /api/solve` returns them. */
+export type GameSteps = { steps: readonly { guess: string; marks: string; candidates_before: number; candidates_after: number }[] };
+
+/** One Guess and its Feedback as the API's `state` takes it (Feedback as a digit string). */
+export type StateRow = { guess: string; feedback: string };
+
+/** The State after each step of a Game: step 0 has no Guess, step k holds Guesses 1 to k. One more entry than the Game has Guesses. */
+export function statesPerStep(game: GameSteps): StateRow[][] {
+  return Array.from({ length: game.steps.length + 1 }, (_, k) => game.steps.slice(0, k).map((s) => ({ guess: s.guess, feedback: s.marks })));
+}
+
+/** A State as one key ("crane:10100,moist:00001"; "" for step 0), for caching its Candidate Set. */
+export function stateKey(state: readonly StateRow[]): string {
+  return state.map((s) => `${s.guess}:${s.feedback}`).join(",");
+}
+
+/**
+ * The Candidate Set's size at each step of a Game: step 0 is the whole Answer List (Guess 1's `candidates_before`),
+ * step k what is left after Guess k. The step of the Win leaves 1.
+ */
+export function sizesPerStep(game: GameSteps): number[] {
+  if (game.steps.length === 0) return [];
+  return [game.steps[0].candidates_before, ...game.steps.map((s) => s.candidates_after)];
+}
+
+/** Where a word is in the Answer List (`answers`, sorted): its row and column in the grid, or -1 when it is not on it. */
+export function answerIndex(answers: readonly string[], word: string): number {
+  let lo = 0;
+  let hi = answers.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (answers[mid] === word) return mid;
+    if (answers[mid] < word) lo = mid + 1;
+    else hi = mid - 1;
+  }
+  return -1;
+}
+
+/**
+ * Each Guess's row in the grid, in the Game's order: its index in the Answer List, or null for a Guess off the Answer
+ * List (a Guess List Guess), which has no row in the Answer × Answer matrix.
+ */
+export function guessRows(game: GameSteps, answers: readonly string[]): (number | null)[] {
+  return game.steps.map((s) => {
+    const row = answerIndex(answers, s.guess);
+    return row < 0 ? null : row;
+  });
+}
+
+/**
+ * The dimmed columns at a step: 1 for each column whose Answer is not in `candidates` (the Candidate Set at that step),
+ * 0 for each still lit. `null` candidates (step 0, before any Guess) dims nothing.
+ */
+export function dimmedMask(answers: readonly string[], candidates: readonly string[] | null): Uint8Array {
+  const mask = new Uint8Array(answers.length);
+  if (candidates === null) return mask;
+  mask.fill(1);
+  for (const word of candidates) {
+    const col = answerIndex(answers, word);
+    if (col >= 0) mask[col] = 0;
+  }
+  return mask;
+}
+
+/** How opaque the dimming veil is over a column no longer a Candidate: the column's colour still shows faintly. */
+export const DIM_ALPHA = 0.82;
+
+/**
+ * Fill `out` (RGBA, one pixel per column, as a one-row `ImageData`'s `data`) with the dimming layer: the veil colour
+ * at `alpha` over each dimmed column, clear over each lit one. The page draws this row stretched over the whole grid.
+ */
+export function fillDimRow(mask: Uint8Array, veil: Rgb, out: Uint8ClampedArray, alpha: number = DIM_ALPHA): void {
+  if (out.length !== mask.length * 4) throw new Error(`the row has ${out.length / 4} pixels for ${mask.length} columns`);
+  const a = Math.round(alpha * 255);
+  for (let i = 0; i < mask.length; i++) {
+    const on = mask[i] === 1;
+    out[i * 4] = veil[0];
+    out[i * 4 + 1] = veil[1];
+    out[i * 4 + 2] = veil[2];
+    out[i * 4 + 3] = on ? a : 0;
+  }
+}

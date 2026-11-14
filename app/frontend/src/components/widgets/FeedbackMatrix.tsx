@@ -2,9 +2,10 @@
 
 import { Popover } from "radix-ui";
 import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ControlPanel } from "@/components/controls/ControlPanel";
 import { FIELD_LABEL } from "@/components/controls/Field";
 import { SegmentedControl } from "@/components/controls/SegmentedControl";
-import { getFeedbackMatrix } from "@/lib/api";
+import { type SolveResponse, getFeedbackMatrix, postCandidates } from "@/lib/api";
 import { DEFAULT_LANGUAGE, type Language } from "@/lib/i18n/language";
 import { pageText } from "@/lib/i18n/page-text";
 import {
@@ -14,16 +15,25 @@ import {
   type Rgb,
   ZOOMS,
   type Zoom,
+  answerIndex,
   buildScale,
   cellAt,
   cellRect,
+  dimmedMask,
+  fillDimRow,
   fillGrid,
   gridSize,
+  guessRows,
   marksOfCode,
   parseHex,
   parseZoom,
+  sizesPerStep,
+  stateKey,
+  statesPerStep,
 } from "@/lib/widgets/matrix-grid";
 import type { Mark } from "@/lib/wordle/feedback";
+import { GuessStrip } from "./_components/GuessStrip";
+import { GameInputs, useSolverGame } from "./_components/SolverGame";
 import { Tile } from "./_components/Tile";
 import { WidgetFrame } from "./_components/ui";
 import { CARD } from "./_components/useHoverCard";
@@ -39,39 +49,165 @@ function themeScale(): Uint8ClampedArray {
   return buildScale(SCALE_ROLES.map((role) => parseHex(style.getPropertyValue(role)) ?? FALLBACK));
 }
 
+/** The dimming veil's colour: the page background, so a dimmed column fades into the page. */
+function themeVeil(): Rgb {
+  return parseHex(getComputedStyle(document.documentElement).getPropertyValue("--background")) ?? FALLBACK;
+}
+
 /**
- * The Answer × Answer Feedback Matrix on a canvas: one cell per (Guess, Answer) pair, rows Guesses and columns Answers,
- * both in Answer List order (`answers`, the build-time list, sorted as the backend's matrix is), so the Wins are the
- * diagonal. The bytes come from `GET /api/feedback-matrix`. They are painted once into a one-pixel-per-cell image (an
- * offscreen canvas), which is drawn scaled to the visible canvas with smoothing off; a theme change refills the image,
- * a resize or a scroll only redraws it. Zoom (fit, 2×, 4×, 8×; the `zoom` URL param) and the hover card are in `Grid`.
+ * The Feedback Matrix page's content: the Solver's Game (`GameInputs`, the URL params `answer`, `pool`, `scope`,
+ * `by`, `opener`, and `step`, 0 before any Guess), a sticky strip of its Guesses with the Candidate Set's size at
+ * each step, and the Answer × Answer Feedback Matrix on a canvas with the columns no longer Candidates dimmed.
+ * One cell per (Guess, Answer) pair, rows Guesses and columns Answers, both in Answer List order (`answers`, the
+ * build-time list, sorted as the backend's matrix is), so the Wins are the diagonal. The bytes come from
+ * `GET /api/feedback-matrix`. They are painted once into a one-pixel-per-cell image (an offscreen canvas), which is
+ * drawn scaled to the visible canvas with smoothing off; a theme change refills the image, a resize or a scroll only
+ * redraws it. Zoom (fit, 2×, 4×, 8×; the `zoom` URL param), the dimming layer and the hover card are in `Grid`.
  */
 export function FeedbackMatrix({ answers, lang = DEFAULT_LANGUAGE }: { answers: readonly string[]; lang?: Language }) {
+  return (
+    <Suspense fallback={<div className="aspect-square w-full bg-overlay" />}>
+      <Matrix answers={answers} lang={lang} />
+    </Suspense>
+  );
+}
+
+/** What the grid shows of the Game at a step: the columns dimmed, the rows of the Guesses played, and the Answer's column. */
+type GameLayer = {
+  /** 1 for each column (Answer) no longer a Candidate. */
+  mask: Uint8Array;
+  /** The rows of the Guesses played so far that are on the Answer List; `current` is the last one played. */
+  rows: { row: number; current: boolean }[];
+  /** The Answer's column. */
+  answerCol: number;
+  answer: string;
+};
+
+const clamp = (n: number, lo: number, hi: number) => Math.min(Math.max(n, lo), hi);
+
+function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language }) {
   const text = pageText(lang);
   const { data, error } = useLoad("feedback-matrix", getFeedbackMatrix);
   const side = answers.length;
   const wrongSize = data !== null && data.length !== side * side;
   const cells = data !== null && !wrongSize ? data : null;
 
-  return (
-    <WidgetFrame title={text.matrixFigure}>
-      <div className="grid gap-3">
-        <p className="text-xs text-meta">{text.matrixAxes(answers[0] ?? "", answers[side - 1] ?? "", side.toLocaleString("en-US"))}</p>
-        {error ? (
-          <p className="text-sm text-error">{error}</p>
-        ) : wrongSize ? (
-          <p className="text-sm text-error">{text.matrixWrongSize}</p>
-        ) : cells ? (
-          <Suspense fallback={<div className="aspect-square w-full bg-overlay" />}>
-            <Grid cells={cells} answers={answers} label={text.matrixLabel(side.toLocaleString("en-US"))} lang={lang} />
-          </Suspense>
-        ) : (
-          <div className="grid aspect-square w-full place-items-center bg-overlay text-sm text-meta">{text.matrixLoading}</div>
-        )}
-        <Legend lang={lang} />
-      </div>
-    </WidgetFrame>
+  const game = useSolverGame();
+  // An Answer or Opener the API rejects keeps the last good Game on the grid; its message shows at the input.
+  const shown = game.data ?? game.lastGood;
+  const [stepText, setStepText] = useWidgetParam(undefined, "step", "0");
+  const total = shown?.guesses ?? 0;
+  const parsed = Number.parseInt(stepText, 10);
+  const step = clamp(Number.isFinite(parsed) ? parsed : 0, 0, total);
+  const go = (n: number) => setStepText(String(clamp(n, 0, total)));
+  const best = !game.custom && game.data ? game.data.steps[0].guess : "";
+
+  const sets = useCandidateSets(shown);
+  const states = useMemo(() => (shown ? statesPerStep(shown) : []), [shown]);
+  const rowsOf = useMemo(() => (shown ? guessRows(shown, answers) : []), [shown, answers]);
+  const sizes = useMemo(() => (shown ? sizesPerStep(shown) : []), [shown]);
+  const setKey = step > 0 && states[step] ? stateKey(states[step]) : null;
+  const words = setKey === null ? null : sets.words[setKey];
+  const failure = setKey === null ? undefined : sets.failures[setKey];
+  // The mask for this step; while its Candidate Set loads, the last mask stays (no flash of the whole grid).
+  const next = useMemo(() => (words === undefined ? null : dimmedMask(answers, words)), [answers, words]);
+  const [mask, setMask] = useState<Uint8Array>(() => dimmedMask(answers, null));
+  if (next && next !== mask) setMask(next);
+
+  const layer: GameLayer | null = useMemo(
+    () =>
+      shown
+        ? {
+            mask,
+            rows: rowsOf.flatMap((row, k) => (row !== null && k < step ? [{ row, current: k === step - 1 }] : [])),
+            answerCol: answerIndex(answers, shown.answer),
+            answer: shown.answer,
+          }
+        : null,
+    [shown, mask, rowsOf, step, answers],
   );
+  const offList = shown ? shown.steps.filter((_, k) => rowsOf[k] === null) : [];
+
+  return (
+    <ControlPanel plain className="space-y-6">
+      <GameInputs game={game} best={best} lang={lang} />
+      {shown && (
+        <GuessStrip data={shown} step={step} first={0} go={go} lang={lang} status={step === 0 ? text.matrixStart : text.guessOf(step, total)}>
+          <span
+            role="group"
+            className="flex flex-wrap items-baseline gap-x-2 text-sm"
+            aria-label={text.matrixSizes(sizes.map((n) => n.toLocaleString("en-US")).join(" → "), step)}
+          >
+            <span className={FIELD_LABEL}>{text.matrixSizesLabel}</span>
+            <span aria-hidden className="font-mono tabular-nums">
+              {sizes.map((n, k) => (
+                <span key={k}>
+                  {k > 0 && <span className="text-meta"> → </span>}
+                  <span className={k === step ? "font-bold text-text" : "text-meta"}>{n.toLocaleString("en-US")}</span>
+                </span>
+              ))}
+            </span>
+          </span>
+          {offList.map((s) => (
+            <p key={s.number} className="basis-full text-xs text-meta">
+              {text.matrixNoRow(s.guess)}
+            </p>
+          ))}
+        </GuessStrip>
+      )}
+      {shown && !shown.solved && <p className="text-sm text-error">{text.notSolved}</p>}
+      {failure ? (
+        <p role="alert" className="text-sm text-error">
+          {failure}
+        </p>
+      ) : (
+        setKey !== null && words === undefined && <p className="text-sm text-meta">{text.matrixCandidatesLoading}</p>
+      )}
+      <WidgetFrame title={text.matrixFigure}>
+        <div className="grid gap-3">
+          <p className="text-xs text-meta">{text.matrixAxes(answers[0] ?? "", answers[side - 1] ?? "", side.toLocaleString("en-US"))}</p>
+          {error ? (
+            <p className="text-sm text-error">{error}</p>
+          ) : wrongSize ? (
+            <p className="text-sm text-error">{text.matrixWrongSize}</p>
+          ) : cells ? (
+            <Grid cells={cells} answers={answers} layer={layer} label={text.matrixLabel(side.toLocaleString("en-US"))} lang={lang} />
+          ) : (
+            <div className="grid aspect-square w-full place-items-center bg-overlay text-sm text-meta">{text.matrixLoading}</div>
+          )}
+          <Legend lang={lang} />
+        </div>
+      </WidgetFrame>
+    </ControlPanel>
+  );
+}
+
+/**
+ * The Candidate Set after each Guess of `game`, from `POST /api/candidates` with the State so far: one call per step,
+ * all asked at once when the Game arrives, and cached by State, so a step (or a Game) seen before is never asked again.
+ */
+function useCandidateSets(game: SolveResponse | null): { words: Record<string, string[]>; failures: Record<string, string> } {
+  const asked = useRef(new Set<string>());
+  const [words, setWords] = useState<Record<string, string[]>>({});
+  const [failures, setFailures] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!game) return;
+    const ctl = new AbortController();
+    for (const state of statesPerStep(game).slice(1)) {
+      const key = stateKey(state);
+      if (asked.current.has(key)) continue;
+      asked.current.add(key);
+      postCandidates(state, ctl.signal).then(
+        (r) => setWords((prev) => ({ ...prev, [key]: r.words })),
+        (e: Error) => {
+          asked.current.delete(key);
+          if (e.name !== "AbortError") setFailures((prev) => ({ ...prev, [key]: e.message }));
+        },
+      );
+    }
+    return () => ctl.abort();
+  }, [game]);
+  return { words, failures };
 }
 
 /** The zoom buttons' names other than `fit`'s. */
@@ -85,8 +221,26 @@ type Pointer = { x: number; y: number; mouse: boolean };
  * scrolls over a grid that many times wider, so the page never scrolls sideways. The visible canvas is only the frame's
  * size: each draw scales the one-pixel-per-cell image by the zoom and shifts it by the scroll, with smoothing off, so
  * cells stay crisp at every zoom. Hovering (or tapping) a cell outlines it and shows its Guess, Answer and Feedback in a card.
+ *
+ * The Game (`layer`) is drawn over the grid without touching its image: the dimming is a second offscreen image, one
+ * pixel per column (the veil over each column no longer a Candidate, clear over the rest), drawn stretched over the
+ * whole grid with the same transform, so a step change refills 2,315 pixels, not 5.4 million. The rows of the Guesses
+ * played are outlined (elements in the scrolling spacer, so they scroll with it), and a marker above the frame points
+ * at the Answer's column, moved with the horizontal scroll at each draw.
  */
-function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: readonly string[]; label: string; lang: Language }) {
+function Grid({
+  cells,
+  answers,
+  layer,
+  label,
+  lang,
+}: {
+  cells: Uint8Array;
+  answers: readonly string[];
+  layer: GameLayer | null;
+  label: string;
+  lang: Language;
+}) {
   const text = pageText(lang);
   const side = answers.length;
   const [zoomText, setZoomText] = useWidgetParam(undefined, "zoom", "fit");
@@ -98,6 +252,8 @@ function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: rea
   const gridRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLCanvasElement | null>(null);
+  const dimRef = useRef<HTMLCanvasElement | null>(null);
+  const markerRef = useRef<HTMLDivElement>(null);
   // The frame's width (CSS px): the grid's side at `fit`, which the zoom levels multiply.
   const [fitWidth, setFitWidth] = useState(0);
   const [hover, setHover] = useState<Cell | null>(null);
@@ -106,6 +262,8 @@ function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: rea
   // The view's centre as a fraction of the grid, kept across a zoom change.
   const centre = useRef<{ x: number; y: number } | null>(null);
   const size = gridSize(fitWidth, zoom);
+  const answerCol = layer?.answerCol ?? -1;
+  const mask = layer?.mask ?? null;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -131,7 +289,14 @@ function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: rea
     // In device pixels, with the grid's top-left corner at minus the scroll.
     context.setTransform(ratio, 0, 0, ratio, -frame.scrollLeft * ratio, -frame.scrollTop * ratio);
     context.drawImage(image, 0, 0, size, size);
-  }, [size]);
+    if (dimRef.current) context.drawImage(dimRef.current, 0, 0, size, size);
+    const marker = markerRef.current;
+    if (marker && answerCol >= 0) {
+      const x = ((answerCol + 0.5) * size) / side - frame.scrollLeft;
+      marker.style.transform = `translateX(${x}px)`;
+      marker.style.visibility = x >= 0 && x <= width ? "visible" : "hidden";
+    }
+  }, [size, side, answerCol]);
   const drawRef = useRef(draw);
   useLayoutEffect(() => {
     drawRef.current = draw;
@@ -156,6 +321,31 @@ function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: rea
     theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => theme.disconnect();
   }, [cells, side]);
+
+  // The dimming layer, one pixel per column: refilled when the step changes (a new mask) and when the theme does.
+  useEffect(() => {
+    if (!mask) {
+      dimRef.current = null;
+      drawRef.current();
+      return;
+    }
+    const dim = document.createElement("canvas");
+    dim.width = mask.length;
+    dim.height = 1;
+    const dimContext = dim.getContext("2d");
+    if (!dimContext) return;
+    const pixels = dimContext.createImageData(mask.length, 1);
+    const fill = () => {
+      fillDimRow(mask, themeVeil(), pixels.data);
+      dimContext.putImageData(pixels, 0, 0);
+      dimRef.current = dim;
+      drawRef.current();
+    };
+    fill();
+    const theme = new MutationObserver(fill);
+    theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => theme.disconnect();
+  }, [mask]);
 
   // The frame is as wide as the content column, and square.
   useEffect(() => {
@@ -241,6 +431,17 @@ function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: rea
         </span>
         <SegmentedControl labelledBy={zoomLabelId} value={zoom} onChange={setZoom} options={ZOOMS} names={{ fit: text.matrixZoomFit, ...ZOOM_NAMES }} />
       </div>
+      {layer && (
+        // The Answer's column: a marker above the frame, moved to the column (less the scroll) at each draw.
+        <div className="relative -mb-1 h-2.5 w-full overflow-hidden" role="img" aria-label={text.matrixAnswerColumn(layer.answer)}>
+          <div
+            ref={markerRef}
+            className="absolute top-0 left-0 -ml-[5px] h-0 w-0 border-x-[5px] border-t-[8px] border-x-transparent"
+            style={{ borderTopColor: "var(--accent)", visibility: "hidden" }}
+            aria-hidden
+          />
+        </div>
+      )}
       <div ref={boxRef} className="relative aspect-square w-full max-w-full bg-overlay">
         <canvas ref={canvasRef} role="img" aria-label={label} className="absolute top-0 left-0 block" />
         <div
@@ -266,6 +467,24 @@ function Grid({ cells, answers, label, lang }: { cells: Uint8Array; answers: rea
           }}
         >
           <div ref={gridRef} className="relative" style={{ width: size, height: size }}>
+            {layer?.rows.map(({ row, current }) => {
+              const rect = cellRect({ row, col: 0 }, fitWidth, zoom, side);
+              // At least 3 px tall, so a row shows when it is under a pixel.
+              const tall = Math.max(rect.size, 3);
+              return (
+                <div
+                  key={row}
+                  className="pointer-events-none absolute left-0"
+                  style={{
+                    top: rect.y + rect.size / 2 - tall / 2,
+                    width: size,
+                    height: tall,
+                    boxShadow: `0 0 0 1px var(--background), 0 0 0 2px ${current ? "var(--accent)" : "var(--text)"}`,
+                  }}
+                  aria-hidden
+                />
+              );
+            })}
             {box && (
               <div
                 className="pointer-events-none absolute rounded-[1px]"
