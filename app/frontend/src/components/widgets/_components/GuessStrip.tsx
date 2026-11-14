@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Pause, Play } from "lucide-react";
 import type { ReactNode } from "react";
 import { ControlPanel } from "@/components/controls/ControlPanel";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import { Tile } from "./Tile";
  * The sticky strip of a Game: Prev and Next, then each Guess with its Feedback Marks as small Tiles, then `status` (the
  * step in words, live) and `children` (the page's own controls or notes). Steps run from `first` (1 on Follow an Answer;
  * 0, before any Guess, on the Feedback Matrix page) to the Game's last Guess. The current Guess is marked
- * (`aria-current="step"`); a Guess is a button that calls `go` with its number.
+ * (`aria-current="step"`); a Guess is a button that calls `go` with its number. With `play` (opt-in; the Feedback Matrix
+ * page) a Play button follows Next, showing Pause while `play.playing`; it calls `play.toggle`.
  */
 export function GuessStrip({
   data,
@@ -23,6 +24,7 @@ export function GuessStrip({
   go,
   lang,
   status,
+  play,
   children,
 }: {
   data: SolveResponse;
@@ -31,6 +33,7 @@ export function GuessStrip({
   go: (n: number) => void;
   lang: Language;
   status: ReactNode;
+  play?: { playing: boolean; toggle: () => void };
   children?: ReactNode;
 }) {
   const text = pageText(lang);
@@ -45,6 +48,12 @@ export function GuessStrip({
           <Button disabled={step >= total} onClick={() => go(step + 1)} aria-label={text.nextGuess}>
             {text.next} →
           </Button>
+          {play && (
+            <Button onClick={play.toggle}>
+              {play.playing ? <Pause aria-hidden /> : <Play aria-hidden />}
+              {play.playing ? text.pause : text.play}
+            </Button>
+          )}
         </div>
         <ol aria-label={text.guessStripLabel(data.answer)} className="flex flex-wrap items-center gap-y-1">
           {data.steps.map((s) => (

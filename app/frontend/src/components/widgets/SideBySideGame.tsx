@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { type SolveResponse, getSolve } from "@/lib/api";
 import { WORD_LENGTH, parseMarks } from "@/lib/wordle/feedback";
 import { MAX_BOARDS, MIN_BOARDS, beatsFor, nextStrategy, parseAnswers, parseBoards, revealed } from "@/lib/widgets/side-by-side";
@@ -11,6 +11,7 @@ import { Tile } from "./_components/Tile";
 import { WIDGET_TITLES } from "@/lib/widgets/widget-titles.mjs";
 import { WidgetFrame } from "./_components/ui";
 import { WordRow } from "./_components/WordRow";
+import { useReducedMotion } from "./_components/useReducedMotion";
 import { useWidgetParam } from "./_components/useWidgetParam";
 
 // Six Guesses, as in the game (wordle.engine.game.MAX_GUESSES). Each board marks where they run out.
@@ -23,15 +24,6 @@ const DEFAULT_BOARDS = "bits-answers-candidates,bits-guesses-candidates,bits-gue
 type Played = { data: SolveResponse; error: null } | { data: null; error: string };
 
 const gameKey = (answer: string, strategy: string) => `${answer}|${strategy}`;
-
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-const subscribeMotion = (onChange: () => void) => {
-  const query = window.matchMedia(REDUCED_MOTION);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-};
-/** Whether the reader asked for reduced motion (false while rendering on the server). */
-const useReducedMotion = () => useSyncExternalStore(subscribeMotion, () => window.matchMedia(REDUCED_MOTION).matches, () => false);
 
 /**
  * Widget 8: the Side-by-side Game. The Step-through Game for two to four Strategies at once: every board plays the

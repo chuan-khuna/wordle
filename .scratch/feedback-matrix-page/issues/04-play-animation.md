@@ -4,11 +4,11 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] Play starts from the current step (from step 0 if already at the Win) and stops at the Win.
-- [ ] Columns fade between steps rather than switching at once; the fade does not refill the grid image.
-- [ ] Pause, Prev and Next work during Play; Prev/Next stop it.
-- [ ] `step` in the URL follows the animation without adding a history entry per step.
-- [ ] Play respects `prefers-reduced-motion` (no fade, steps only).
-- [ ] `web-frontend.md` describes Play.
+- [x] Play starts from the current step (from step 0 if already at the Win) and stops at the Win.
+- [x] Columns fade between steps rather than switching at once; the fade does not refill the grid image.
+- [x] Pause, Prev and Next work during Play; Prev/Next stop it.
+- [x] `step` in the URL follows the animation without adding a history entry per step.
+- [x] Play respects `prefers-reduced-motion` (no fade, steps only).
+- [x] `web-frontend.md` describes Play.

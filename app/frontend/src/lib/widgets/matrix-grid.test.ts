@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import candidatesWatch from "@/lib/widgets/fixtures/candidates-watch-crane.json";
 import solveCrane from "@/lib/widgets/fixtures/solve-crane-crane.json";
 import solveWatch from "@/lib/widgets/fixtures/solve-watch-crane.json";
-import { DIM_ALPHA, MIDDLE_CODE, SCALE_STEPS, WIN_CODE, ZOOMS, answerIndex, buildScale, cellAt, cellRect, colourIndex, dimmedMask, fillDimRow, fillGrid, gridSize, guessRows, marksOfCode, parseHex, parseZoom, sizesPerStep, stateKey, statesPerStep, zoomFactor } from "@/lib/widgets/matrix-grid";
+import { DIM_ALPHA, FADE_MS, MIDDLE_CODE, PLAY_STEP_MS, SCALE_STEPS, WIN_CODE, ZOOMS, answerIndex, buildScale, cellAt, cellRect, colourIndex, dimmedMask, fadeProgress, fillDimRow, fillGrid, gridSize, guessRows, marksOfCode, mixLevels, parseHex, parseZoom, playNext, playStart, sizesPerStep, stateKey, statesPerStep, zoomFactor } from "@/lib/widgets/matrix-grid";
 import { answerList } from "@/lib/wordle/words";
 
 const answers = answerList();
@@ -178,4 +178,56 @@ test("fillDimRow veils the dimmed columns and leaves the lit ones clear", () => 
   const a = Math.round(DIM_ALPHA * 255);
   expect([...out]).toEqual([10, 20, 30, a, 10, 20, 30, 0, 10, 20, 30, a]);
   expect(() => fillDimRow(new Uint8Array(2), [0, 0, 0], out)).toThrow();
+});
+
+test("fillDimRow veils a column mid-fade in proportion to its level", () => {
+  const out = new Uint8ClampedArray(3 * 4);
+  fillDimRow(new Float32Array([0, 0.5, 1]), [10, 20, 30], out, 1);
+  expect([...out]).toEqual([10, 20, 30, 0, 10, 20, 30, 128, 10, 20, 30, 255]);
+});
+
+test("mixLevels runs from the levels shown to the step's mask", () => {
+  const from = new Uint8Array([0, 1, 1, 0]);
+  const to = new Uint8Array([0, 1, 0, 1]);
+  const out = new Float32Array(4);
+  mixLevels(from, to, 0, out);
+  expect([...out]).toEqual([0, 1, 1, 0]);
+  mixLevels(from, to, 0.25, out);
+  expect([...out]).toEqual([0, 1, 0.75, 0.25]);
+  mixLevels(from, to, 1, out);
+  expect([...out]).toEqual([0, 1, 0, 1]);
+  mixLevels(from, to, 3, out);
+  expect([...out]).toEqual([0, 1, 0, 1]);
+  // A fade that starts mid-fade carries on from the levels on the screen.
+  mixLevels(new Float32Array([0.5, 0.5]), new Uint8Array([1, 0]), 0.5, out.subarray(0, 2));
+  expect([...out.subarray(0, 2)]).toEqual([0.75, 0.25]);
+  expect(() => mixLevels(from, new Uint8Array(3), 0, out)).toThrow();
+});
+
+test("fadeProgress eases from 0 to 1 over the fade and stays there", () => {
+  expect(fadeProgress(-5)).toBe(0);
+  expect(fadeProgress(0)).toBe(0);
+  expect(fadeProgress(FADE_MS / 2)).toBe(0.5);
+  expect(fadeProgress(FADE_MS)).toBe(1);
+  expect(fadeProgress(FADE_MS * 3)).toBe(1);
+  expect(fadeProgress(10, 0)).toBe(1);
+  let before = 0;
+  for (let ms = 0; ms <= FADE_MS; ms += 10) {
+    const t = fadeProgress(ms);
+    expect(t).toBeGreaterThanOrEqual(before);
+    before = t;
+  }
+  // Gentle at both ends: the first and last tenths move less than a tenth.
+  expect(fadeProgress(FADE_MS / 10)).toBeLessThan(0.1);
+  expect(fadeProgress((FADE_MS * 9) / 10)).toBeGreaterThan(0.9);
+  expect(FADE_MS).toBeLessThan(PLAY_STEP_MS);
+});
+
+test("Play starts from the current step, from step 0 at the Win, and stops at the Win", () => {
+  expect(playStart(0, 4)).toBe(0);
+  expect(playStart(2, 4)).toBe(2);
+  expect(playStart(4, 4)).toBe(0);
+  expect(playNext(0, 4)).toBe(1);
+  expect(playNext(3, 4)).toBe(4);
+  expect(playNext(4, 4)).toBeNull();
 });

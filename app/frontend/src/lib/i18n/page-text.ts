@@ -87,6 +87,9 @@ export type PageText = {
   next: string;
   prevGuess: string;
   nextGuess: string;
+  /** The Feedback Matrix page's Play button, and its label while playing. */
+  play: string;
+  pause: string;
   /** "Guess 2 of 4" under the strip, and a row's heading: the Guess over the Candidate Set before it, or the Win. */
   guessOf: (number: number, total: number) => string;
   rowHeading: (number: number, guess: string, candidates: number) => string;
@@ -260,6 +263,8 @@ export const EN: PageText = {
   next: "Next",
   prevGuess: "Previous Guess",
   nextGuess: "Next Guess",
+  play: "Play",
+  pause: "Pause",
   guessOf: (n, total) => `Guess ${n} of ${total}`,
   rowHeading: (n, g, c) => `Guess ${n}: ${g.toUpperCase()} over ${c} ${c === 1 ? "Candidate" : "Candidates"}`,
   winHeading: (n, g) => `Guess ${n}: ${g.toUpperCase()} is the Win`,
@@ -277,7 +282,7 @@ export const EN: PageText = {
   pathWin: (n, g) => `Guess ${n}: ${g.toUpperCase()}, Win`,
   matrix: "Feedback Matrix",
   matrixIntro: "The Solver never works a Feedback out during a Game: it looks it up in a Feedback Matrix. This is the Answer List one, every Guess against every Answer, as one picture.",
-  matrixHelp: "Each row is a Guess and each column an Answer, both in Answer List order (alphabetical), so the Wins form the diagonal. A cell's colour is its Feedback Code: the more Correct and Present letters, the brighter. Pick an Answer and a Strategy, then step through the Solver's Game with Prev and Next: after each Guess, the columns of the Answers that are no longer Candidates go dark, the rows of the Guesses played are outlined, and the marker above the grid follows the Answer's column.",
+  matrixHelp: "Each row is a Guess and each column an Answer, both in Answer List order (alphabetical), so the Wins form the diagonal. A cell's colour is its Feedback Code: the more Correct and Present letters, the brighter. Pick an Answer and a Strategy, then step through the Solver's Game with Prev and Next, or press Play to watch it play out: after each Guess, the columns of the Answers that are no longer Candidates go dark, the rows of the Guesses played are outlined, and the marker above the grid follows the Answer's column.",
   matrixFigure: "Answer × Answer Feedback Matrix",
   matrixAxes: (first, last, count) => `Columns: the Answer. Rows: the Guess. Both run through the ${count} Answer List words, ${first.toUpperCase()} to ${last.toUpperCase()}.`,
   matrixLabel: (count) => `The Feedback Matrix: ${count} Guesses (rows) by ${count} Answers (columns), each cell coloured by its Feedback Code`,
@@ -411,6 +416,8 @@ export const TH: PageText = {
   next: "ถัดไป",
   prevGuess: "Guess ก่อนหน้า",
   nextGuess: "Guess ถัดไป",
+  play: "เล่น",
+  pause: "หยุดชั่วคราว",
   guessOf: (n, total) => `Guess ที่ ${n} จาก ${total}`,
   rowHeading: (n, g, c) => `Guess ที่ ${n}: ${g.toUpperCase()} บน ${c} Candidate`,
   winHeading: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} คือ Win`,
@@ -428,7 +435,7 @@ export const TH: PageText = {
   pathWin: (n, g) => `Guess ที่ ${n}: ${g.toUpperCase()} Win`,
   matrix: "Feedback Matrix",
   matrixIntro: "ระหว่าง Game นั้น Solver ไม่คำนวณ Feedback เลย แต่เปิดหาใน Feedback Matrix นี่คือตารางของ Answer List คือทุก Guess เทียบกับทุก Answer แสดงเป็นภาพเดียว",
-  matrixHelp: "แต่ละแถวคือ Guess และแต่ละคอลัมน์คือ Answer ทั้งสองแกนเรียงตาม Answer List (ตามตัวอักษร) ช่องที่เป็น Win จึงเรียงเป็นเส้นทแยง สีของช่องคือ Feedback Code ยิ่งมีตัวอักษร Correct และ Present มาก สียิ่งสว่าง เลือก Answer และ Strategy แล้วกด Prev และ Next เพื่อไล่ดูเกมของ Solver หลังแต่ละ Guess คอลัมน์ของ Answer ที่ไม่ใช่ Candidate แล้วจะมืดลง แถวของ Guess ที่เล่นไปแล้วจะมีกรอบ และเครื่องหมายเหนือภาพจะชี้คอลัมน์ของ Answer",
+  matrixHelp: "แต่ละแถวคือ Guess และแต่ละคอลัมน์คือ Answer ทั้งสองแกนเรียงตาม Answer List (ตามตัวอักษร) ช่องที่เป็น Win จึงเรียงเป็นเส้นทแยง สีของช่องคือ Feedback Code ยิ่งมีตัวอักษร Correct และ Present มาก สียิ่งสว่าง เลือก Answer และ Strategy แล้วกด Prev และ Next เพื่อไล่ดูเกมของ Solver หรือกดปุ่มเล่นเพื่อดูเกมเล่นไปเอง หลังแต่ละ Guess คอลัมน์ของ Answer ที่ไม่ใช่ Candidate แล้วจะมืดลง แถวของ Guess ที่เล่นไปแล้วจะมีกรอบ และเครื่องหมายเหนือภาพจะชี้คอลัมน์ของ Answer",
   matrixFigure: "Feedback Matrix แบบ Answer × Answer",
   matrixAxes: (first, last, count) => `คอลัมน์คือ Answer แถวคือ Guess ทั้งสองแกนไล่ตามคำใน Answer List ทั้ง ${count} คำ ตั้งแต่ ${first.toUpperCase()} ถึง ${last.toUpperCase()}`,
   matrixLabel: (count) => `Feedback Matrix: Guess ${count} แถว คูณ Answer ${count} คอลัมน์ แต่ละช่องมีสีตาม Feedback Code`,

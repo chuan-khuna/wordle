@@ -11,6 +11,7 @@ import { pageText } from "@/lib/i18n/page-text";
 import {
   type Cell,
   LEGEND_CODES,
+  PLAY_STEP_MS,
   SCALE_ROLES,
   type Rgb,
   ZOOMS,
@@ -20,13 +21,17 @@ import {
   cellAt,
   cellRect,
   dimmedMask,
+  fadeProgress,
   fillDimRow,
   fillGrid,
   gridSize,
   guessRows,
   marksOfCode,
+  mixLevels,
   parseHex,
   parseZoom,
+  playNext,
+  playStart,
   sizesPerStep,
   stateKey,
   statesPerStep,
@@ -38,6 +43,7 @@ import { Tile } from "./_components/Tile";
 import { WidgetFrame } from "./_components/ui";
 import { CARD } from "./_components/useHoverCard";
 import { useLoad } from "./_components/useLoad";
+import { useReducedMotion } from "./_components/useReducedMotion";
 import { useWidgetParam } from "./_components/useWidgetParam";
 
 /** Grey, if a theme role cannot be read (it always can in the ten themes). */
@@ -99,7 +105,26 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
   const total = shown?.guesses ?? 0;
   const parsed = Number.parseInt(stepText, 10);
   const step = clamp(Number.isFinite(parsed) ? parsed : 0, 0, total);
-  const go = (n: number) => setStepText(String(clamp(n, 0, total)));
+  // Play steps through the Game on a timer; Prev, Next or a Guess in the strip (`go`) stops it. It stops by itself at
+  // the Win: `playing` is only true while a step is left.
+  const [playOn, setPlayOn] = useState(false);
+  // Another Game (a new Answer, Strategy or Opener) stops Play.
+  const [playedGame, setPlayedGame] = useState(shown);
+  if (shown !== playedGame) {
+    setPlayedGame(shown);
+    setPlayOn(false);
+  }
+  const playing = playOn && step < total;
+  const go = (n: number) => {
+    setPlayOn(false);
+    setStepText(String(clamp(n, 0, total)));
+  };
+  const togglePlay = () => {
+    if (playing) return setPlayOn(false);
+    setStepText(String(playStart(step, total)));
+    setPlayOn(true);
+  };
+  const reducedMotion = useReducedMotion();
   const best = !game.custom && game.data ? game.data.steps[0].guess : "";
 
   const sets = useCandidateSets(shown);
@@ -113,6 +138,16 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
   const next = useMemo(() => (words === undefined ? null : dimmedMask(answers, words)), [answers, words]);
   const [mask, setMask] = useState<Uint8Array>(() => dimmedMask(answers, null));
   if (next && next !== mask) setMask(next);
+  // The step is on the grid once its Candidate Set is in; Play holds it for `PLAY_STEP_MS` from then (a step that is
+  // slow to load is not cut short), then shows the next. `step` goes to the URL with `replaceState`: no history entry.
+  const ready = step === 0 || words !== undefined;
+  useEffect(() => {
+    if (!playing || !ready) return;
+    const after = playNext(step, total);
+    if (after === null) return;
+    const timer = window.setTimeout(() => setStepText(String(after)), PLAY_STEP_MS);
+    return () => window.clearTimeout(timer);
+  }, [playing, ready, step, total, setStepText]);
 
   const layer: GameLayer | null = useMemo(
     () =>
@@ -132,7 +167,14 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
     <ControlPanel plain className="space-y-6">
       <GameInputs game={game} best={best} lang={lang} />
       {shown && (
-        <GuessStrip data={shown} step={step} first={0} go={go} lang={lang} status={step === 0 ? text.matrixStart : text.guessOf(step, total)}>
+        <GuessStrip
+          data={shown}
+          step={step}
+          first={0}
+          go={go}
+          lang={lang}
+          play={{ playing, toggle: togglePlay }}
+          status={step === 0 ? text.matrixStart : text.guessOf(step, total)}>
           <span
             role="group"
             className="flex flex-wrap items-baseline gap-x-2 text-sm"
@@ -171,7 +213,7 @@ function Matrix({ answers, lang }: { answers: readonly string[]; lang: Language 
           ) : wrongSize ? (
             <p className="text-sm text-error">{text.matrixWrongSize}</p>
           ) : cells ? (
-            <Grid cells={cells} answers={answers} layer={layer} label={text.matrixLabel(side.toLocaleString("en-US"))} lang={lang} />
+            <Grid cells={cells} answers={answers} layer={layer} fade={!reducedMotion} label={text.matrixLabel(side.toLocaleString("en-US"))} lang={lang} />
           ) : (
             <div className="grid aspect-square w-full place-items-center bg-overlay text-sm text-meta">{text.matrixLoading}</div>
           )}
@@ -227,17 +269,24 @@ type Pointer = { x: number; y: number; mouse: boolean };
  * whole grid with the same transform, so a step change refills 2,315 pixels, not 5.4 million. The rows of the Guesses
  * played are outlined (elements in the scrolling spacer, so they scroll with it), and a marker above the frame points
  * at the Answer's column, moved with the horizontal scroll at each draw.
+ *
+ * With `fade`, a new mask does not switch the columns at once: each animation frame for `FADE_MS` mixes the dimming
+ * levels on the screen towards the new mask (`mixLevels`, eased by `fadeProgress`), refills the one-row image and
+ * redraws. Only the 2,315-pixel row is refilled; the grid image is untouched. Without `fade` (`prefers-reduced-motion`)
+ * the new mask shows at once.
  */
 function Grid({
   cells,
   answers,
   layer,
+  fade,
   label,
   lang,
 }: {
   cells: Uint8Array;
   answers: readonly string[];
   layer: GameLayer | null;
+  fade: boolean;
   label: string;
   lang: Language;
 }) {
@@ -322,30 +371,56 @@ function Grid({
     return () => theme.disconnect();
   }, [cells, side]);
 
-  // The dimming layer, one pixel per column: refilled when the step changes (a new mask) and when the theme does.
+  // The dimming layer, one pixel per column, and how dimmed each column is on the screen now (0 lit to 1 dimmed).
+  const levels = useRef<Float32Array | null>(null);
+  const dim = useRef<{ canvas: HTMLCanvasElement; context: CanvasRenderingContext2D; pixels: ImageData } | null>(null);
+  const paintDim = useCallback(() => {
+    const row = dim.current;
+    if (!row || !levels.current) return;
+    fillDimRow(levels.current, themeVeil(), row.pixels.data);
+    row.context.putImageData(row.pixels, 0, 0);
+    dimRef.current = row.canvas;
+    drawRef.current();
+  }, []);
+
+  // A new mask (a step change): fade the levels from what is on the screen to the mask, or switch at once without `fade`.
   useEffect(() => {
     if (!mask) {
+      levels.current = null;
       dimRef.current = null;
       drawRef.current();
       return;
     }
-    const dim = document.createElement("canvas");
-    dim.width = mask.length;
-    dim.height = 1;
-    const dimContext = dim.getContext("2d");
-    if (!dimContext) return;
-    const pixels = dimContext.createImageData(mask.length, 1);
-    const fill = () => {
-      fillDimRow(mask, themeVeil(), pixels.data);
-      dimContext.putImageData(pixels, 0, 0);
-      dimRef.current = dim;
-      drawRef.current();
+    if (!dim.current || dim.current.canvas.width !== mask.length) {
+      const canvas = document.createElement("canvas");
+      canvas.width = mask.length;
+      canvas.height = 1;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      dim.current = { canvas, context, pixels: context.createImageData(mask.length, 1) };
+    }
+    if (!levels.current || levels.current.length !== mask.length) levels.current = new Float32Array(mask.length);
+    const shown = levels.current;
+    const from = shown.slice();
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = fade ? fadeProgress(now - start) : 1;
+      mixLevels(from, mask, t, shown);
+      paintDim();
+      if (t < 1) frame = requestAnimationFrame(tick);
     };
-    fill();
-    const theme = new MutationObserver(fill);
+    tick(start);
+    // A fade cut short leaves the levels part way; the next one starts from there.
+    return () => cancelAnimationFrame(frame);
+  }, [mask, fade, paintDim]);
+
+  // A theme change repaints the row in the new background colour, at the levels on the screen.
+  useEffect(() => {
+    const theme = new MutationObserver(paintDim);
     theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     return () => theme.disconnect();
-  }, [mask]);
+  }, [paintDim]);
 
   // The frame is as wide as the content column, and square.
   useEffect(() => {

@@ -185,15 +185,47 @@ export const DIM_ALPHA = 0.82;
 /**
  * Fill `out` (RGBA, one pixel per column, as a one-row `ImageData`'s `data`) with the dimming layer: the veil colour
  * at `alpha` over each dimmed column, clear over each lit one. The page draws this row stretched over the whole grid.
+ * `mask` may also hold levels between 0 and 1 (`mixLevels`, mid-fade): a column at level l is veiled at l × `alpha`.
  */
-export function fillDimRow(mask: Uint8Array, veil: Rgb, out: Uint8ClampedArray, alpha: number = DIM_ALPHA): void {
+export function fillDimRow(mask: ArrayLike<number>, veil: Rgb, out: Uint8ClampedArray, alpha: number = DIM_ALPHA): void {
   if (out.length !== mask.length * 4) throw new Error(`the row has ${out.length / 4} pixels for ${mask.length} columns`);
-  const a = Math.round(alpha * 255);
   for (let i = 0; i < mask.length; i++) {
-    const on = mask[i] === 1;
     out[i * 4] = veil[0];
     out[i * 4 + 1] = veil[1];
     out[i * 4 + 2] = veil[2];
-    out[i * 4 + 3] = on ? a : 0;
+    out[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, mask[i])) * alpha * 255);
   }
+}
+
+/**
+ * How dimmed each column is, for a fade: 0 lit, 1 fully dimmed, between while the column fades. Write into `out` the
+ * levels a fraction `t` (0 to 1) of the way from `from` (the levels shown when the fade began) to `to` (the step's
+ * mask), so a fade that starts mid-fade carries on from what is on the screen.
+ */
+export function mixLevels(from: ArrayLike<number>, to: ArrayLike<number>, t: number, out: Float32Array): void {
+  if (from.length !== out.length || to.length !== out.length) throw new Error(`mixing ${from.length} and ${to.length} levels into ${out.length}`);
+  const k = Math.min(1, Math.max(0, t));
+  for (let i = 0; i < out.length; i++) out[i] = from[i] + (to[i] - from[i]) * k;
+}
+
+/** How long Play holds each step, from one step to the next, in milliseconds. */
+export const PLAY_STEP_MS = 1800;
+/** How long the dimmed columns take to fade between two steps, in milliseconds; well inside `PLAY_STEP_MS`. */
+export const FADE_MS = 600;
+
+/** How far a fade is (0 to 1, eased in and out so it starts and ends gently) `elapsed` ms into one of `duration` ms. */
+export function fadeProgress(elapsed: number, duration: number = FADE_MS): number {
+  if (!(duration > 0)) return 1;
+  const t = Math.min(1, Math.max(0, elapsed / duration));
+  return t * t * (3 - 2 * t);
+}
+
+/** The step Play starts from: the current one, or step 0 when the Game is already at its Win (its last step, `total`). */
+export function playStart(step: number, total: number): number {
+  return step >= total ? 0 : step;
+}
+
+/** The step Play shows next after `step`, or null when `step` is the Win (`total`) and Play stops. */
+export function playNext(step: number, total: number): number | null {
+  return step >= total ? null : step + 1;
 }
