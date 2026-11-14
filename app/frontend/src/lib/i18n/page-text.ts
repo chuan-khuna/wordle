@@ -119,6 +119,14 @@ export type PageText = {
   matrixWrongSize: string;
   /** The legend's caption (its Tiles are Feedbacks). */
   matrixLegend: string;
+  /** The zoom buttons' label and the name of the level that fits the whole grid (the others are "2×", "4×", "8×"). */
+  matrixZoom: string;
+  matrixZoomFit: string;
+  /** The zoomed frame's accessible name (it scrolls, and takes the focus so the arrow keys scroll it). */
+  matrixScroll: string;
+  /** The hover card: the Guess row's label (the Answer's is `answerLabel`) and the card's accessible name. */
+  matrixGuess: string;
+  matrixCell: (guess: string, answer: string, marks: string) => string;
   /** The link on the Opener Distribution page to its Article. */
   howItWorks: string;
   /** The home page's Explore section: its intro, "Builds on" label, and for each Explore page its purpose and three points (see `lib/explore.ts`). */
@@ -269,6 +277,11 @@ export const EN: PageText = {
   matrixLoading: "Loading the Feedback Matrix…",
   matrixWrongSize: "The Feedback Matrix does not match the Answer List. Run `just precompute feedback` again.",
   matrixLegend: "Feedback Code, from all Absent (0) to the Win (242)",
+  matrixZoom: "Zoom",
+  matrixZoomFit: "Fit",
+  matrixScroll: "The Feedback Matrix, zoomed in: scroll to move around it",
+  matrixGuess: "Guess",
+  matrixCell: (g, a, m) => `Guess ${g.toUpperCase()}, Answer ${a.toUpperCase()}, Feedback ${m}`,
   howItWorks: "How it works",
   exploreIntro: "Interactive pages that go beyond the Articles.",
   exploreBuildsOn: "Builds on",
@@ -409,6 +422,11 @@ export const TH: PageText = {
   matrixLoading: "กำลังโหลด Feedback Matrix…",
   matrixWrongSize: "Feedback Matrix ไม่ตรงกับ Answer List ให้รัน `just precompute feedback` อีกครั้ง",
   matrixLegend: "Feedback Code ตั้งแต่ Absent ทั้งหมด (0) ถึง Win (242)",
+  matrixZoom: "ซูม",
+  matrixZoomFit: "พอดีกรอบ",
+  matrixScroll: "Feedback Matrix แบบซูมเข้า เลื่อนเพื่อดูส่วนอื่น",
+  matrixGuess: "Guess",
+  matrixCell: (g, a, m) => `Guess ${g.toUpperCase()} กับ Answer ${a.toUpperCase()} ได้ Feedback ${m}`,
   howItWorks: "ดูว่าทำงานอย่างไร",
   exploreIntro: "หน้าแบบโต้ตอบที่ไปไกลกว่า Article",
   exploreBuildsOn: "ต่อยอดจาก",

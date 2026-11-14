@@ -74,3 +74,43 @@ export function fillGrid(cells: Uint8Array, scale: Uint8ClampedArray, out: Uint8
   const target = new Uint32Array(out.buffer, out.byteOffset, cells.length);
   for (let i = 0; i < cells.length; i++) target[i] = words[cells[i]];
 }
+
+/** The zoom levels, as the `zoom` URL param writes them: the whole grid fits the frame, or 2, 4 or 8 times that. */
+export const ZOOMS = ["fit", "2", "4", "8"] as const;
+export type Zoom = (typeof ZOOMS)[number];
+
+/** A `zoom` URL param as a zoom level: anything that is not one is `fit`. */
+export function parseZoom(text: string | null | undefined): Zoom {
+  return (ZOOMS as readonly string[]).includes(text ?? "") ? (text as Zoom) : "fit";
+}
+
+/** How many times the fitted width a zoom level draws the grid. */
+export function zoomFactor(zoom: Zoom): number {
+  return zoom === "fit" ? 1 : Number(zoom);
+}
+
+/** The grid's side in CSS pixels at a zoom level, when it fits a frame `fitWidth` wide. */
+export function gridSize(fitWidth: number, zoom: Zoom): number {
+  return fitWidth * zoomFactor(zoom);
+}
+
+/** A cell of the grid: its row (the Guess) and its column (the Answer), both indices into the Answer List. */
+export type Cell = { row: number; col: number };
+
+/**
+ * The cell under the point (`x`, `y`) on the grid, in CSS pixels from the grid's top-left corner, when the grid of
+ * `side` × `side` cells fits a frame `fitWidth` wide and is drawn at `zoom`; null off the grid. A cell covers
+ * [start, end) on each axis, so a point on the line between two cells is in the later one.
+ */
+export function cellAt(x: number, y: number, fitWidth: number, zoom: Zoom, side: number): Cell | null {
+  const size = gridSize(fitWidth, zoom);
+  if (side <= 0 || size <= 0 || !(x >= 0 && y >= 0 && x < size && y < size)) return null;
+  const index = (p: number) => Math.min(side - 1, Math.floor((p * side) / size));
+  return { row: index(y), col: index(x) };
+}
+
+/** Where a cell is drawn: its top-left corner and side in CSS pixels from the grid's top-left corner, as for `cellAt`. */
+export function cellRect(cell: Cell, fitWidth: number, zoom: Zoom, side: number): { x: number; y: number; size: number } {
+  const step = gridSize(fitWidth, zoom) / side;
+  return { x: cell.col * step, y: cell.row * step, size: step };
+}

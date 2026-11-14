@@ -11,7 +11,7 @@ const CLOSE_DELAY = 250;
 type Opener = "hover" | "key" | "tap" | "focus";
 
 /** Above the Full screen overlay (z-100). Looks like an `InfoTip` card. */
-const CARD =
+export const CARD =
   "z-[110] w-fit rounded-sm border border-rule-strong bg-popover px-3 py-2 font-sans text-sm leading-snug font-normal text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0";
 
 /**
